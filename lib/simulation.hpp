@@ -17,7 +17,7 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit GaussianWhiteNoise(const ModelConfig& model_config);
+  // explicit GaussianWhiteNoise(const SimulationConfig& simulation_config);
 
   /**
    * @brief Simulates a GWN process
@@ -46,7 +46,7 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit RandomWalk(const ModelConfig& model_config);
+  // explicit RandomWalk(const SimulationConfig& simulation_config);
 
   /**
    * @brief Simulates a random walk by summing up samples from
@@ -70,6 +70,64 @@ private:
   // GWN_variance // the variance of the GWN distribution
   // accumulated_variance // the accumulated variance over the entire
   // random walk process
+};
+
+class ConstantVelocity {
+public:
+  /**
+   * @brief Constructor for the ConstantVelocity class.
+   * @param model_config all configuration parameters that are
+   * used by the constructor
+   */
+  // explicit ConstantVelocity(const SimulationConfig& simulation_config);
+
+  /**
+   * @brief Simulates a 2d particle following the constant velocity model
+   * @param timesteps, the amount of timesteps we simulate for
+   * @return returns an array of samples
+   */
+
+  // simulate(timesteps) -> array of 2d points
+
+private:
+  /**
+   * @brief propagates the model by 1 timestep, could essentially be
+   * a numeric integration algorithm like explicit euler or RK4
+   * @return returns the next state given a previous state
+   */
+
+  // propagate_dynamics(x_previous)
+
+  // velocity // the velocity at which the partice is traveling at
+};
+
+class CoordinatedTurn {
+public:
+  /**
+   * @brief Constructor for the CoordinatedTurn class.
+   * @param model_config all configuration parameters that are
+   * used by the constructor
+   */
+  // explicit CoordinatedTurn(const SimulationConfig& simulation_config);
+
+  /**
+   * @brief Simulates a 2d particle following the coordinated turn model
+   * @param timesteps, the amount of timesteps we simulate for
+   * @return returns an array of samples
+   */
+
+  // simulate(timesteps) -> array of 2d points
+
+private:
+  /**
+   * @brief propagates the model by 1 timestep, could essentially be
+   * a numeric integration algorithm like explicit euler or RK4
+   * @return returns the next state given a previous state
+   */
+
+  // propagate_dynamics(x_previous)
+
+  // velocity // the velocity at which the partice is traveling at
 };
 
 #endif
