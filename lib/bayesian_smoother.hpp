@@ -11,26 +11,12 @@
 #include "models.hpp"
 #include <eigen3/Eigen/Eigen>
 
-class SmootherUpdate {
-public:
-  /**
-   * @brief Constructor for the Smoother Update class.
-   */
-  explicit SmootherUpdate();
-
+struct SmootherUpdate {
   Eigen::VectorXd x_smoothed;
   Eigen::MatrixXd P_smoothed;
 };
 
-class SmootherConfig {
-public:
-  /**
-   * @brief Constructor for the SmootherConfig class.
-   * @param motion_model the motion model shared with the filter that
-   * produced the estimates being smoothed
-   */
-  explicit SmootherConfig(MotionModel motion_model);
-
+struct SmootherConfig {
   MotionModel motion_model;
 };
 

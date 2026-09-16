@@ -44,6 +44,9 @@ build/
 Build/
 build-*/
 
+# Generated simulation/filter/smoother output
+output/
+
 # CMake generated files
 CMakeFiles/
 CMakeCache.txt

@@ -1,4 +1,3 @@
-
 /**
  * @file models.hpp
  * @brief Contains basic stochastic dynamical models of motion
@@ -9,6 +8,13 @@
 #define SIMULATION_HPP
 
 #include <eigen3/Eigen/Eigen>
+#include <random>
+
+struct SimulationConfig {
+  std::mt19937_64 &rng;
+  double variance;
+  double mean;
+};
 
 class GaussianWhiteNoise {
 public:
@@ -17,26 +23,25 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit GaussianWhiteNoise(const SimulationConfig& simulation_config);
+  explicit GaussianWhiteNoise(const SimulationConfig &simulation_config);
 
   /**
    * @brief Simulates a GWN process
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of GWN samples
    */
-
-  // simulate(timesteps) -> array of 2d points
+  Eigen::VectorXd simulate(const int timesteps);
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
+  double sample_from_distribution();
 
-  // sample_from_distribution() -> singular GWN sample
-
-  // mean // the mean of the distribution
-  // variance // the variance of the distribution
+  double mean_;          // the mean of the distribution
+  double variance_;      // the variance of the distribution
+  std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
 class RandomWalk {
@@ -46,7 +51,7 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit RandomWalk(const SimulationConfig& simulation_config);
+  explicit RandomWalk(const SimulationConfig &simulation_config);
 
   /**
    * @brief Simulates a random walk by summing up samples from
@@ -54,22 +59,28 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-
-  // simulate(timesteps) -> array of 2d points
+  Eigen::VectorXd simulate(int timesteps);
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
+  double sample_from_distribution();
 
-  // sample_from_distribution() -> singular GWN sample
-  // propagate_dynamics(x_previous)
+  /**
+   * @brief propagates the system dynamics e.g by utilizing
+   * a numerical integration method such as the explicit
+   * euler method or RK4.
+   * @return returns a sample from the GWN distribution
+   */
+  double propagate_dynamics(double x_previous);
 
-  // mean // the mean of the GWN distribution
-  // GWN_variance // the variance of the GWN distribution
-  // accumulated_variance // the accumulated variance over the entire
-  // random walk process
+  double mean_;                  // the mean of the distribution
+  double variance_;              // the variance of the distribution
+  double accumulated_variance_ = 0.0; // accumulated variance over k timesteps
+  std::mt19937_64
+      &rng_; // the engine that draws from stochastic distributions
 };
 
 class ConstantVelocity {
@@ -79,11 +90,11 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit ConstantVelocity(const SimulationConfig& simulation_config);
+  explicit ConstantVelocity(const SimulationConfig &simulation_config);
 
   /**
    * @brief Simulates a 2d particle following the constant velocity model
-   * @param timesteps, the amount of timesteps we simulate for
+   * @param timesteps, the amount of timesteps we simulate
    * @return returns an array of samples
    */
 
@@ -99,6 +110,7 @@ private:
   // propagate_dynamics(x_previous)
 
   // velocity // the velocity at which the partice is traveling at
+  std::mt19937_64 &rng; // the engine that draws from stochastic distributions
 };
 
 class CoordinatedTurn {
@@ -108,7 +120,7 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit CoordinatedTurn(const SimulationConfig& simulation_config);
+  explicit CoordinatedTurn(const SimulationConfig &simulation_config);
 
   /**
    * @brief Simulates a 2d particle following the coordinated turn model
@@ -128,6 +140,8 @@ private:
   // propagate_dynamics(x_previous)
 
   // velocity // the velocity at which the partice is traveling at
+  // turn_rate // the turn rate of the particle
+  std::mt19937_64 &rng; // the engine that draws from stochastic distributions
 };
 
 #endif

@@ -11,37 +11,18 @@
 #include <eigen3/Eigen/Eigen>
 #include <eigen3/Eigen/src/Core/Matrix.h>
 
-class FilterPredict {
-  /**
-   * @brief Constructor for the Filter Predict class.
-   * @param filter_config all configuration parameters
-   */
-  explicit FilterPredict();
-
-public:
+struct FilterPredict {
   Eigen::VectorXd x_predicted;
   Eigen::MatrixXd P_predicted;
 };
 
-class FilterUpdate {
-  /**
-   * @brief Constructor for the Filter Update class.
-   * @param filter_config all configuration parameters
-   */
-  explicit FilterUpdate();
-
-public:
+struct FilterUpdate {
   Eigen::VectorXd x_updated;
   Eigen::VectorXd innovation;
   Eigen::MatrixXd P_updated;
 };
 
-class FilterConfig {
-  /**
-   * @brief Constructor for the Filter Config class.
-   * @param filter_config all configuration parameters
-   */
-  explicit FilterConfig();
+struct FilterConfig {
   MotionModel motion_model;
   MeasurementModel measurement_model;
 };
