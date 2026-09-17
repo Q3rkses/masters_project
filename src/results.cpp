@@ -95,3 +95,26 @@ void SmootherResult::to_csv(const std::string &path) const {
     out << "\n";
   }
 }
+
+void TruthResult::add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z) {
+  records_.push_back(TruthRecord{x_true, z});
+}
+
+void TruthResult::to_csv(const std::string &path) const {
+  std::ofstream out(path);
+
+  int state_dim = records_.empty() ? 0 : records_[0].x_true.size();
+  int measurement_dim = records_.empty() ? 0 : records_[0].z.size();
+
+  out << "timestep";
+  write_vector_header(out, "x_true", state_dim);
+  write_vector_header(out, "z", measurement_dim);
+  out << "\n";
+
+  for (std::size_t k = 0; k < records_.size(); k++) {
+    out << k;
+    write_vector_values(out, records_[k].x_true);
+    write_vector_values(out, records_[k].z);
+    out << "\n";
+  }
+}

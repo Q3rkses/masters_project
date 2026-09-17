@@ -9,8 +9,7 @@
 
 #include "bayesian_filter.hpp"
 #include "models.hpp"
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/src/Core/Matrix.h>
+#include <Eigen/Dense>
 
 class KalmanFilter final : public BayesianFilter {
 public:

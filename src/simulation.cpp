@@ -1,5 +1,5 @@
 #include "simulation.hpp"
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Dense>
 #include <random>
 
 GaussianWhiteNoise::GaussianWhiteNoise(

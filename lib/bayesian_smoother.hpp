@@ -9,7 +9,7 @@
 
 #include "bayesian_filter.hpp"
 #include "models.hpp"
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Dense>
 
 struct SmootherUpdate {
   Eigen::VectorXd x_smoothed;
@@ -46,7 +46,7 @@ public:
   virtual SmootherUpdate
   backward_recursion(const FilterUpdate &filtered_current,
                      const FilterPredict &predicted_next,
-                     const SmootherUpdate &smoothed_previous);
+                     const SmootherUpdate &smoothed_previous) = 0;
 };
 
 #endif

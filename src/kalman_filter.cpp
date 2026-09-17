@@ -1,9 +1,7 @@
 #include "kalman_filter.hpp"
 #include "bayesian_filter.hpp"
 #include "models.hpp"
-#include "results.hpp"
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/src/Core/Matrix.h>
+#include <Eigen/Dense>
 
 KalmanFilter::KalmanFilter(const FilterConfig &filter_config)
     : motion_model_(filter_config.motion_model),

@@ -11,7 +11,7 @@
 
 #include "bayesian_filter.hpp"
 #include "bayesian_smoother.hpp"
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Dense>
 #include <string>
 #include <vector>
 
@@ -42,6 +42,13 @@ public:
    * @param path where to write the csv file
    */
   void to_csv(const std::string &path) const;
+
+  /**
+   * @brief read-only access to the recorded forward pass, needed by a
+   * smoother's backward recursion.
+   */
+  const std::vector<FilterPredict> &predictions() const { return predictions_; }
+  const std::vector<FilterUpdate> &updates() const { return updates_; }
 
 private:
   std::vector<FilterPredict> predictions_; // one entry per timestep
@@ -78,5 +85,37 @@ private:
   std::vector<SmootherUpdate> smoothed_; // one entry per timestep
 
   SmootherConfig smoother_config_; // F, Q used to produce this result
+};
+
+struct TruthRecord {
+  Eigen::VectorXd x_true; // the simulated state, unobservable to the filter
+  Eigen::VectorXd z;      // the noisy measurement handed to the filter
+};
+
+/**
+ * @brief Records the ground truth and the measurements generated from it.
+ * Needed downstream for NEES, which the filter cannot compute about itself.
+ */
+class TruthResult {
+public:
+  /**
+   * @brief records one timestep's true state and measurement. Must be called
+   * once per timestep, in order, for to_csv() to line up with the filter and
+   * smoother files on the timestep column.
+   */
+  void add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z);
+
+  /**
+   * @brief exports all recorded truth data to a csv file. One row per
+   * timestep, with columns (state dim n, measurement dim m):
+   * timestep,
+   * x_true_0..x_true_{n-1},
+   * z_0..z_{m-1}
+   * @param path where to write the csv file
+   */
+  void to_csv(const std::string &path) const;
+
+private:
+  std::vector<TruthRecord> records_; // one entry per timestep
 };
 #endif

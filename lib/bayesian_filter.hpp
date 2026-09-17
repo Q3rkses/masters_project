@@ -8,8 +8,7 @@
 #define BAYESIAN_FILTER_HPP
 
 #include "models.hpp"
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/src/Core/Matrix.h>
+#include <Eigen/Dense>
 
 struct FilterPredict {
   Eigen::VectorXd x_predicted;
@@ -17,10 +16,10 @@ struct FilterPredict {
 };
 
 struct FilterUpdate {
-  Eigen::VectorXd x_updated;
-  Eigen::VectorXd innovation;
-  Eigen::MatrixXd S; // innovation covariance, needed downstream for NIS
-  Eigen::MatrixXd P_updated;
+  Eigen::VectorXd x_updated;  // updated state estimate, x^_k in (Brekke 2025)
+  Eigen::VectorXd innovation; // innovation eta in (Brekke, 2025)
+  Eigen::MatrixXd S;          // innovation covariance S_k in (Brekke, 2025)
+  Eigen::MatrixXd P_updated;  // posterior covariance P_k in (Brekke, 2025)
 };
 
 struct FilterConfig {
@@ -51,7 +50,7 @@ public:
    */
   virtual FilterPredict
   predict(Eigen::VectorXd x_current,
-          Eigen::MatrixXd P_current); // -> x_predicted, P_predicted
+          Eigen::MatrixXd P_current) = 0; // -> x_predicted, P_predicted
 
   /**
    * @brief The update step in a Bayesian Filter
@@ -62,9 +61,9 @@ public:
    * @return returns x_updated, innovation, P_updated packaged in the
    * FilterUpdate class
    */
-  virtual FilterUpdate
-  update(Eigen::VectorXd x_predicted, Eigen::VectorXd z_current,
-         Eigen::MatrixXd P_predicted); // -> x_updated, innovation, P_updated
+  virtual FilterUpdate update(
+      Eigen::VectorXd x_predicted, Eigen::VectorXd z_current,
+      Eigen::MatrixXd P_predicted) = 0; // -> x_updated, innovation, P_updated
 };
 
 #endif

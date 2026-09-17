@@ -6,7 +6,7 @@
 #ifndef MODELS_HPP
 #define MODELS_HPP
 
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Dense>
 
 // Can be expanded later to utilize a template for F and H s.t
 // we can use the Jacobian when needed and the actual functions

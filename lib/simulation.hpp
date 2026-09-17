@@ -7,7 +7,7 @@
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
 
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Dense>
 #include <random>
 
 struct SimulationConfig {
