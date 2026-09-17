@@ -19,10 +19,13 @@ struct FilterPredict {
 struct FilterUpdate {
   Eigen::VectorXd x_updated;
   Eigen::VectorXd innovation;
+  Eigen::MatrixXd S; // innovation covariance, needed downstream for NIS
   Eigen::MatrixXd P_updated;
 };
 
 struct FilterConfig {
+  Eigen::VectorXd x_prior;
+  Eigen::MatrixXd P_prior;
   MotionModel motion_model;
   MeasurementModel measurement_model;
 };
@@ -47,7 +50,8 @@ public:
    * class
    */
   virtual FilterPredict
-  predict(Eigen::VectorXd x_current); // -> x_predicted, P_predicted
+  predict(Eigen::VectorXd x_current,
+          Eigen::MatrixXd P_current); // -> x_predicted, P_predicted
 
   /**
    * @brief The update step in a Bayesian Filter
@@ -59,8 +63,8 @@ public:
    * FilterUpdate class
    */
   virtual FilterUpdate
-  update(Eigen::VectorXd x_predicted,
-         Eigen::VectorXd z_current); // -> x_updated, innovation, P_updated
+  update(Eigen::VectorXd x_predicted, Eigen::VectorXd z_current,
+         Eigen::MatrixXd P_predicted); // -> x_updated, innovation, P_updated
 };
 
 #endif

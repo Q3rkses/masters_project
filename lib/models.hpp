@@ -11,12 +11,7 @@
 // Can be expanded later to utilize a template for F and H s.t
 // we can use the Jacobian when needed and the actual functions
 // f and h, when possible in the EKF
-class ModelConfig {
-
-  explicit ModelConfig(Eigen::MatrixXd F, Eigen::MatrixXd H, Eigen::MatrixXd Q,
-                       Eigen::MatrixXd R);
-
-public:
+struct ModelConfig {
   Eigen::MatrixXd F;
   Eigen::MatrixXd H;
   Eigen::MatrixXd Q;
@@ -31,8 +26,6 @@ public:
    * used by the constructor
    */
   explicit MotionModel(const ModelConfig &model_config);
-
-private:
   Eigen::MatrixXd F;
   Eigen::MatrixXd Q; // the uncertainty of the Motion
 };
@@ -44,9 +37,7 @@ public:
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  // explicit Measurement(const ModelConfig& model_config);
-
-private:
+  explicit MeasurementModel(const ModelConfig &model_config);
   Eigen::MatrixXd H;
   Eigen::MatrixXd R; // the uncertainty of the Measurement
 };

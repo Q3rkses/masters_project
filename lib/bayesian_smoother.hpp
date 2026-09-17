@@ -17,6 +17,8 @@ struct SmootherUpdate {
 };
 
 struct SmootherConfig {
+  Eigen::VectorXd x_prior;
+  Eigen::MatrixXd P_prior;
   MotionModel motion_model;
 };
 

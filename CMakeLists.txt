@@ -11,11 +11,10 @@ find_package(Eigen3 REQUIRED)
 
 add_library(kalman_lib
   src/models.cpp
-  src/bayesian_filter.cpp
   src/kalman_filter.cpp
-  src/bayesian_smoother.cpp
   src/rauch_tung_striebel_smoother.cpp
   src/simulation.cpp
+  src/results.cpp
 )
 
 include_directories(lib)

@@ -26,17 +26,17 @@ public:
    * Theorem 12.2 from Bayesian Smoothing and Filtering (Sarakka, p.255)
    * @param filtered_current, x_updated and P_updated at timestep k as
    * produced by the forward filter pass
-   * @param predicted_next, x_predicted and P_predicted at timestep k+1
+   * @param predicted_previous, x_predicted and P_predicted at timestep k+1
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */
   SmootherUpdate
   backward_recursion(const FilterUpdate &filtered_current,
-                     const FilterPredict &predicted_next,
+                     const FilterPredict &predicted_previous,
                      const SmootherUpdate &smoothed_previous) override;
 
 private:
-  MotionModel motion_model;
+  MotionModel motion_model_;
 };
 
 #endif
