@@ -10,20 +10,21 @@
 #include <random>
 
 int main() {
-  const int timesteps = 100;
+  const int timesteps = 1000;
   std::mt19937_64 rng(42);
 
-  SimulationConfig gwn_config{.rng = rng, .variance = 1.0, .mean = 0.0};
+  SimulationConfig gwn_config{.rng = rng, .variance = 0.5, .mean = 0.0};
   GaussianWhiteNoise gwn(gwn_config);
   Eigen::VectorXd gwn_samples = gwn.simulate(timesteps);
 
-  SimulationConfig rw_config{.rng = rng, .variance = 0.1, .mean = 0.0};
+  SimulationConfig rw_config{.rng = rng, .variance = 0.05, .mean = 0.0};
   RandomWalk random_walk(rw_config);
   Eigen::VectorXd rw_samples = random_walk.simulate(timesteps);
 
-  std::filesystem::path output_dir = std::filesystem::path(PROJECT_ROOT_DIR) / "output";
+  std::filesystem::path output_dir =
+      std::filesystem::path(PROJECT_ROOT_DIR) / "data";
   std::filesystem::create_directories(output_dir);
-  std::filesystem::path output_file = output_dir / "simulation.csv";
+  std::filesystem::path output_file = output_dir / "1000timesteps.csv";
 
   std::ofstream out(output_file);
   out << "timestep,gwn,random_walk\n";
