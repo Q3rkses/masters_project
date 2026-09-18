@@ -73,3 +73,7 @@ data/
 .cache/
 .venv/
 figures/
+
+# finished experiments are curated and tracked; only the top-level scratch dirs stay ignored
+!results/*/data/
+!results/*/figures/
