@@ -5,6 +5,7 @@
 #include "simulation.hpp"
 
 #include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 #include <filesystem>
 #include <iostream>
 #include <random>
@@ -14,28 +15,32 @@ int main() {
   const int timesteps = 1000;
   std::mt19937_64 rng(42);
 
-  // the model we are utilizing is a 1-D random walk observed directly:
-  //   x_k = x_{k-1} + w_k,  w_k ~ N(0, q)  ->  F = 1, Q = q
-  //   z_k = x_k     + v_k,  v_k ~ N(0, r)  ->  H = 1, R = r
+  // the model we are utilizing is a 2-D random walk observed directly:
+  //   x_k = x_{k-1} + w_k,  w_k ~ N(0, Q)  ->  F = I_2, Q = q * I_2
+  //   z_k = x_k     + v_k,  v_k ~ N(0, R)  ->  H = I_2, R = r * I_2
 
+  const int dim = 2;
   const double q = 0.05; // process noise variance (random walk step size)
   const double r = 0.5;  // measurement noise variance
-  const double x0 = 0.0; // prior mean
-  const double p0 = 1.0; // prior variance
+  const Eigen::VectorXd gwn_mean = Eigen::VectorXd::Zero(dim); // gwn mean
+  const Eigen::VectorXd rw_mean = Eigen::VectorXd::Zero(dim);  // rw mean
+  const Eigen::VectorXd x0 = Eigen::VectorXd::Zero(dim);       // prior mean
+  const Eigen::MatrixXd p0 =
+      Eigen::MatrixXd::Identity(dim, dim); // prior covariance
 
   ModelConfig model_config{
-      .F = Eigen::MatrixXd::Identity(1, 1),
-      .H = Eigen::MatrixXd::Identity(1, 1),
-      .Q = Eigen::MatrixXd::Constant(1, 1, q),
-      .R = Eigen::MatrixXd::Constant(1, 1, r),
+      .F = Eigen::MatrixXd::Identity(dim, dim),
+      .H = Eigen::MatrixXd::Identity(dim, dim),
+      .Q = q * Eigen::MatrixXd::Identity(dim, dim),
+      .R = r * Eigen::MatrixXd::Identity(dim, dim),
   };
 
   MotionModel motion_model(model_config);
   MeasurementModel measurement_model(model_config);
 
   FilterConfig filter_config{
-      .x_prior = Eigen::VectorXd::Constant(1, x0),
-      .P_prior = Eigen::MatrixXd::Constant(1, 1, p0),
+      .x_prior = x0,
+      .P_prior = p0,
       .motion_model = motion_model,
       .measurement_model = measurement_model,
   };
@@ -50,26 +55,27 @@ int main() {
   // simulation stepping inside of a for loop where i step through and add the
   // results to the truth vector, measurement vector etc... then filter and
   // smooth in two other for loops but ehhhh look at it tomorrow.
-  SimulationConfig initial_config{.rng = rng, .variance = p0, .mean = x0};
+  SimulationConfig initial_config{.rng = rng, .covariance = p0, .mean = x0};
   GaussianWhiteNoise initial_state(initial_config);
-  const double x_true_initial = initial_state.simulate(1)(0);
+  const Eigen::VectorXd x_true_initial = initial_state.simulate(1).at(0);
 
-  SimulationConfig walk_config{.rng = rng, .variance = q, .mean = 0.0};
+  SimulationConfig walk_config{
+      .rng = rng, .covariance = model_config.Q, .mean = gwn_mean};
   RandomWalk random_walk(walk_config);
-  const Eigen::VectorXd walk = random_walk.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> walk = random_walk.simulate(timesteps);
 
-  SimulationConfig noise_config{.rng = rng, .variance = r, .mean = 0.0};
+  SimulationConfig noise_config{
+      .rng = rng, .covariance = model_config.R, .mean = rw_mean};
   GaussianWhiteNoise measurement_noise(noise_config);
-  const Eigen::VectorXd noise = measurement_noise.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> noise =
+      measurement_noise.simulate(timesteps);
 
   TruthResult truth_result;
   std::vector<Eigen::VectorXd> measurements;
   measurements.reserve(timesteps);
   for (int k = 0; k < timesteps; k++) {
-    Eigen::VectorXd x_true =
-        Eigen::VectorXd::Constant(1, x_true_initial + walk(k));
-    Eigen::VectorXd z =
-        model_config.H * x_true + Eigen::VectorXd::Constant(1, noise(k));
+    Eigen::VectorXd x_true = x_true_initial + walk.at(k);
+    Eigen::VectorXd z = model_config.H * x_true + noise.at(k);
     truth_result.add(x_true, z);
     measurements.push_back(z);
   }

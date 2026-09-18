@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Plot the filter and smoother results and check their consistency.
 
-usage: analyze.py [data_dir]
+usage: analyze_1d.py [data_dir]
 """
 
 import sys

@@ -9,12 +9,26 @@
 
 #include <Eigen/Dense>
 #include <random>
+#include <vector>
 
 struct SimulationConfig {
   std::mt19937_64 &rng;
-  double variance;
-  double mean;
+  Eigen::MatrixXd covariance;
+  Eigen::VectorXd mean;
 };
+
+/**
+ * @brief Samples from a multivaraite standard normal distribution
+ * then utilizes cholesky L and mean to convert the samples to
+ * the normal distribution we are looking for
+ * @param &rng, the random engine
+ * @param &mean, the mean of the desired distribution
+ * @param &covariance, the covariance of the desired distribution
+ * @return returns an array of GWN samples
+ */
+Eigen::VectorXd sample_multivariate_normal(std::mt19937_64 &rng,
+                                           const Eigen::VectorXd &mean,
+                                           const Eigen::MatrixXd &covariance);
 
 class GaussianWhiteNoise {
 public:
@@ -30,17 +44,17 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of GWN samples
    */
-  Eigen::VectorXd simulate(const int timesteps);
+  std::vector<Eigen::VectorXd> simulate(const int timesteps);
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
-  double sample_from_distribution();
+  Eigen::VectorXd sample_from_distribution();
 
-  double mean_;          // the mean of the distribution
-  double variance_;      // the variance of the distribution
+  Eigen::VectorXd mean_;       // the mean of the distribution
+  Eigen::MatrixXd covariance_; // the variance of the distribution
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
@@ -59,14 +73,14 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-  Eigen::VectorXd simulate(int timesteps);
+  std::vector<Eigen::VectorXd> simulate(int timesteps);
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
-  double sample_from_distribution();
+  Eigen::VectorXd sample_from_distribution();
 
   /**
    * @brief propagates the system dynamics e.g by utilizing
@@ -74,13 +88,11 @@ private:
    * euler method or RK4.
    * @return returns a sample from the GWN distribution
    */
-  double propagate_dynamics(double x_previous);
+  Eigen::VectorXd propagate_dynamics(Eigen::VectorXd x_previous);
 
-  double mean_;                  // the mean of the distribution
-  double variance_;              // the variance of the distribution
-  double accumulated_variance_ = 0.0; // accumulated variance over k timesteps
-  std::mt19937_64
-      &rng_; // the engine that draws from stochastic distributions
+  Eigen::VectorXd mean_;       // the mean of the distribution
+  Eigen::MatrixXd covariance_; // the variance of the distribution
+  std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
 class ConstantVelocity {

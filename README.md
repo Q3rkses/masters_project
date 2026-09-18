@@ -13,7 +13,7 @@ A place to store code that will be used in my masters pre-project. This Repo wil
 
 ---
 
-**Phase 1 progress.** Steps 1-4 are done for the 1-D case: a Gaussian random walk observed through
+**Phase 1 progress.** Steps 1-4 are done for the 1-D and 2-D cases: a Gaussian random walk observed through
 Gaussian white noise, filtered forward with a KF, smoothed backward with an RTS smoother, and
 evaluated with NIS and NEES. The CV and CT models nor the forward-backward smoother are written yet.
 
@@ -27,6 +27,16 @@ cmake --build build
 
 Requires Eigen 3 and a C++20 compiler. `data/`, `figures/` and `.venv/` are
 gitignored.
+
+The dimension and length of the run are set at the top of `main()` (`dim`,
+`timesteps`). Analyze the output with the script matching `dim`:
+
+```bash
+python3 scripts/analyze_1d.py   # dim = 1
+python3 scripts/analyze_2d.py   # dim = 2
+```
+
+They read `data/` and write their figures to `figures/`.
 
 #### The first (baby steps) model
 
@@ -46,9 +56,6 @@ this was tested with the following parameter table:
 | `x0`, `p0` | 0.0, 1.0 | prior mean and variance    |
 | timesteps  | 1000     |                            |
 
-`q` and `r` are declared once in `main.cpp` and handed to both the simulator and
-the filter. Two details that are easy to get wrong:
-
 #### Code layout
 
 | file                                                   | contents                                                                       |
@@ -59,9 +66,10 @@ the filter. Two details that are easy to get wrong:
 | `src/rauch_tung_striebel_smoother.cpp`                 | implements the backward recursion equations from Sarkka theorem 12.2           |
 | `src/simulation.cpp`                                   | Gaussian white noise and random walk generators for the simulation             |
 | `src/results.cpp`                                      | CSV export for filter, smoother and ground truth                               |
-| `scripts/analyze.py`                                   | plots and consistency statistics                                               |
+| `scripts/analyze_1d.py`                                | plots and consistency statistics for the 1-D case                              |
+| `scripts/analyze_2d.py`                                | trajectory plots with covariance ellipses and consistency statistics for 2-D   |
 
-#### Results
+#### Results, 1-D
 
 Figures below are the first 500 timesteps of a 1000-step run, seed 42.
 
@@ -89,7 +97,7 @@ Side by side, the smoother's band is roughly half the width of the filter's.
 | filter   | 0.3648 | 0.1354 |
 | smoother | 0.2736 | 0.0783 |
 
-#### Consistency
+#### Consistency, 1-D
 
 ![NIS and NEES](result_figures/5_consistency.png)
 
@@ -103,12 +111,78 @@ shaded region is the 95% band, widened to account for autocorrelation in NEES.
 | ANEES filter   | 0.9840 | [0.8520, 1.1597] | consistent |
 | ANEES smoother | 0.9563 | [0.8614, 1.1488] | consistent |
 
+#### Results, 2-D
+
+The same model with a 2-D state: `F = H = I_2`, `Q = q * I_2`, `R = r * I_2`.
+
+| parameter  | value       | meaning                              |
+| ---------- | ----------- | ------------------------------------ |
+| `q`        | 0.05        | process noise variance, per axis     |
+| `r`        | 0.5         | measurement noise variance, per axis |
+| `x0`, `P0` | [0, 0], I_2 | prior mean and covariance            |
+| timesteps  | 200         |                                      |
+
+`Q`, `R` and `P0` are all multiples of the identity, so the confidence regions
+are circles here. They only become proper ellipses once the two axes differ or
+couple, for example with different noise per axis such as would be the case in
+a coordinated turn (CT) model or constant velocity (CV) model.
+
+Figures below are the full 200-step run, seed 42. The problem: a hidden 2-D
+random walk (black, the dot is where it starts) and the noisy measurements of it
+(grey).
+
+![simulation, 2-D](result_figures/2d_1_simulation_200.png)
+
+The Kalman filter with a 95% confidence ellipse at six timesteps. The first
+ellipse is large because the prior is `P0 = I`; once measurements have come in
+it settles at a constant size.
+
+![filter, 2-D](result_figures/2d_2_filter_200.png)
+
+The RTS smoother over the same data. Its path is smoother and closer to the
+truth, and its ellipses are smaller, including at the start, where it can use
+every later measurement.
+
+![smoother, 2-D](result_figures/2d_3_smoother_200.png)
+
+Side by side over the first 50, 100 and all 200 timesteps. The shorter windows
+make the individual ellipses readable.
+
+![filter vs smoother, first 50 timesteps](result_figures/2d_4_filter_vs_smoother_50.png)
+
+![filter vs smoother, first 100 timesteps](result_figures/2d_4_filter_vs_smoother_100.png)
+
+![filter vs smoother, all 200 timesteps](result_figures/2d_4_filter_vs_smoother_200.png)
+
+|          | RMSE   | mean trace P |
+| -------- | ------ | ------------ |
+| filter   | 0.5450 | 0.2738       |
+| smoother | 0.3875 | 0.1583       |
+
+RMSE is taken over the Euclidean position error, so it counts both axes.
+
+#### Consistency, 2-D
+
+![NIS and NEES, 2-D](result_figures/2d_5_consistency.png)
+
+Same layout as the 1-D figure. Both statistics have 2 degrees of freedom, so the
+expected value is 2. The running mean needs a full 50-step window, so the first
+49 steps are not drawn, which is a quarter of this shorter run.
+
+| statistic      | value  | 95% band         | verdict    |
+| -------------- | ------ | ---------------- | ---------- |
+| ANIS           | 2.1678 | [1.7127, 2.3092] | consistent |
+| ANEES filter   | 2.1842 | [1.5081, 2.5602] | consistent |
+| ANEES smoother | 1.8951 | [1.5883, 2.4585] | consistent |
+
+ANIS and the filter's ANEES sit a little above 2 but inside their bands. This is
+a single 200-step run, so it is a sanity check; the Monte Carlo over seeds listed
+under Next is the proper test.
+
 #### Next
 
 - Mis-tune `q` or `r` in the filter while leaving the simulator alone, to show
   an inconsistent filter for contrast.
-- Go 2-D, which makes covariance ellipses possible (`np.linalg.eigh` on the
-  exported `P` blocks, scaled by `chi2.ppf(0.95, 2) = 5.991`).
 - Monte Carlo over seeds for proper consistency bands.
 - CV and CT models, then the forward-backward smoother.
 
