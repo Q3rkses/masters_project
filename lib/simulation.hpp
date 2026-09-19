@@ -8,6 +8,7 @@
 #define SIMULATION_HPP
 
 #include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 #include <random>
 #include <vector>
 
@@ -73,7 +74,7 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-  std::vector<Eigen::VectorXd> simulate(int timesteps);
+  std::vector<Eigen::VectorXd> simulate(const int timesteps);
 
 private:
   /**
@@ -88,72 +89,48 @@ private:
    * euler method or RK4.
    * @return returns a sample from the GWN distribution
    */
-  Eigen::VectorXd propagate_dynamics(Eigen::VectorXd x_previous);
+  Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd x_previous);
 
   Eigen::VectorXd mean_;       // the mean of the distribution
   Eigen::MatrixXd covariance_; // the variance of the distribution
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
-class ConstantVelocity {
+class GaussMarkov {
 public:
   /**
-   * @brief Constructor for the ConstantVelocity class.
+   * @brief Constructor for the GaussMarkov class.
    * @param model_config all configuration parameters that are
    * used by the constructor
    */
-  explicit ConstantVelocity(const SimulationConfig &simulation_config);
+  explicit GaussMarkov(const SimulationConfig &simulation_config);
 
   /**
-   * @brief Simulates a 2d particle following the constant velocity model
-   * @param timesteps, the amount of timesteps we simulate
-   * @return returns an array of samples
-   */
-
-  // simulate(timesteps) -> array of 2d points
-
-private:
-  /**
-   * @brief propagates the model by 1 timestep, could essentially be
-   * a numeric integration algorithm like explicit euler or RK4
-   * @return returns the next state given a previous state
-   */
-
-  // propagate_dynamics(x_previous)
-
-  // velocity // the velocity at which the partice is traveling at
-  std::mt19937_64 &rng; // the engine that draws from stochastic distributions
-};
-
-class CoordinatedTurn {
-public:
-  /**
-   * @brief Constructor for the CoordinatedTurn class.
-   * @param model_config all configuration parameters that are
-   * used by the constructor
-   */
-  explicit CoordinatedTurn(const SimulationConfig &simulation_config);
-
-  /**
-   * @brief Simulates a 2d particle following the coordinated turn model
+   * @brief Simulates a Gauss Markov process by utilizing the
+   * time constant and covariance, to calculate c and q.
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-
-  // simulate(timesteps) -> array of 2d points
+  std::vector<Eigen::VectorXd> simulate(const int timesteps);
 
 private:
   /**
-   * @brief propagates the model by 1 timestep, could essentially be
-   * a numeric integration algorithm like explicit euler or RK4
-   * @return returns the next state given a previous state
+   * @brief utilizes GM process to create a sample
+   * @return returns a sample from the GM process
    */
+  Eigen::VectorXd sample_from_distribution();
 
-  // propagate_dynamics(x_previous)
+  /**
+   * @brief propagates the system dynamics e.g by utilizing
+   * a numerical integration method such as the explicit
+   * euler method or RK4.
+   * @return returns a sample from the GWN distribution
+   */
+  Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd x_previous);
 
-  // velocity // the velocity at which the partice is traveling at
-  // turn_rate // the turn rate of the particle
-  std::mt19937_64 &rng; // the engine that draws from stochastic distributions
+  Eigen::MatrixXd covariance_;  // the I * variance of the GM proces
+  Eigen::VectorXd Timeconstant; // the timeconstant T, of the GM process
+  std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
 #endif

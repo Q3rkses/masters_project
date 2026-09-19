@@ -10,6 +10,7 @@
 #include "bayesian_filter.hpp"
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <memory>
 
 struct SmootherUpdate {
   Eigen::VectorXd x_smoothed;
@@ -19,7 +20,7 @@ struct SmootherUpdate {
 struct SmootherConfig {
   Eigen::VectorXd x_prior;
   Eigen::MatrixXd P_prior;
-  MotionModel motion_model;
+  std::shared_ptr<const MotionModel> motion_model;
 };
 
 /**
@@ -40,13 +41,16 @@ public:
    * @param filtered_current, x_updated and P_updated at timestep k, as
    * produced by the forward filter pass
    * @param predicted_next, x_predicted and P_predicted at timestep k+1
+   * @param input, the input the forward pass used when it predicted
+   * timestep k+1 from timestep k
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */
   virtual SmootherUpdate
   backward_recursion(const FilterUpdate &filtered_current,
                      const FilterPredict &predicted_next,
-                     const SmootherUpdate &smoothed_previous) = 0;
+                     const SmootherUpdate &smoothed_previous,
+                     const Input &input) = 0;
 };
 
 #endif

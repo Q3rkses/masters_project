@@ -10,6 +10,7 @@
 #include "bayesian_filter.hpp"
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <memory>
 
 class KalmanFilter final : public BayesianFilter {
 public:
@@ -25,10 +26,12 @@ public:
    * based on algorithm 1 in Fundamentals of Sensorfusion (Brekke, p.56)
    * utilizes the Joseph form for better numerical stability of P
    * @param x_current, the density of the current state
+   * @param input, the input to the system during this step
    * @return returns x_predicted, P_predicted
    */
-  FilterPredict predict(Eigen::VectorXd x_current,
-                        Eigen::MatrixXd P_current) override;
+  FilterPredict predict(const Eigen::VectorXd &x_current,
+                        const Eigen::MatrixXd &P_current,
+                        const Input &input) override;
 
   /**
    * @brief The update step in a Kalman Filter
@@ -36,14 +39,17 @@ public:
    * utilizes the Joseph form for better numerical stability of P
    * @param x_predicted, the density of the current prediction
    * @param z_current, the current measurement
+   * @param input, the input to the system during this step
    * @return returns x_updated, innovation, P_updated
    */
-  FilterUpdate update(Eigen::VectorXd x_predicted, Eigen::VectorXd z_current,
-                      Eigen::MatrixXd P_current) override;
+  FilterUpdate update(const Eigen::VectorXd &x_predicted,
+                      const Eigen::VectorXd &z_current,
+                      const Eigen::MatrixXd &P_current,
+                      const Input &input) override;
 
 private:
-  MotionModel motion_model_;
-  MeasurementModel measurement_model_;
+  std::shared_ptr<const MotionModel> motion_model_;
+  std::shared_ptr<const MeasurementModel> measurement_model_;
 };
 
 #endif

@@ -9,6 +9,7 @@
 
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <memory>
 
 struct FilterPredict {
   Eigen::VectorXd x_predicted;
@@ -25,8 +26,8 @@ struct FilterUpdate {
 struct FilterConfig {
   Eigen::VectorXd x_prior;
   Eigen::MatrixXd P_prior;
-  MotionModel motion_model;
-  MeasurementModel measurement_model;
+  std::shared_ptr<const MotionModel> motion_model;
+  std::shared_ptr<const MeasurementModel> measurement_model;
 };
 
 /**
@@ -45,12 +46,13 @@ public:
    * needs to be overridden by the filter that inherits
    * from the bayesian filter class
    * @param x_current, the density of the current state
+   * @param input, the input to the system during this step
    * @return returns x_predicted, P_predicted packaged in the FilterPredict
    * class
    */
   virtual FilterPredict
-  predict(Eigen::VectorXd x_current,
-          Eigen::MatrixXd P_current) = 0; // -> x_predicted, P_predicted
+  predict(const Eigen::VectorXd &x_current, const Eigen::MatrixXd &P_current,
+          const Input &input) = 0; // -> x_predicted, P_predicted
 
   /**
    * @brief The update step in a Bayesian Filter
@@ -58,12 +60,14 @@ public:
    * from the bayesian filter class
    * @param x_predicted, the density of the current prediction
    * @param z_current, the current measurement
+   * @param input, the input to the system during this step
    * @return returns x_updated, innovation, P_updated packaged in the
    * FilterUpdate class
    */
-  virtual FilterUpdate update(
-      Eigen::VectorXd x_predicted, Eigen::VectorXd z_current,
-      Eigen::MatrixXd P_predicted) = 0; // -> x_updated, innovation, P_updated
+  virtual FilterUpdate
+  update(const Eigen::VectorXd &x_predicted, const Eigen::VectorXd &z_current,
+         const Eigen::MatrixXd &P_predicted,
+         const Input &input) = 0; // -> x_updated, innovation, P_updated
 };
 
 #endif

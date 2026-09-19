@@ -3,17 +3,28 @@
 #include "bayesian_smoother.hpp"
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <stdexcept>
 
 RTSSmoother::RTSSmoother(const SmootherConfig &smoother_config)
-    : motion_model_(smoother_config.motion_model) {};
+    : motion_model_(smoother_config.motion_model) {
+  if (!motion_model_) {
+    throw std::invalid_argument(
+        "RTSSmoother: the smoother config needs a motion model");
+  }
+};
 
 SmootherUpdate
 RTSSmoother::backward_recursion(const FilterUpdate &filtered_current,
                                 const FilterPredict &predicted_next,
-                                const SmootherUpdate &smoothed_previous) {
+                                const SmootherUpdate &smoothed_previous,
+                                const Input &input) {
+  // F is evaluated at the filtered state, with the same input the forward
+  // pass used for this transition, so it is the F the filter linearized at.
+  Eigen::MatrixXd F = motion_model_->F(filtered_current.x_updated, input);
+
   // solving linear system is faster and more algebraically stable than
   // matrix inversion.
-  Eigen::MatrixXd FP = motion_model_.F * filtered_current.P_updated;
+  Eigen::MatrixXd FP = F * filtered_current.P_updated;
   Eigen::MatrixXd W =
       predicted_next.P_predicted.ldlt().solve(FP).transpose();
 

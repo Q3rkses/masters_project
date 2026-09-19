@@ -11,6 +11,8 @@ find_package(Eigen3 REQUIRED)
 
 add_library(kalman_lib
   src/models.cpp
+  src/linear_models.cpp
+  src/nonlinear_models.cpp
   src/kalman_filter.cpp
   src/rauch_tung_striebel_smoother.cpp
   src/simulation.cpp

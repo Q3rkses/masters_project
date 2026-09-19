@@ -11,6 +11,7 @@
 #include "bayesian_smoother.hpp"
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <memory>
 
 class RTSSmoother final : public BayesianSmoother {
 public:
@@ -27,16 +28,19 @@ public:
    * @param filtered_current, x_updated and P_updated at timestep k as
    * produced by the forward filter pass
    * @param predicted_next, x_predicted and P_predicted at timestep k+1
+   * @param input, the input the forward pass used when it predicted
+   * timestep k+1 from timestep k
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */
   SmootherUpdate
   backward_recursion(const FilterUpdate &filtered_current,
                      const FilterPredict &predicted_next,
-                     const SmootherUpdate &smoothed_previous) override;
+                     const SmootherUpdate &smoothed_previous,
+                     const Input &input) override;
 
 private:
-  MotionModel motion_model_;
+  std::shared_ptr<const MotionModel> motion_model_;
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "kalman_filter.hpp"
+#include "linear_models.hpp"
 #include "models.hpp"
 #include "rauch_tung_striebel_smoother.hpp"
 #include "results.hpp"
@@ -8,6 +9,7 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <random>
 #include <vector>
 
@@ -35,8 +37,9 @@ int main() {
       .R = r * Eigen::MatrixXd::Identity(dim, dim),
   };
 
-  MotionModel motion_model(model_config);
-  MeasurementModel measurement_model(model_config);
+  auto motion_model = std::make_shared<LinearMotionModel>(model_config);
+  auto measurement_model =
+      std::make_shared<LinearMeasurementModel>(model_config);
 
   FilterConfig filter_config{
       .x_prior = x0,
@@ -84,12 +87,15 @@ int main() {
   KalmanFilter kalman_filter(filter_config);
   FilterResult filter_result(filter_config);
 
+  // the random walk has no input, so the models get an all zeros input
+  const Input input;
+
   Eigen::VectorXd x = filter_config.x_prior;
   Eigen::MatrixXd P = filter_config.P_prior;
   for (int k = 0; k < timesteps; k++) {
-    FilterPredict prediction = kalman_filter.predict(x, P);
+    FilterPredict prediction = kalman_filter.predict(x, P, input);
     FilterUpdate update = kalman_filter.update(
-        prediction.x_predicted, measurements[k], prediction.P_predicted);
+        prediction.x_predicted, measurements[k], prediction.P_predicted, input);
     filter_result.add(prediction, update);
     x = update.x_updated;
     P = update.P_updated;
@@ -105,7 +111,7 @@ int main() {
                                            updates[timesteps - 1].P_updated};
   for (int k = timesteps - 2; k >= 0; k--) {
     smoothed[k] = rts_smoother.backward_recursion(
-        updates[k], predictions[k + 1], smoothed[k + 1]);
+        updates[k], predictions[k + 1], smoothed[k + 1], input);
   }
 
   SmootherResult smoother_result(smoother_config);
