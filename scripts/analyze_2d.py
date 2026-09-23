@@ -98,6 +98,15 @@ def draw_estimate(axis, indices, x, P, color, label):
             label=f"{label} 95%" if count == 0 else None))
 
 
+def draw_variance(axis, k, P_filter, P_smoother):
+    """Filter vs smoother trace(P), the 2-D analogue of Sarkka figure 12.2."""
+    trace = lambda P: np.trace(P, axis1=1, axis2=2)
+    axis.plot(k, trace(P_filter), color=FILTER, linewidth=1.5, label="filter trace(P)")
+    axis.plot(k, trace(P_smoother), color=SMOOTHER, linewidth=1.5, label="smoother trace(P)")
+    axis.set_title("Filter vs smoother variance", loc="left")
+    axis.set_ylabel("trace(P) = x variance + y variance")
+
+
 def finish(axis):
     axis.legend(loc="best", frameon=False, fontsize=9)
 
@@ -230,6 +239,21 @@ def main():
         axis.spines[["top", "right"]].set_visible(False)
         finish(axis)
     figures["2d_5_consistency.png"] = figure
+
+    figure, axis = plt.subplots(figsize=(11, 5))
+    axis.set_xlabel("timestep")
+    axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
+    axis.set_axisbelow(True)
+    axis.spines[["top", "right"]].set_visible(False)
+    draw_variance(axis, k, P_filter, P_smoother)
+    finish(axis)
+    figures["2d_6_variance.png"] = figure
+
+    trace_filter, trace_smoother = np.trace(P_filter, axis1=1, axis2=2), np.trace(P_smoother, axis1=1, axis2=2)
+    always_smaller = np.all(trace_smoother <= trace_filter + 1e-9)
+    final_equal = np.isclose(trace_smoother[-1], trace_filter[-1])
+    print(f"\nsmoother trace(P) <= filter trace(P) at every step: {always_smaller}")
+    print(f"equal at the final step: {final_equal}")
 
     print()
     for name, figure in figures.items():

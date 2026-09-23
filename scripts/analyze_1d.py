@@ -62,6 +62,14 @@ def draw_estimate(axis, k, x, P, color, label):
     axis.plot(k, x, color=color, linewidth=1.5, label=label, zorder=3)
 
 
+def draw_variance(axis, k, P_filter, P_smoother):
+    """Filter vs smoother variance, as in Sarkka figure 12.2."""
+    axis.plot(k, P_filter, color=FILTER, linewidth=1.5, label="filter variance")
+    axis.plot(k, P_smoother, color=SMOOTHER, linewidth=1.5, label="smoother variance")
+    axis.set_title("Filter vs smoother variance", loc="left")
+    axis.set_ylabel("variance")
+
+
 def finish(axis):
     axis.legend(loc="best", frameon=False, fontsize=9)
 
@@ -186,6 +194,16 @@ def main():
         axis.spines[["top", "right"]].set_visible(False)
         finish(axis)
     figures["5_consistency.png"] = figure
+
+    figure, axis = new_figure("Filter vs smoother variance", ylabel="variance")
+    draw_variance(axis, k, P_filter, P_smoother)
+    finish(axis)
+    figures["6_variance.png"] = figure
+
+    always_smaller = np.all(P_smoother <= P_filter + 1e-12)
+    final_equal = np.isclose(P_smoother[-1], P_filter[-1])
+    print(f"\nsmoother variance <= filter variance at every step: {always_smaller}")
+    print(f"equal at the final step: {final_equal}")
 
     print()
     for name, figure in figures.items():

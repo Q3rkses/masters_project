@@ -106,6 +106,17 @@ the filter's (its variance is about 58% of the filter's).
 
 The smoother's RMSE is 25% lower and its mean `P` is 42% lower.
 
+## Filter vs smoother variance
+
+![filter vs smoother variance](figures/6_variance.png)
+
+The smoother's reported variance is never larger than the filter's, and the two
+are equal at the final timestep, matching Figure 12.2 in Sarkka's _Bayesian
+Filtering and Smoothing_ for this exact example (a Gaussian random walk).
+It's a property of the RTS recursion itself, since the smoother's covariance
+update only ever subtracts a positive semi-definite term from the filter's, so
+therefore it's more of a check on the implementation, not on the data.
+
 ## Consistency
 
 ![NIS and NEES](figures/5_consistency.png)

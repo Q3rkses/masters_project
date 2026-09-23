@@ -113,6 +113,18 @@ make the individual ellipses readable.
 RMSE is taken over the Euclidean position error, so it counts both axes. The
 smoother's RMSE is 29% lower and its mean `trace(P)` is 42% lower.
 
+## Filter vs smoother variance
+
+![filter vs smoother variance](figures/2d_6_variance.png)
+
+The 2-D analogue of Figure 12.2 in Sarkka's _Bayesian Filtering and Smoothing_:
+`trace(P)` (the sum of the x and y variance) is never larger for the smoother
+than for the filter, and the two are equal at the final timestep, same as in
+[the 1-D run](../1D/README.md). The plotted quantity here is `trace(P)`, but
+the full statement is stronger and also holds here: `P_filter - P_smoother`
+is positive semi-definite at every timestep so the smoother's confidence
+ellipse is contained in the filter's one every axis, not only on average.
+
 ## Consistency
 
 ![NIS and NEES](figures/2d_5_consistency.png)
