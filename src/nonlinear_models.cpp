@@ -27,7 +27,7 @@ Eigen::VectorXd
 StrapdownINS2D::composition_plus(const Eigen::VectorXd &state,
                                  const Eigen::VectorXd &delta) const {
   Eigen::VectorXd result = state + delta;
-  result(4) = ssa(result(4));
+  result(2) = ssa(result(2));
   return result;
 }
 
@@ -35,6 +35,6 @@ Eigen::VectorXd
 StrapdownINS2D::composition_minus(const Eigen::VectorXd &state_a,
                                   const Eigen::VectorXd &state_b) const {
   Eigen::VectorXd result = state_a - state_b;
-  result(4) = ssa(result(4));
+  result(2) = ssa(result(2));
   return result;
 }

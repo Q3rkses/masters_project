@@ -35,9 +35,9 @@ public:
 
   double x_;
   double y_;
+  double psi_;
   double u_;
   double v_;
-  double psi_;
   double bias_accelerometer_x_;
   double bias_accelerometer_y_;
   double bias_gyro_psi_;
@@ -105,6 +105,8 @@ public:
 
 private:
   double dt_;
+  Eigen::VectorXd gyro_noise;
+  Eigen::VectorXd imu_noise;
   // the noise densities and the Gauss-Markov parameters (time constants and
   // sigmas) will be added here
 };
