@@ -49,7 +49,6 @@ public:
    * @brief Constructor for the StrapdownINS2D class.
    * @param dt the time between two IMU samples in seconds, which is
    * assumed to be fixed
-   * @throws std::invalid_argument if dt is not positive
    */
   explicit StrapdownINS2D(double dt);
 
@@ -59,7 +58,6 @@ public:
    * I.e 2 for position, 2 for speed, 1 heading, 2 bias accel, 1 bias gyro
    * @param state, the state of the system
    * @param input, the IMU input to the system, [a_x, a_y, omega_psi]
-   * @throws std::logic_error since it is not implemented yet
    */
   Eigen::VectorXd f(const Eigen::VectorXd &state,
                     const Input &input) const override;
@@ -68,7 +66,6 @@ public:
    * @brief Gets F, the Jacobian of f evaluated at the state and input
    * @param state, the state of the system
    * @param input, the IMU input to the system
-   * @throws std::logic_error since it is not implemented yet
    */
   Eigen::MatrixXd F(const Eigen::VectorXd &state,
                     const Input &input) const override;
@@ -78,10 +75,33 @@ public:
    * and the input
    * @param state, the state of the system
    * @param input, the IMU input to the system
-   * @throws std::logic_error since it is not implemented yet
    */
   Eigen::MatrixXd Q(const Eigen::VectorXd &state,
                     const Input &input) const override;
+
+  /**
+   * @brief The composition operator of the 2D strapdown INS
+   * model, which is defined in order to respect the manifold
+   * that the state lies on.
+   * @param state, the state of the system
+   * @param delta, the pertrubation of the state
+   * @return the composed state
+   */
+  virtual Eigen::VectorXd
+  composition_plus(const Eigen::VectorXd &state,
+                   const Eigen::VectorXd &delta) const override;
+
+  /**
+   * @brief The composition operator of the 2D strapdown INS
+   * model, which is defined in order to respect the manifold
+   * that the state lies on.
+   * @param state_a, the state we subtract from
+   * @param state_b, the state we subtract
+   * @return the delta between the two states
+   */
+  virtual Eigen::VectorXd
+  composition_minus(const Eigen::VectorXd &state_a,
+                    const Eigen::VectorXd &state_b) const override;
 
 private:
   double dt_;

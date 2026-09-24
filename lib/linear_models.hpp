@@ -1,7 +1,7 @@
 /**
  * @file linear_models.hpp
  * @brief contains the linear motion and measurement models, where
- * f(x) = F x and h(x) = H x, so the Jacobians are the matrices themselves
+ * f(x) = Fx and h(x) = Hx, so the Jacobians are the matrices themselves
  */
 
 #ifndef LINEAR_MODELS_HPP
@@ -9,6 +9,7 @@
 
 #include "models.hpp"
 #include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 
 struct ModelConfig {
   Eigen::MatrixXd F;
@@ -51,6 +52,29 @@ public:
   Eigen::MatrixXd Q(const Eigen::VectorXd &state,
                     const Input &input) const override;
 
+  /**
+   * @brief implements the generic composition operator which will
+   * for linear models not including angles in the state always be
+   * the default + operator
+   * @param state, the state of the system
+   * @param delta, the pertrubation of the state
+   * @return the composed state
+   */
+  Eigen::VectorXd composition_plus(const Eigen::VectorXd &state,
+                                   const Eigen::VectorXd &delta) const override;
+
+  /**
+   * @brief implements the generic composition operator which will
+   * for linear models not including angles in the state always be
+   * the default - operator
+   * @param state_a, the state we subtract from
+   * @param state_b, the state we subtract
+   * @return the delta between the two states
+   */
+  Eigen::VectorXd
+  composition_minus(const Eigen::VectorXd &state_a,
+                    const Eigen::VectorXd &state_b) const override;
+
 private:
   Eigen::MatrixXd F_matrix_;
   Eigen::MatrixXd Q_matrix_;
@@ -89,6 +113,29 @@ public:
    */
   Eigen::MatrixXd R(const Eigen::VectorXd &state,
                     const Input &input) const override;
+
+  /**
+   * @brief implements the generic composition operator which will
+   * for linear models not including angles in the state always be
+   * the default + operator
+   * @param measurement, the measurement of the system
+   * @param delta, the pertrubation of the state
+   * @return the composed measurement
+   */
+  Eigen::VectorXd composition_plus(const Eigen::VectorXd &measurement,
+                                   const Eigen::VectorXd &delta) const override;
+
+  /**
+   * @brief implements the generic composition operator which will
+   * for linear models not including angles in the state always be
+   * the default - operator
+   * @param measurement_a, the measurement we subtract from
+   * @param measurement_b, the measurement we subtract
+   * @return the delta between the two measurements
+   */
+  Eigen::VectorXd
+  composition_minus(const Eigen::VectorXd &measurement_a,
+                    const Eigen::VectorXd &measurement_b) const override;
 
 private:
   Eigen::MatrixXd H_matrix_;

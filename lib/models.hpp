@@ -71,6 +71,28 @@ public:
    */
   virtual Eigen::MatrixXd Q(const Eigen::VectorXd &state,
                             const Input &input) const = 0;
+
+  /**
+   * @brief The generic composition operator that the motion
+   * model has to define in order to respect the manifold
+   * @param state, the state of the system
+   * @param delta, the pertrubation of the state
+   * @return the composed state
+   */
+  virtual Eigen::VectorXd
+  composition_plus(const Eigen::VectorXd &state,
+                   const Eigen::VectorXd &delta) const = 0;
+
+  /**
+   * @brief The generic composition operator that the motion
+   * model has to define in order to respect the manifold
+   * @param state_a, the state we subtract from
+   * @param state_b, the state we subtract
+   * @return the delta between the two states
+   */
+  virtual Eigen::VectorXd
+  composition_minus(const Eigen::VectorXd &state_a,
+                    const Eigen::VectorXd &state_b) const = 0;
 };
 
 class MeasurementModel {
@@ -102,6 +124,28 @@ public:
    */
   virtual Eigen::MatrixXd R(const Eigen::VectorXd &state,
                             const Input &input) const = 0;
+
+  /**
+   * @brief The generic composition operator that the motion
+   * model has to define in order to respect the manifold
+   * @param state, the state of the system
+   * @param delta, the pertrubation of the state
+   * @return the composed state
+   */
+  virtual Eigen::VectorXd
+  composition_plus(const Eigen::VectorXd &state,
+                   const Eigen::VectorXd &delta) const = 0;
+
+  /**
+   * @brief The generic composition operator that the motion
+   * model has to define in order to respect the manifold
+   * @param state_a, the state we subtract from
+   * @param state_b, the state we subtract
+   * @return the delta between the two states
+   */
+  virtual Eigen::VectorXd
+  composition_minus(const Eigen::VectorXd &state_a,
+                    const Eigen::VectorXd &state_b) const = 0;
 };
 
 #endif

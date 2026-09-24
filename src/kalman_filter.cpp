@@ -34,7 +34,11 @@ FilterUpdate KalmanFilter::update(const Eigen::VectorXd &x_predicted,
   Eigen::MatrixXd R = measurement_model_->R(x_predicted, input);
 
   Eigen::VectorXd z_predicted = measurement_model_->h(x_predicted, input);
-  Eigen::VectorXd innovation = z_current - z_predicted;
+
+  // remember to use the proper compostion operation, rather than
+  // the default + or - operator when dealing with states / measurements
+  Eigen::VectorXd innovation =
+      measurement_model_->composition_minus(z_current, z_predicted);
 
   Eigen::MatrixXd PHt = P_predicted * H.transpose();
   Eigen::MatrixXd S = H * PHt + R;
@@ -43,7 +47,10 @@ FilterUpdate KalmanFilter::update(const Eigen::VectorXd &x_predicted,
   // invering because it is cheaper and more stable
   Eigen::MatrixXd W = S.ldlt().solve(PHt.transpose()).transpose();
 
-  Eigen::VectorXd x_updated = x_predicted + W * innovation;
+  // remember to use the proper compostion operation, rather than
+  // the default + or - operator when dealing with states / measurements
+  Eigen::VectorXd x_updated =
+      motion_model_->composition_plus(x_predicted, W * innovation);
 
   // Joseph form: (I - WH) P (I - WH)^T + W R W^T. Algebraically equal to the
   // textbook (I - WH) P, but always positive definite

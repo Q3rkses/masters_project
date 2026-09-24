@@ -26,6 +26,18 @@ Eigen::MatrixXd LinearMotionModel::Q(const Eigen::VectorXd &,
   return Q_matrix_;
 }
 
+Eigen::VectorXd
+LinearMotionModel::composition_plus(const Eigen::VectorXd &state,
+                                    const Eigen::VectorXd &delta) const {
+  return state + delta;
+}
+
+Eigen::VectorXd
+LinearMotionModel::composition_minus(const Eigen::VectorXd &state_a,
+                                     const Eigen::VectorXd &state_b) const {
+  return state_a - state_b;
+}
+
 LinearMeasurementModel::LinearMeasurementModel(const ModelConfig &model_config)
     : H_matrix_(model_config.H), R_matrix_(model_config.R) {
   if (R_matrix_.rows() != H_matrix_.rows() ||
@@ -48,4 +60,16 @@ Eigen::MatrixXd LinearMeasurementModel::H(const Eigen::VectorXd &,
 Eigen::MatrixXd LinearMeasurementModel::R(const Eigen::VectorXd &,
                                           const Input &) const {
   return R_matrix_;
+}
+
+Eigen::VectorXd
+LinearMeasurementModel::composition_plus(const Eigen::VectorXd &measurement,
+                                         const Eigen::VectorXd &delta) const {
+  return measurement + delta;
+}
+
+Eigen::VectorXd
+LinearMeasurementModel::composition_minus(const Eigen::VectorXd &measurement_a,
+                                          const Eigen::VectorXd &measurement_b) const {
+  return measurement_a - measurement_b;
 }
