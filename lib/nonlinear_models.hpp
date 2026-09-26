@@ -54,7 +54,7 @@ public:
 
   /**
    * @brief Gets f for a 2d particle following a strapdown INS model.
-   * The model has 8 states, [x, y, u, w, psi, b_x, b_y, b_psi].
+   * The model has 8 states, [x, y, psi, u, w, b_x, b_y, b_psi].
    * I.e 2 for position, 2 for speed, 1 heading, 2 bias accel, 1 bias gyro
    * @param state, the state of the system
    * @param input, the IMU input to the system, [a_x, a_y, omega_psi]
@@ -105,10 +105,23 @@ public:
 
 private:
   double dt_;
-  Eigen::VectorXd gyro_noise;
-  Eigen::VectorXd imu_noise;
-  // the noise densities and the Gauss-Markov parameters (time constants and
-  // sigmas) will be added here
+
+  Eigen::VectorXd accelerometer_gwn;
+  Eigen::VectorXd gyro_gwn;
+
+  // Accelerometer Noise in the pessimistic case
+  Eigen::VectorXd accelerometer_random_walk_variance_;
+
+  // Accelerometer Noise in a more realistic case
+  Eigen::VectorXd accelerometer_gauss_markov_variance_;
+  Eigen::VectorXd accelerometer_gauss_markov_timeconstant_;
+
+  // Gyro Noise in the pessimistic case
+  Eigen::VectorXd gyro_random_walk_variance_;
+
+  // Gyro Noise in a more realistic case
+  Eigen::VectorXd gyro_gauss_markov_variance_;
+  Eigen::VectorXd gyro_gauss_markov_timeconstant_;
 };
 
 #endif

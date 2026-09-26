@@ -16,6 +16,7 @@ struct SimulationConfig {
   std::mt19937_64 &rng;
   Eigen::MatrixXd covariance;
   Eigen::VectorXd mean;
+  Eigen::VectorXd timeconstant;
 };
 
 /**
@@ -128,8 +129,8 @@ private:
    */
   Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd x_previous);
 
-  Eigen::MatrixXd covariance_;  // the I * variance of the GM proces
-  Eigen::VectorXd Timeconstant; // the timeconstant T, of the GM process
+  Eigen::MatrixXd covariance_;   // the I * variance of the GM proces
+  Eigen::VectorXd timeconstant_; // the timeconstant T, of the GM process
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 

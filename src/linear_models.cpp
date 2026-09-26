@@ -68,8 +68,8 @@ LinearMeasurementModel::composition_plus(const Eigen::VectorXd &measurement,
   return measurement + delta;
 }
 
-Eigen::VectorXd
-LinearMeasurementModel::composition_minus(const Eigen::VectorXd &measurement_a,
-                                          const Eigen::VectorXd &measurement_b) const {
+Eigen::VectorXd LinearMeasurementModel::composition_minus(
+    const Eigen::VectorXd &measurement_a,
+    const Eigen::VectorXd &measurement_b) const {
   return measurement_a - measurement_b;
 }
