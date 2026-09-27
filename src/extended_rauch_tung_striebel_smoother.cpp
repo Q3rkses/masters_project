@@ -26,9 +26,12 @@ SmootherUpdate ERTSSmoother::backward_recursion(
   Eigen::MatrixXd W = predicted_next.P_predicted.ldlt().solve(FP).transpose();
 
   // assemble the smoother equations from Algorithm 13.1
+  // remember to use the proper compostion operation, rather than
+  // the default + or - operator when dealing with states
+  Eigen::VectorXd delta = motion_model_->composition_minus(
+      smoothed_previous.x_smoothed, predicted_next.x_predicted);
   Eigen::VectorXd x_smoothed =
-      filtered_current.x_updated +
-      W * (smoothed_previous.x_smoothed - predicted_next.x_predicted);
+      motion_model_->composition_plus(filtered_current.x_updated, W * delta);
   Eigen::MatrixXd P_smoothed =
       filtered_current.P_updated +
       W * (smoothed_previous.P_smoothed - predicted_next.P_predicted) *

@@ -10,6 +10,18 @@
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 
+struct INS2DConfig {
+  double dt;
+  double gyro_time_constant;
+  Eigen::Vector2d accelerometer_time_constant;
+  double gyro_noise_variance; // Gauss-Markov bias driving noise
+  Eigen::Vector2d
+      accelerometer_noise_variance; // Gauss-Markov bias driving noise
+  double gyro_random_walk_variance; // simpler, non-decaying bias
+  Eigen::Vector2d
+      accelerometer_random_walk_variance; // simpler, non-decaying bias
+};
+
 class State {
 public:
   /**
@@ -50,7 +62,7 @@ public:
    * @param dt the time between two IMU samples in seconds, which is
    * assumed to be fixed
    */
-  explicit StrapdownINS2D(double dt);
+  explicit StrapdownINS2D(const INS2DConfig &config);
 
   /**
    * @brief Gets f for a 2d particle following a strapdown INS model.
@@ -106,22 +118,18 @@ public:
 private:
   double dt_;
 
-  Eigen::VectorXd accelerometer_gwn;
-  Eigen::VectorXd gyro_gwn;
+  // Accelerometer bias, modeled as Gauss-Markov
+  Eigen::Vector2d accelerometer_gauss_markov_variance_;
+  Eigen::Vector2d accelerometer_gauss_markov_timeconstant_;
 
-  // Accelerometer Noise in the pessimistic case
-  Eigen::VectorXd accelerometer_random_walk_variance_;
+  // Gyro bias, modeled as Gauss-Markov
+  double gyro_gauss_markov_variance_;
+  double gyro_gauss_markov_timeconstant_;
 
-  // Accelerometer Noise in a more realistic case
-  Eigen::VectorXd accelerometer_gauss_markov_variance_;
-  Eigen::VectorXd accelerometer_gauss_markov_timeconstant_;
-
-  // Gyro Noise in the pessimistic case
-  Eigen::VectorXd gyro_random_walk_variance_;
-
-  // Gyro Noise in a more realistic case
-  Eigen::VectorXd gyro_gauss_markov_variance_;
-  Eigen::VectorXd gyro_gauss_markov_timeconstant_;
+  // Accelerometer bias, simpler non-decaying (random walk) alternative
+  Eigen::Vector2d accelerometer_random_walk_variance_;
+  // Gyro bias, simpler non-decaying (random walk) alternative
+  double gyro_random_walk_variance_;
 };
 
 #endif

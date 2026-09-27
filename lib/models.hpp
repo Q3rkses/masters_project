@@ -93,6 +93,12 @@ public:
   virtual Eigen::VectorXd
   composition_minus(const Eigen::VectorXd &state_a,
                     const Eigen::VectorXd &state_b) const = 0;
+
+  /**
+   * @brief A simple function that linear models can override and return
+   * true if and only if the model is truly linear.
+   */
+  virtual bool is_linear() const { return false; }
 };
 
 class MeasurementModel {
@@ -146,6 +152,12 @@ public:
   virtual Eigen::VectorXd
   composition_minus(const Eigen::VectorXd &state_a,
                     const Eigen::VectorXd &state_b) const = 0;
+
+  /**
+   * @brief A simple function that linear models can override and return
+   * true if and only if the model is truly linear.
+   */
+  virtual bool is_linear() const { return false; }
 };
 
 #endif

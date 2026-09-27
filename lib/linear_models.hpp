@@ -75,6 +75,11 @@ public:
   composition_minus(const Eigen::VectorXd &state_a,
                     const Eigen::VectorXd &state_b) const override;
 
+  /**
+   * @brief A LinearMotionModel is exactly linear by construction.
+   */
+  bool is_linear() const override;
+
 private:
   Eigen::MatrixXd F_matrix_;
   Eigen::MatrixXd Q_matrix_;
@@ -136,6 +141,11 @@ public:
   Eigen::VectorXd
   composition_minus(const Eigen::VectorXd &measurement_a,
                     const Eigen::VectorXd &measurement_b) const override;
+
+  /**
+   * @brief A LinearMeasurementModel is exactly linear by construction.
+   */
+  bool is_linear() const override;
 
 private:
   Eigen::MatrixXd H_matrix_;

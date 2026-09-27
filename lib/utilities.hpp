@@ -44,19 +44,35 @@ inline Eigen::VectorXd ssa(const Eigen::VectorXd &angles) {
  * @param state, the state of the system
  * @return the rotated state vector
  */
-inline State Rotate_Z_2D(const State &state) {
+inline Eigen::Vector2d rotate_z_2D(const double x, const double y,
+                                   const double psi) {
+  Eigen::Vector2d initial_position = {x, y};
 
-  Eigen::Vector2d initial_position{state.x_, state.y_};
   Eigen::Matrix2d rotation_matrix_z;
-  rotation_matrix_z << std::cos(state.psi_), -std::sin(state.psi_),
-      std::sin(state.psi_), std::cos(state.psi_);
+  rotation_matrix_z << std::cos(psi), -std::sin(psi), std::sin(psi),
+      std::cos(psi);
 
   Eigen::Vector2d rotated_position = rotation_matrix_z * initial_position;
 
-  State rotated_state = state;
-  rotated_state.x_ = rotated_position(0);
-  rotated_state.y_ = rotated_position(1);
-  return rotated_state;
+  return rotated_position;
+}
+
+/**
+ * @brief applies the 2D rotation matrix about the z-axis
+ * @param state, the state of the system
+ * @return the rotated state vector
+ */
+inline Eigen::Vector2d derivative_rotate_z_2D(const double x, const double y,
+                                              const double psi) {
+  Eigen::Vector2d initial_position = {x, y};
+
+  Eigen::Matrix2d rotation_matrix_z;
+  rotation_matrix_z << -std::sin(psi), -std::cos(psi), std::cos(psi),
+      -std::sin(psi);
+
+  Eigen::Vector2d rotated_position = rotation_matrix_z * initial_position;
+
+  return rotated_position;
 }
 
 /**
@@ -64,7 +80,7 @@ inline State Rotate_Z_2D(const State &state) {
  * @param state, the state of the system
  * @return the rotated state vector
  */
-// inline State Rotate_X(const State &state) {
+// inline State rotate_x(const State &state) {
 //
 //   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
 //   state.z}; Eigen::Matrix3d rotation_matrix_x =
@@ -80,7 +96,7 @@ inline State Rotate_Z_2D(const State &state) {
  * @param state, the state of the system
  * @return the rotated state vector
  */
-// inline State Rotate_Y(const State &state) {
+// inline State rotate_y(const State &state) {
 //
 //   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
 //   state.z}; Eigen::Matrix2d rotation_matrix_y =
@@ -96,7 +112,7 @@ inline State Rotate_Z_2D(const State &state) {
  * @param state, the state of the system
  * @return the rotated state vector
  */
-// inline State Rotate_Z(const State &state) {
+// inline State rotate_z(const State &state) {
 //
 //   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
 //   state.z}; Eigen::Matrix2d rotation_matrix_z =

@@ -38,6 +38,8 @@ LinearMotionModel::composition_minus(const Eigen::VectorXd &state_a,
   return state_a - state_b;
 }
 
+bool LinearMotionModel::is_linear() const { return true; }
+
 LinearMeasurementModel::LinearMeasurementModel(const ModelConfig &model_config)
     : H_matrix_(model_config.H), R_matrix_(model_config.R) {
   if (R_matrix_.rows() != H_matrix_.rows() ||
@@ -73,3 +75,5 @@ Eigen::VectorXd LinearMeasurementModel::composition_minus(
     const Eigen::VectorXd &measurement_b) const {
   return measurement_a - measurement_b;
 }
+
+bool LinearMeasurementModel::is_linear() const { return true; }

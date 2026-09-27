@@ -12,6 +12,11 @@ KalmanFilter::KalmanFilter(const FilterConfig &filter_config)
         "KalmanFilter: the filter config needs both a motion and a "
         "measurement model");
   }
+  if (!motion_model_->is_linear() || !measurement_model_->is_linear()) {
+    throw std::invalid_argument(
+        "KalmanFilter requires linear motion and measurement models; use "
+        "ExtendedKalmanFilter for nonlinear models such as StrapdownINS2D");
+  }
 };
 
 FilterPredict KalmanFilter::predict(const Eigen::VectorXd &x_current,
