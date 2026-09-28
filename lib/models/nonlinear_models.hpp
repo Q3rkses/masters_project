@@ -6,7 +6,7 @@
 #ifndef NONLINEAR_MODELS_HPP
 #define NONLINEAR_MODELS_HPP
 
-#include "models.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 
 /**

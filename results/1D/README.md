@@ -30,7 +30,7 @@ z_k = x_k     + v_k,   v_k ~ N(0, r)    ->   H = 1, R = r
 | `x0`, `p0` | 0.0, 1.0 | prior mean and variance    |
 | timesteps  | 1000     |                            |
 
-- `q` and `r` are declared once in `main.cpp` and handed to both the simulator
+- `q` and `r` are declared once in `configs/random_walk_1d.yaml` and handed to both the simulator
   and the filter, so the filter's model matches the truth by construction.
 - The true initial state is drawn from the prior `N(x0, p0)`, so the prior is
   honest from the first step.
@@ -46,8 +46,7 @@ To regenerate the figures and statistics from the stored data:
 python3 scripts/analyze_1d.py results/1D/data
 ```
 
-To regenerate the data as well, set `dim = 1` and `timesteps = 1000` at the top
-of `main()` in `src/main.cpp`, then:
+To regenerate the data as well, point `main.cpp` at `configs/random_walk_1d.yaml`, then:
 
 ```bash
 cmake --build build && ./build/kalman_filtering_and_smoothing   # writes data/

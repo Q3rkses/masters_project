@@ -1,23 +1,27 @@
-#include "extended_kalman_filter.hpp"
-#include "bayesian_filter.hpp"
-#include "models.hpp"
+#include "filters/kalman_filter.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <stdexcept>
 
-ExtendedKalmanFilter::ExtendedKalmanFilter(const FilterConfig &filter_config)
+KalmanFilter::KalmanFilter(const FilterConfig &filter_config)
     : motion_model_(filter_config.motion_model),
       measurement_model_(filter_config.measurement_model) {
   if (!motion_model_ || !measurement_model_) {
     throw std::invalid_argument(
-        "ExtendedKalmanFilter: the filter config needs both a motion and a "
+        "KalmanFilter: the filter config needs both a motion and a "
         "measurement model");
+  }
+  if (!motion_model_->is_linear() || !measurement_model_->is_linear()) {
+    throw std::invalid_argument(
+        "KalmanFilter requires linear motion and measurement models; use "
+        "ExtendedKalmanFilter for nonlinear models such as StrapdownINS2D");
   }
 };
 
-FilterPredict ExtendedKalmanFilter::predict(const Eigen::VectorXd &x_current,
-                                            const Eigen::MatrixXd &P_current,
-                                            const Input &input) {
-
+FilterPredict KalmanFilter::predict(const Eigen::VectorXd &x_current,
+                                    const Eigen::MatrixXd &P_current,
+                                    const Input &input) {
   Eigen::MatrixXd F = motion_model_->F(x_current, input);
   Eigen::VectorXd x_predicted = motion_model_->f(x_current, input);
   Eigen::MatrixXd P_predicted =
@@ -26,10 +30,10 @@ FilterPredict ExtendedKalmanFilter::predict(const Eigen::VectorXd &x_current,
   return filter_prediction;
 }
 
-FilterUpdate ExtendedKalmanFilter::update(const Eigen::VectorXd &x_predicted,
-                                          const Eigen::VectorXd &z_current,
-                                          const Eigen::MatrixXd &P_predicted,
-                                          const Input &input) {
+FilterUpdate KalmanFilter::update(const Eigen::VectorXd &x_predicted,
+                                  const Eigen::VectorXd &z_current,
+                                  const Eigen::MatrixXd &P_predicted,
+                                  const Input &input) {
 
   Eigen::MatrixXd H = measurement_model_->H(x_predicted, input);
   Eigen::MatrixXd R = measurement_model_->R(x_predicted, input);

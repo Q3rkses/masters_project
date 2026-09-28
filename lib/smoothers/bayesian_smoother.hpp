@@ -7,8 +7,8 @@
 #ifndef BAYESIAN_SMOOTHER_HPP
 #define BAYESIAN_SMOOTHER_HPP
 
-#include "bayesian_filter.hpp"
-#include "models.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <memory>
 

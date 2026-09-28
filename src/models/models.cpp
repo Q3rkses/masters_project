@@ -1,4 +1,4 @@
-#include "models.hpp"
+#include "models/models.hpp"
 #include <stdexcept>
 
 Input::Input() : a_x_(0.0), a_y_(0.0), omega_psi_(0.0) {}

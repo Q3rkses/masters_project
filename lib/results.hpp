@@ -9,8 +9,8 @@
 #ifndef FILTER_RESULT_HPP
 #define FILTER_RESULT_HPP
 
-#include "bayesian_filter.hpp"
-#include "bayesian_smoother.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "smoothers/bayesian_smoother.hpp"
 #include <Eigen/Dense>
 #include <string>
 #include <vector>

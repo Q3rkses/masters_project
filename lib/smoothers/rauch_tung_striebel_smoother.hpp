@@ -8,8 +8,8 @@
 #ifndef RAUCH_TUNG_STRIEBEL_SMOOTHER_HPP
 #define RAUCH_TUNG_STRIEBEL_SMOOTHER_HPP
 
-#include "bayesian_smoother.hpp"
-#include "models.hpp"
+#include "smoothers/bayesian_smoother.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <memory>
 

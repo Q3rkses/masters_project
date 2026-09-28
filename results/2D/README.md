@@ -47,8 +47,8 @@ To regenerate the figures and statistics from the stored data:
 python3 scripts/analyze_2d.py results/2D/data
 ```
 
-To regenerate the data as well, set `dim = 2` and `timesteps = 200` at the top of
-`main()` in `src/main.cpp`, then:
+To regenerate the data as well, point `main.cpp` at `configs/random_walk_2d.yaml`, set `timesteps: 200` in it,
+then:
 
 ```bash
 cmake --build build && ./build/kalman_filtering_and_smoothing   # writes data/

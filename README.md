@@ -71,24 +71,32 @@ Each experiment lives in `results/<name>/` with its own `README.md`, `data/` and
 ## Repository layout
 
 ```
-lib/        headers: filter and smoother interfaces, models, simulation, results
-src/        implementations, and main.cpp which runs one experiment
+lib/        headers, grouped by role; src/ mirrors this structure
+  filters/      bayesian_filter (interface), kalman_filter, extended_kalman_filter
+  smoothers/    bayesian_smoother (interface), rts and extended rts smoothers
+  models/       motion/measurement interfaces, linear and nonlinear (INS) models
+  scenarios/    one run function per scenario
+  simulation.hpp, results.hpp, utilities.hpp   generators, CSV export, helpers
+src/        implementations, and main.cpp which loads one config and runs it
+configs/    one yaml file per scenario
 scripts/    analysis: analyze_1d.py, analyze_2d.py
 results/    one folder per experiment: README.md, data/, figures/
 data/       scratch output of the latest run (gitignored)
 figures/    scratch figures of the latest analysis (gitignored)
 ```
 
-| file                                                   | contents                                                                       |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `lib/bayesian_filter.hpp`, `lib/bayesian_smoother.hpp` | pure virtual interfaces                                                        |
-| `lib/models.hpp`                                       | `MotionModel` (F, Q) and `MeasurementModel` (H, R)                             |
-| `src/kalman_filter.cpp`                                | implements the kalman filter predict/update step from Algorithm 1, Brekke 2025 |
-| `src/rauch_tung_striebel_smoother.cpp`                 | implements the backward recursion equations from Sarkka theorem 12.2           |
-| `src/simulation.cpp`                                   | Gaussian white noise and random walk generators for the simulation             |
-| `src/results.cpp`                                      | CSV export for filter, smoother and ground truth                               |
-| `scripts/analyze_1d.py`                                | plots and consistency statistics for the 1-D case                              |
-| `scripts/analyze_2d.py`                                | trajectory plots with covariance ellipses and consistency statistics for 2-D   |
+| file                                                                     | contents                                                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `lib/filters/bayesian_filter.hpp`, `lib/smoothers/bayesian_smoother.hpp` | pure virtual interfaces                                                        |
+| `lib/models/models.hpp`                                                  | `MotionModel` (F, Q) and `MeasurementModel` (H, R)                             |
+| `src/filters/kalman_filter.cpp`                                          | implements the kalman filter predict/update step from Algorithm 1, Brekke 2025 |
+| `src/smoothers/rauch_tung_striebel_smoother.cpp`                         | implements the backward recursion equations from Sarkka theorem 12.2           |
+| `src/main.cpp`                                                           | loads one config file from `configs/` and calls the scenario's run function    |
+| `src/scenarios/random_walk_scenario.cpp`                                 | the random walk scenario (any dimension), values come from the yaml config     |
+| `src/simulation.cpp`                                                     | Gaussian white noise and random walk generators for the simulation             |
+| `src/results.cpp`                                                           | CSV export for filter, smoother and ground truth                               |
+| `scripts/analyze_1d.py`                                                  | plots and consistency statistics for the 1-D case                              |
+| `scripts/analyze_2d.py`                                                  | trajectory plots with covariance ellipses and consistency statistics for 2-D   |
 
 ## Building and running
 
@@ -98,7 +106,12 @@ cmake --build build
 ./build/kalman_filtering_and_smoothing
 ```
 
-Requires Eigen 3 and a C++20 compiler.
+`main.cpp` names the config file to run e.g `random_walk.yaml` and the
+run function that uses it. To switch scenario, change the file name there and
+rebuild. To add a new kind of scenario, write a `run_<name>` function (see
+`lib/scenarios/scenarios.hpp`) and call it from `main.cpp`.
+
+Requires Eigen 3, yaml-cpp and a C++20 compiler.
 
 `data/`, `figures/` and `.venv/` are gitignored scratch space. When a run is
 worth keeping, copy its CSVs to `results/<name>/data/`, run the analysis script

@@ -8,7 +8,7 @@
 #ifndef UTILITIES_HPP
 #define UTILITIES_HPP
 
-#include "nonlinear_models.hpp"
+#include "models/nonlinear_models.hpp"
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 #include <cmath>

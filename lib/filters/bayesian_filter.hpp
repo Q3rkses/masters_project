@@ -7,7 +7,7 @@
 #ifndef BAYESIAN_FILTER_HPP
 #define BAYESIAN_FILTER_HPP
 
-#include "models.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <memory>
 

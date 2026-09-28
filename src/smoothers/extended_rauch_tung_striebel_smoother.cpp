@@ -1,28 +1,21 @@
-#include "rauch_tung_striebel_smoother.hpp"
-#include "bayesian_filter.hpp"
-#include "bayesian_smoother.hpp"
-#include "models.hpp"
+#include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "smoothers/bayesian_smoother.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <stdexcept>
 
-RTSSmoother::RTSSmoother(const SmootherConfig &smoother_config)
+ERTSSmoother::ERTSSmoother(const SmootherConfig &smoother_config)
     : motion_model_(smoother_config.motion_model) {
   if (!motion_model_) {
     throw std::invalid_argument(
-        "RTSSmoother: the smoother config needs a motion model");
-  }
-  if (!motion_model_->is_linear()) {
-    throw std::invalid_argument(
-        "RTSSmoother requires a linear motion model; use ERTSSmoother for "
-        "nonlinear models such as StrapdownINS2D");
+        "ERTSSmoother: the smoother config needs a motion model");
   }
 };
 
-SmootherUpdate
-RTSSmoother::backward_recursion(const FilterUpdate &filtered_current,
-                                const FilterPredict &predicted_next,
-                                const SmootherUpdate &smoothed_previous,
-                                const Input &input) {
+SmootherUpdate ERTSSmoother::backward_recursion(
+    const FilterUpdate &filtered_current, const FilterPredict &predicted_next,
+    const SmootherUpdate &smoothed_previous, const Input &input) {
   // F is evaluated at the filtered state, with the same input the forward
   // pass used for this transition, so it is the F the filter linearized at.
   Eigen::MatrixXd F = motion_model_->F(filtered_current.x_updated, input);
@@ -30,9 +23,9 @@ RTSSmoother::backward_recursion(const FilterUpdate &filtered_current,
   // solving linear system is faster and more algebraically stable than
   // matrix inversion.
   Eigen::MatrixXd FP = F * filtered_current.P_updated;
-  Eigen::MatrixXd W =
-      predicted_next.P_predicted.ldlt().solve(FP).transpose();
+  Eigen::MatrixXd W = predicted_next.P_predicted.ldlt().solve(FP).transpose();
 
+  // assemble the smoother equations from Algorithm 13.1
   // remember to use the proper compostion operation, rather than
   // the default + or - operator when dealing with states
   Eigen::VectorXd delta = motion_model_->composition_minus(
@@ -43,6 +36,8 @@ RTSSmoother::backward_recursion(const FilterUpdate &filtered_current,
       filtered_current.P_updated +
       W * (smoothed_previous.P_smoothed - predicted_next.P_predicted) *
           W.transpose();
+
+  // assemble into answer
   SmootherUpdate smoothed_update{x_smoothed, P_smoothed};
   return smoothed_update;
 };

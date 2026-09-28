@@ -8,20 +8,24 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Eigen3 REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 add_library(kalman_lib
-  src/models.cpp
-  src/linear_models.cpp
-  src/nonlinear_models.cpp
-  src/kalman_filter.cpp
-  src/rauch_tung_striebel_smoother.cpp
+  src/models/models.cpp
+  src/models/linear_models.cpp
+  src/models/nonlinear_models.cpp
+  src/filters/kalman_filter.cpp
+  src/filters/extended_kalman_filter.cpp
+  src/smoothers/rauch_tung_striebel_smoother.cpp
+  src/smoothers/extended_rauch_tung_striebel_smoother.cpp
   src/simulation.cpp
   src/results.cpp
+  src/scenarios/random_walk_scenario.cpp
 )
 
 include_directories(lib)
 target_include_directories(kalman_lib PUBLIC lib)
-target_link_libraries(kalman_lib PUBLIC Eigen3::Eigen)
+target_link_libraries(kalman_lib PUBLIC Eigen3::Eigen yaml-cpp)
 
 add_executable(kalman_filtering_and_smoothing
   src/main.cpp

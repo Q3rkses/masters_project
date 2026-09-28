@@ -7,8 +7,8 @@
 #ifndef KALMAN_FILTER_HPP
 #define KALMAN_FILTER_HPP
 
-#include "bayesian_filter.hpp"
-#include "models.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <memory>
 

@@ -1,0 +1,145 @@
+#include "scenarios/scenarios.hpp"
+
+#include "filters/kalman_filter.hpp"
+#include "models/linear_models.hpp"
+#include "models/models.hpp"
+#include "smoothers/rauch_tung_striebel_smoother.hpp"
+#include "results.hpp"
+#include "simulation.hpp"
+
+#include <Eigen/Dense>
+#include <iostream>
+#include <memory>
+#include <random>
+#include <stdexcept>
+#include <vector>
+
+void run_random_walk(const YAML::Node &config,
+                     const std::filesystem::path &output_dir) {
+  const int timesteps = config["timesteps"].as<int>();
+  std::mt19937_64 rng(config["seed"].as<std::uint64_t>());
+
+  // the model we are utilizing is a random walk observed directly:
+  //   x_k = x_{k-1} + w_k,  w_k ~ N(0, Q)  ->  F = I, Q = q * I
+  //   z_k = x_k     + v_k,  v_k ~ N(0, R)  ->  H = I, R = r * I
+
+  const int dim = config["dim"].as<int>();
+  const double q = config["q"].as<double>(); // process noise variance
+  const double r = config["r"].as<double>(); // measurement noise variance
+  const std::vector<double> x0_values = config["x0"].as<std::vector<double>>();
+  const double p0_variance = config["p0"].as<double>();
+
+  if (timesteps < 1 || dim < 1 || q <= 0.0 || r <= 0.0 || p0_variance <= 0.0) {
+    throw std::runtime_error(
+        "random_walk: timesteps and dim must be >= 1, q, r and p0 must be > 0");
+  }
+  if (static_cast<int>(x0_values.size()) != dim) {
+    throw std::runtime_error("random_walk: x0 must have exactly dim entries");
+  }
+
+  const Eigen::VectorXd gwn_mean = Eigen::VectorXd::Zero(dim); // gwn mean
+  const Eigen::VectorXd rw_mean = Eigen::VectorXd::Zero(dim);  // rw mean
+  const Eigen::VectorXd x0 =
+      Eigen::Map<const Eigen::VectorXd>(x0_values.data(), dim); // prior mean
+  const Eigen::MatrixXd p0 =
+      p0_variance * Eigen::MatrixXd::Identity(dim, dim); // prior covariance
+
+  ModelConfig model_config{
+      .F = Eigen::MatrixXd::Identity(dim, dim),
+      .H = Eigen::MatrixXd::Identity(dim, dim),
+      .Q = q * Eigen::MatrixXd::Identity(dim, dim),
+      .R = r * Eigen::MatrixXd::Identity(dim, dim),
+  };
+
+  auto motion_model = std::make_shared<LinearMotionModel>(model_config);
+  auto measurement_model =
+      std::make_shared<LinearMeasurementModel>(model_config);
+
+  FilterConfig filter_config{
+      .x_prior = x0,
+      .P_prior = p0,
+      .motion_model = motion_model,
+      .measurement_model = measurement_model,
+  };
+
+  SmootherConfig smoother_config{
+      .x_prior = filter_config.x_prior,
+      .P_prior = filter_config.P_prior,
+      .motion_model = motion_model,
+  };
+
+  // this was maybe a wierd design choice on my part, i could have done the
+  // simulation stepping inside of a for loop where i step through and add the
+  // results to the truth vector, measurement vector etc... then filter and
+  // smooth in two other for loops but ehhhh look at it some other time.
+  SimulationConfig initial_config{.rng = rng, .covariance = p0, .mean = x0};
+  GaussianWhiteNoise initial_state(initial_config);
+  const Eigen::VectorXd x_true_initial = initial_state.simulate(1).at(0);
+
+  SimulationConfig walk_config{
+      .rng = rng, .covariance = model_config.Q, .mean = gwn_mean};
+  RandomWalk random_walk(walk_config);
+  const std::vector<Eigen::VectorXd> walk = random_walk.simulate(timesteps);
+
+  SimulationConfig noise_config{
+      .rng = rng, .covariance = model_config.R, .mean = rw_mean};
+  GaussianWhiteNoise measurement_noise(noise_config);
+  const std::vector<Eigen::VectorXd> noise =
+      measurement_noise.simulate(timesteps);
+
+  TruthResult truth_result;
+  std::vector<Eigen::VectorXd> measurements;
+  measurements.reserve(timesteps);
+  for (int k = 0; k < timesteps; k++) {
+    Eigen::VectorXd x_true = x_true_initial + walk.at(k);
+    Eigen::VectorXd z = model_config.H * x_true + noise.at(k);
+    truth_result.add(x_true, z);
+    measurements.push_back(z);
+  }
+
+  // Kalman filter forward pass
+  KalmanFilter kalman_filter(filter_config);
+  FilterResult filter_result(filter_config);
+
+  // the random walk has no input, so the models get an all zeros input
+  const Input input;
+
+  Eigen::VectorXd x = filter_config.x_prior;
+  Eigen::MatrixXd P = filter_config.P_prior;
+  for (int k = 0; k < timesteps; k++) {
+    FilterPredict prediction = kalman_filter.predict(x, P, input);
+    FilterUpdate update = kalman_filter.update(
+        prediction.x_predicted, measurements[k], prediction.P_predicted, input);
+    filter_result.add(prediction, update);
+    x = update.x_updated;
+    P = update.P_updated;
+  }
+
+  // RTS Smoother backwards pass
+  RTSSmoother rts_smoother(smoother_config);
+  const std::vector<FilterPredict> &predictions = filter_result.predictions();
+  const std::vector<FilterUpdate> &updates = filter_result.updates();
+
+  std::vector<SmootherUpdate> smoothed(timesteps);
+  smoothed[timesteps - 1] = SmootherUpdate{updates[timesteps - 1].x_updated,
+                                           updates[timesteps - 1].P_updated};
+  for (int k = timesteps - 2; k >= 0; k--) {
+    smoothed[k] = rts_smoother.backward_recursion(
+        updates[k], predictions[k + 1], smoothed[k + 1], input);
+  }
+
+  SmootherResult smoother_result(smoother_config);
+  for (const SmootherUpdate &smoothed_step : smoothed) {
+    smoother_result.add(smoothed_step);
+  }
+
+  // Code to utilize the to_csv functionality and to store the data so that it
+  // can later be analyzed by a python script
+  std::filesystem::create_directories(output_dir);
+
+  truth_result.to_csv((output_dir / "truth.csv").string());
+  filter_result.to_csv((output_dir / "filter.csv").string());
+  smoother_result.to_csv((output_dir / "smoother.csv").string());
+
+  std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
+}

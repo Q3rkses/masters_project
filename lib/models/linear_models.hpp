@@ -7,7 +7,7 @@
 #ifndef LINEAR_MODELS_HPP
 #define LINEAR_MODELS_HPP
 
-#include "models.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 

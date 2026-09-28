@@ -7,8 +7,8 @@
 #ifndef EXTENDED_KALMAN_FILTER_HPP
 #define EXTENDED_KALMAN_FILTER_HPP
 
-#include "bayesian_filter.hpp"
-#include "models.hpp"
+#include "filters/bayesian_filter.hpp"
+#include "models/models.hpp"
 #include <Eigen/Dense>
 
 class ExtendedKalmanFilter final : public BayesianFilter {

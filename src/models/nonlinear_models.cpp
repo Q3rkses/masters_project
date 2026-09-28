@@ -1,4 +1,4 @@
-#include "nonlinear_models.hpp"
+#include "models/nonlinear_models.hpp"
 #include "utilities.hpp"
 #include <Eigen/src/Core/Matrix.h>
 #include <stdexcept>

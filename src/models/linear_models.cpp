@@ -1,4 +1,4 @@
-#include "linear_models.hpp"
+#include "models/linear_models.hpp"
 #include <stdexcept>
 
 LinearMotionModel::LinearMotionModel(const ModelConfig &model_config)
