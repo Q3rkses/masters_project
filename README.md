@@ -11,28 +11,44 @@ A place to store code that will be used in my masters pre-project. This Repo wil
 - [x] RTS smoother, used on the path
 - [x] Plot the results and evaluate filter and smoother consistency (NIS and NEES, single run)
 
-Next up, in order:
+Other interesting tests to perform when writing about results and theory:
 
 - [ ] Mis-tune `q` or `r` in the filter while leaving the simulator alone, to show an inconsistent filter for contrast
 - [ ] Monte Carlo over seeds for proper consistency bands
-- [ ] A 2D strapdown INS scenario with x,y,psi with simulated IMU and GNSS signals
 - [ ] Standard forward-backward smoother, to compare against the RTS smoother
 
 ### Phase 2: sophistication
 
-- [ ] Extend the current filter and smoother to be able to handle nonlinearities
-- [ ] Add and experiment with EKF and ERTSS
+- [x] Extend the current filter and smoother to be able to handle nonlinearities
+- [x] Add and experiment with EKF and ERTSS
+- [x] Add a 2D strapdown inertial navigation model to test how the filters deal with real nonlinearities.
 - [ ] Add and experiment with UKF and URTSS
-- [ ] (stretch goal) add and experiment with ESKF and ESRTSS
+- [ ] Run experiments and document consistency, accuracy and other factors that might be of interest
+
+Other interesting tests to perform when writing about results and theory:
+
+- [ ] Introduce model mismatch between the filter and the simulator, to show an inconsistent filter for contrast
+- [ ] Monte Carlo over seeds for proper consistency bands
+- [ ] Reason about why we can expect or should not expect differences in performance between an Unscented, an Extended or an Iterative variant of a filter/smoother.
 
 ### Phase 3: towards realistic scenarios
 
-- [ ] Make test cases more realistic and aligned with the goal of the project
 - [ ] Implement dynamical AUV model from Fossen
-- [ ] Implement models for sensors which will be used
-- [ ] (stretch goal) test using the Stonefish simulator, hereunder find a good way to get GNSS and ground truth data to play with
-- [ ] Adopt the existing codebase to accomodate for the new AUV model and Sensor models
+- [ ] Implement a 3D stapdown INS model
+- [ ] Implement sensor models for the 3D strapdown INS model
 - [ ] Run experiments and document consistency, accuracy and other factors that might be of interest
+
+### Phase 4: Iterative solutions, Graph based solutions, and batch solutions
+
+- [ ] Experiment with a home cooked batch solver
+- [ ] Experiment with ISAM2, an incremental solver
+- [ ] Experiment with GTSAM, a graph based solver
+- [ ] Run experiments and document consistency, accuracy and other factors that might be of interest
+
+### Additions if time allows
+
+- [ ] Experiment with the ESKF and ESRTSS
+- [ ] Experiment with the Stonefish simulator and how to get good data from it
 
 ### Example results
 
