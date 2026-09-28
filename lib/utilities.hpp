@@ -40,88 +40,30 @@ inline Eigen::VectorXd ssa(const Eigen::VectorXd &angles) {
 }
 
 /**
- * @brief applies the 2D rotation matrix about the z-axis
- * @param state, the state of the system
- * @return the rotated state vector
+ * @brief the 2D rotation matrix about the z-axis.
+ * @param psi, the rotation angle in radians
+ * @return R_z(psi)
  */
-inline Eigen::Vector2d rotate_z_2D(const double x, const double y,
-                                   const double psi) {
-  Eigen::Vector2d initial_position = {x, y};
-
+inline Eigen::Matrix2d rotation_matrix_z_2D(const double psi) {
   Eigen::Matrix2d rotation_matrix_z;
   rotation_matrix_z << std::cos(psi), -std::sin(psi), std::sin(psi),
       std::cos(psi);
 
-  Eigen::Vector2d rotated_position = rotation_matrix_z * initial_position;
-
-  return rotated_position;
+  return rotation_matrix_z;
 }
 
 /**
- * @brief applies the 2D rotation matrix about the z-axis
- * @param state, the state of the system
- * @return the rotated state vector
+ * @brief the derivative of the 2D rotation matrix about the z-axis.
+ * @param psi, the rotation angle in radians
+ * @return dR_z(psi)
  */
-inline Eigen::Vector2d derivative_rotate_z_2D(const double x, const double y,
-                                              const double psi) {
-  Eigen::Vector2d initial_position = {x, y};
-
-  Eigen::Matrix2d rotation_matrix_z;
-  rotation_matrix_z << -std::sin(psi), -std::cos(psi), std::cos(psi),
+inline Eigen::Matrix2d derivative_rotation_matrix_z_2D(const double psi) {
+  Eigen::Matrix2d derivative_rotation_matrix_z;
+  derivative_rotation_matrix_z << -std::sin(psi), -std::cos(psi), std::cos(psi),
       -std::sin(psi);
 
-  Eigen::Vector2d rotated_position = rotation_matrix_z * initial_position;
-
-  return rotated_position;
+  return derivative_rotation_matrix_z;
 }
-
-/**
- * @brief applies the 3D rotation matrix about the x-axis
- * @param state, the state of the system
- * @return the rotated state vector
- */
-// inline State rotate_x(const State &state) {
-//
-//   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
-//   state.z}; Eigen::Matrix3d rotation_matrix_x =
-//       Eigen::Matrix3d{[1, 0, 0],
-//                       [0, std::cos(state.psi), -std::sin(state.psi)],
-//                       [0, std::sin(state.psi), std::cos(state.psi)]};
-//
-//   return initial_state * rotation_matrix_x;
-// }
-
-/**
- * @brief applies the 3D rotation matrix about the x-axis
- * @param state, the state of the system
- * @return the rotated state vector
- */
-// inline State rotate_y(const State &state) {
-//
-//   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
-//   state.z}; Eigen::Matrix2d rotation_matrix_y =
-//       Eigen::Matrix2d{[std::cos(state.psi), 0, std::sin(state.psi)],
-//                       [0, 1, 0],
-//                       [-std::sin(state.psi), 0, std::cos(state.psi)]};
-//
-//   return initial_position * rotation_matrix_y;
-// }
-
-/**
- * @brief applies the 3D rotation matrix about the x-axis
- * @param state, the state of the system
- * @return the rotated state vector
- */
-// inline State rotate_z(const State &state) {
-//
-//   Eigen::Vector3d initial_position = Eigen::Vector3d{state.x, state.y,
-//   state.z}; Eigen::Matrix2d rotation_matrix_z =
-//       Eigen::Matrix2d{[std::cos(state.psi), std::sin(state.psi), 0],
-//                       [-std::sin(state.psi), std::cos(state.psi), 0],
-//                       [0, 0, 1]};
-//
-//   return initial_position * rotation_matrix_z;
-// }
 
 // TODO: If there are any functions that do not naturally fall into any existing
 // category lump them in here and make this a more general utils.

@@ -8,18 +8,20 @@
 
 #include "models.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 
+/**
+ * All values must be non-negative
+ */
 struct INS2DConfig {
   double dt;
   double gyro_time_constant;
   Eigen::Vector2d accelerometer_time_constant;
-  double gyro_noise_variance; // Gauss-Markov bias driving noise
-  Eigen::Vector2d
-      accelerometer_noise_variance; // Gauss-Markov bias driving noise
-  double gyro_random_walk_variance; // simpler, non-decaying bias
-  Eigen::Vector2d
-      accelerometer_random_walk_variance; // simpler, non-decaying bias
+  double gyro_noise_variance;
+  Eigen::Vector2d accelerometer_noise_variance;
+  double gyro_white_noise_intensity;
+  Eigen::Vector2d accelerometer_white_noise_intensity;
+  double gyro_random_walk_variance;
+  Eigen::Vector2d accelerometer_random_walk_variance;
 };
 
 class State {
@@ -118,17 +120,23 @@ public:
 private:
   double dt_;
 
+  // White noise on the raw IMU readings (continuous-time intensities)
+  Eigen::Vector2d accelerometer_white_noise_intensity_;
+  double gyro_white_noise_intensity_;
+
   // Accelerometer bias, modeled as Gauss-Markov
+  Eigen::Vector2d accelerometer_driving_noise_variance_;
   Eigen::Vector2d accelerometer_gauss_markov_variance_;
   Eigen::Vector2d accelerometer_gauss_markov_timeconstant_;
 
   // Gyro bias, modeled as Gauss-Markov
+  double gyro_driving_noise_variance_;
   double gyro_gauss_markov_variance_;
   double gyro_gauss_markov_timeconstant_;
 
-  // Accelerometer bias, simpler non-decaying (random walk) alternative
+  // Accelerometer bias, simpler but more pessimistic alternative
   Eigen::Vector2d accelerometer_random_walk_variance_;
-  // Gyro bias, simpler non-decaying (random walk) alternative
+  // Gyro bias, simpler but more pessimistic alternative
   double gyro_random_walk_variance_;
 };
 
