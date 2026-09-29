@@ -55,17 +55,17 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of GWN samples
    */
-  std::vector<Eigen::VectorXd> simulate(const int timesteps);
+  std::vector<Eigen::VectorXd> simulate(const int timesteps) const;
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
-  Eigen::VectorXd sample_from_distribution();
+  Eigen::VectorXd sample_from_distribution() const;
 
-  Eigen::VectorXd mean_;       // the mean of the distribution
-  Eigen::MatrixXd covariance_; // the variance of the distribution
+  const Eigen::VectorXd mean_;       // the mean of the distribution
+  const Eigen::MatrixXd covariance_; // the variance of the distribution
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
@@ -84,14 +84,14 @@ public:
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-  std::vector<Eigen::VectorXd> simulate(const int timesteps);
+  std::vector<Eigen::VectorXd> simulate(const int timesteps) const;
 
 private:
   /**
    * @brief utilizes GWN to create a sample
    * @return returns a sample from the GWN distribution
    */
-  Eigen::VectorXd sample_from_distribution();
+  Eigen::VectorXd sample_from_distribution() const;
 
   /**
    * @brief propagates the system dynamics e.g by utilizing
@@ -101,45 +101,48 @@ private:
    */
   Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd x_previous);
 
-  Eigen::VectorXd mean_;       // the mean of the distribution
-  Eigen::MatrixXd covariance_; // the variance of the distribution
+  const Eigen::VectorXd mean_;       // the mean of the distribution
+  const Eigen::MatrixXd covariance_; // the variance of the distribution
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 
 class GaussMarkov {
 public:
   /**
-   * @brief Constructor for the GaussMarkov class.
-   * @param model_config all configuration parameters that are
-   * used by the constructor
+   * @brief Constructor for the GaussMarkov class. Precomputes the decay and
+   * the driving noise covariance
+   * @param dt, the discretization time interval
    */
-  explicit GaussMarkov(const SimulationConfig &simulation_config);
+  GaussMarkov(const SimulationConfig &simulation_config, const double dt);
 
   /**
-   * @brief Simulates a Gauss Markov process by utilizing the
-   * time constant and covariance, to calculate c and q.
+   * @brief Simulates a Gauss Markov process by decaying the previous sample
+   * and adding that step's driving noise.
    * @param timesteps, the amount of timesteps we simulate for
    * @return returns an array of samples
    */
-  std::vector<Eigen::VectorXd> simulate(const int timesteps);
+  std::vector<Eigen::VectorXd> simulate(const int timesteps) const;
 
 private:
   /**
-   * @brief utilizes GM process to create a sample
-   * @return returns a sample from the GM process
+   * @brief draws the driving noise for one step. A Gauss-Markov process
+   * with stationary variance sigma^2 and time constant T is driven, over a
+   * step dt, by noise with variance sigma^2 * (1 - exp(-2dt/T))
    */
-  Eigen::VectorXd sample_from_distribution();
+  Eigen::VectorXd sample_from_distribution() const;
 
   /**
-   * @brief propagates the system dynamics e.g by utilizing
-   * a numerical integration method such as the explicit
-   * euler method or RK4.
-   * @return returns a sample from the GWN distribution
+   * @brief propagates the system dynamics: exponential decay toward zero
+   * with time constant T, i.e. x_next = exp(-dt/T) * x_previous
+   * @param x_previous, the previous sample
+   * @return the decayed previous sample, before that step's noise is added
    */
-  Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd x_previous);
+  Eigen::VectorXd propagate_dynamics(const Eigen::VectorXd &x_previous) const;
 
-  Eigen::MatrixXd covariance_;   // the I * variance of the GM proces
-  Eigen::VectorXd timeconstant_; // the timeconstant T, of the GM process
+  const Eigen::VectorXd mean_;
+  const Eigen::VectorXd decay_; // exp(-dt/T), per axis
+  const Eigen::MatrixXd
+      driving_covariance_; // sigma^2 * (1 - decay^2), per axis
   std::mt19937_64 &rng_; // the engine that draws from stochastic distributions
 };
 

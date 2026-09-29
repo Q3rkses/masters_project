@@ -25,7 +25,7 @@ Eigen::VectorXd read_vector(const YAML::Node &node) {
   return output_vector;
 }
 // clang-format off
-INS2DConfig read_ins_config(const YAML::Node &config, ) {
+INS2DConfig read_ins_config(const YAML::Node &config) {
   INS2DConfig ins{};
   ins.dt = config["dt"].as<double>();
   ins.gyro_time_constant = config["gyro_time_constant"].as<double>();
@@ -92,15 +92,30 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       .x_prior = x0, .P_prior = p0, .motion_model = motion_model};
 
   SimulationConfig accelerometer_gauss_markov_config{
-    .rng = rng, .covariance = ins_config.accelerometer_noise_variance, .time_constant = accelerometer_time_constant, .mean = 0};
+      .rng = rng,
+      .covariance = Eigen::MatrixXd(ins_config.accelerometer_noise_variance.asDiagonal()),
+      .mean = Eigen::VectorXd::Zero(2),
+      .timeconstant = ins_config.accelerometer_time_constant,
+  };
   SimulationConfig accelerometer_white_measurement_noise_config{
-    .rng = rng, .covariance = ins_config.accelerometer_white_noise_intensity, .mean = 0};
-  }
+      .rng = rng,
+      .covariance = Eigen::MatrixXd(ins_config.accelerometer_white_noise_intensity.asDiagonal()),
+      .mean = Eigen::VectorXd::Zero(2),
+  };
   SimulationConfig gyro_gauss_markov_config{
-    .rng = rng, .covariance = ins_config.gyro_noise_variance, .time_constant = gyro_time_constant, .mean = 0};
+      .rng = rng,
+      .covariance = Eigen::MatrixXd::Constant(1, 1, ins_config.gyro_noise_variance),
+      .mean = Eigen::VectorXd::Zero(1),
+      .timeconstant = Eigen::VectorXd::Constant(1, ins_config.gyro_time_constant),
+  };
   SimulationConfig gyro_white_measurement_noise_config{
-    .rng = rng, .covariance = ins_config.gyro_white_noise_intensity, .mean = 0};
-  }
+      .rng = rng,
+      .covariance = Eigen::MatrixXd::Constant(1, 1, ins_config.gyro_white_noise_intensity),
+      .mean = Eigen::VectorXd::Zero(1),
+  };
+
+  GaussMarkov gyro_gauss_markov{gyro_gauss_markov_config, ins_config.dt};
+  GaussMarkov accelerometer_gauss_markov{accelerometer_gauss_markov_config, ins_config.dt};
 
   // 3. simulate truth and IMU, and keep the inputs for the filter and smoother
   TruthResult truth_result;
@@ -116,15 +131,39 @@ void run_strapdown_ins_2d(const YAML::Node &config,
     // measurements.push_back(z);
   }
 
-  // 4. EKF forward pass, same loop as the random walk with inputs[k]
+  // EKF forward pass
   ExtendedKalmanFilter ekf(filter_config);
   FilterResult ekf_result(filter_config);
   Eigen::VectorXd x = x0;
   Eigen::MatrixXd P = p0;
+
+  // The time interval at which GNSS arrives is uniformly distributed in time
+  const double gnss_period_min = config["gnss_period_min"].as<double>();
+  const double gnss_period_max = config["gnss_period_max"].as<double>();
+  double next_gnss_time = sample_uniform(rng, gnss_period_min, gnss_period_max);
+  // Remember at which timesteps we actually got a GNSS update, useful for plotting
+  std::vector<int> gnss_fix_steps;
+
   for (int k = 0; k < timesteps; k++) {
+    const double t = k * ins_config.dt;
     FilterPredict prediction = ekf.predict(x, P, inputs[k]);
-    FilterUpdate update = ekf.update(prediction.x_predicted, measurements[k],
-                                        prediction.P_predicted, inputs[k]);
+  
+    // Only update the filter if there is a measurement available
+    FilterUpdate update;
+    if (t >= next_gnss_time) { // new measurement -> run full update with EKF
+      update = ekf.update(prediction.x_predicted, measurements[k],
+                          prediction.P_predicted, inputs[k]);
+      gnss_fix_steps.push_back(k);
+      next_gnss_time += sample_uniform(rng, gnss_period_min, gnss_period_max);
+    } else { // no measurement -> x_updated, P_updated are equal to predicted
+      update = FilterUpdate{
+          .x_updated = prediction.x_predicted,
+          .innovation = Eigen::VectorXd::Zero(gnss_H.rows()),
+          .S = Eigen::MatrixXd::Zero(gnss_H.rows(), gnss_H.rows()),
+          .P_updated = prediction.P_predicted,
+      };
+    }
+
     ekf_result.add(prediction, update);
     x = update.x_updated;
     P = update.P_updated;
@@ -132,14 +171,28 @@ void run_strapdown_ins_2d(const YAML::Node &config,
 
   // 5. ERTS backward pass, same as the RTS one with inputs[k]
   ERTSSmoother smoother(smoother_config);
-  // ...
+  const std::vector<FilterPredict> &predictions = ekf_result.predictions();
+  const std::vector<FilterUpdate> &updates = ekf_result.updates();
+
+  std::vector<SmootherUpdate> smoothed(timesteps);
+  smoothed[timesteps - 1] = SmootherUpdate{updates[timesteps - 1].x_updated,
+                                          updates[timesteps - 1].P_updated};
+  for (int k = timesteps - 2; k >= 0; k--) {
+    smoothed[k] = smoother.backward_recursion(updates[k], predictions[k + 1],
+                                              smoothed[k + 1], inputs[k]);
+  }
+
+  SmootherResult ERTS_result(smoother_config);
+  for (const SmootherUpdate &smoothed_step : smoothed) {
+    ERTS_result.add(smoothed_step);
+  }
 
   // 6. write truth.csv, filter.csv, smoother.csv to output_dir
   std::filesystem::create_directories(output_dir);
 
   truth_result.to_csv((output_dir / "truth.csv").string());
-  filter_result.to_csv((output_dir / "filter.csv").string());
-  smoother_result.to_csv((output_dir / "smoother.csv").string());
+  ekf_result.to_csv((output_dir / "filter.csv").string());
+  ERTS_result.to_csv((output_dir / "smoother.csv").string());
 
   std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
 }

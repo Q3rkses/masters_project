@@ -13,3 +13,5 @@ p0_diagonal: [1, 1, 0.1, 0.1, 0.1, 0.01, 0.01, 0.001]
 # accelerometer_random_walk_variance:
 gnss_noise_variance: [1.0, 1.0]
 gnss_and_heading_noise_variance: [1.0, 1.0, 2.0]
+gnss_period_min: 10.0 # GNSS fixes arrive at a random gap, uniform between these, seconds
+gnss_period_max: 15.0

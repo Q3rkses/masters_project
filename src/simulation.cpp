@@ -31,15 +31,16 @@ GaussianWhiteNoise::GaussianWhiteNoise(
     : mean_(simulation_config.mean), covariance_(simulation_config.covariance),
       rng_(simulation_config.rng) {};
 
-Eigen::VectorXd GaussianWhiteNoise::sample_from_distribution() {
+Eigen::VectorXd GaussianWhiteNoise::sample_from_distribution() const {
   return sample_multivariate_normal(rng_, mean_, covariance_);
 };
 
-std::vector<Eigen::VectorXd> GaussianWhiteNoise::simulate(const int timesteps) {
+std::vector<Eigen::VectorXd>
+GaussianWhiteNoise::simulate(const int timesteps) const {
   std::vector<Eigen::VectorXd> timeseries;
 
   for (int i = 0; i < timesteps; i++) {
-    Eigen::VectorXd sample = sample_from_distribution();
+    const Eigen::VectorXd sample = sample_from_distribution();
     timeseries.push_back(sample);
   }
 
@@ -50,16 +51,48 @@ RandomWalk::RandomWalk(const SimulationConfig &simulation_config)
     : mean_(simulation_config.mean), covariance_(simulation_config.covariance),
       rng_(simulation_config.rng) {};
 
-Eigen::VectorXd RandomWalk::sample_from_distribution() {
+Eigen::VectorXd RandomWalk::sample_from_distribution() const {
   return sample_multivariate_normal(rng_, mean_, covariance_);
 };
 
-std::vector<Eigen::VectorXd> RandomWalk::simulate(const int timesteps) {
+std::vector<Eigen::VectorXd> RandomWalk::simulate(const int timesteps) const {
   std::vector<Eigen::VectorXd> timeseries;
 
   Eigen::VectorXd state = Eigen::VectorXd::Zero(mean_.size());
   for (int i = 0; i < timesteps; i++) {
     state += sample_from_distribution();
+    timeseries.push_back(state);
+  }
+
+  return timeseries;
+};
+
+GaussMarkov::GaussMarkov(const SimulationConfig &simulation_config,
+                         const double dt)
+    : mean_(simulation_config.mean),
+      decay_((-dt / simulation_config.timeconstant.array()).exp()),
+      driving_covariance_(Eigen::MatrixXd(
+          (simulation_config.covariance.diagonal().array() *
+           (1.0 - decay_.array().square()))
+              .matrix()
+              .asDiagonal())),
+      rng_(simulation_config.rng) {};
+
+Eigen::VectorXd
+GaussMarkov::propagate_dynamics(const Eigen::VectorXd &x_previous) const {
+  return (decay_.array() * x_previous.array()).matrix();
+};
+
+Eigen::VectorXd GaussMarkov::sample_from_distribution() const {
+  return sample_multivariate_normal(rng_, mean_, driving_covariance_);
+};
+
+std::vector<Eigen::VectorXd> GaussMarkov::simulate(const int timesteps) const {
+  std::vector<Eigen::VectorXd> timeseries;
+
+  Eigen::VectorXd state = Eigen::VectorXd::Zero(mean_.size());
+  for (int i = 0; i < timesteps; i++) {
+    state = propagate_dynamics(state) + sample_from_distribution();
     timeseries.push_back(state);
   }
 
