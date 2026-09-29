@@ -85,47 +85,55 @@ Path make_rounded_rectangle(double width, double height,
   const double r = corner_radius;
   const double quarter_turn = M_PI / 2.0;
 
+  // every point below is for a rectangle centered at the origin; this shifts
+  // the whole shape so it starts at (0,0) instead, heading +x, like the
+  // other two trajectories
+  const Eigen::Vector2d shift(half_width - r, half_height);
+
   Path path;
 
   // bottom side, left to right
   path.add(std::make_shared<LineSegment>(
-      Eigen::Vector2d(-half_width + r, -half_height),
-      Eigen::Vector2d(half_width - r, -half_height)));
+      shift + Eigen::Vector2d(-half_width + r, -half_height),
+      shift + Eigen::Vector2d(half_width - r, -half_height)));
   // bottom-right corner
   path.add(std::make_shared<ArcSegment>(
-      Eigen::Vector2d(half_width - r, -half_height + r), r, -quarter_turn,
-      quarter_turn));
+      shift + Eigen::Vector2d(half_width - r, -half_height + r), r,
+      -quarter_turn, quarter_turn));
   // right side, bottom to top
   path.add(std::make_shared<LineSegment>(
-      Eigen::Vector2d(half_width, -half_height + r),
-      Eigen::Vector2d(half_width, half_height - r)));
+      shift + Eigen::Vector2d(half_width, -half_height + r),
+      shift + Eigen::Vector2d(half_width, half_height - r)));
   // top-right corner
   path.add(std::make_shared<ArcSegment>(
-      Eigen::Vector2d(half_width - r, half_height - r), r, 0.0, quarter_turn));
+      shift + Eigen::Vector2d(half_width - r, half_height - r), r, 0.0,
+      quarter_turn));
   // top side, right to left
   path.add(std::make_shared<LineSegment>(
-      Eigen::Vector2d(half_width - r, half_height),
-      Eigen::Vector2d(-half_width + r, half_height)));
+      shift + Eigen::Vector2d(half_width - r, half_height),
+      shift + Eigen::Vector2d(-half_width + r, half_height)));
   // top-left corner
   path.add(std::make_shared<ArcSegment>(
-      Eigen::Vector2d(-half_width + r, half_height - r), r, quarter_turn,
-      quarter_turn));
+      shift + Eigen::Vector2d(-half_width + r, half_height - r), r,
+      quarter_turn, quarter_turn));
   // left side, top to bottom
   path.add(std::make_shared<LineSegment>(
-      Eigen::Vector2d(-half_width, half_height - r),
-      Eigen::Vector2d(-half_width, -half_height + r)));
+      shift + Eigen::Vector2d(-half_width, half_height - r),
+      shift + Eigen::Vector2d(-half_width, -half_height + r)));
   // bottom-left corner, closes the loop back onto the bottom side's start
   path.add(std::make_shared<ArcSegment>(
-      Eigen::Vector2d(-half_width + r, -half_height + r), r, M_PI,
+      shift + Eigen::Vector2d(-half_width + r, -half_height + r), r, M_PI,
       quarter_turn));
 
   return path;
 }
 
 Path make_circle(double radius) {
+  // center placed so the circle starts at (0,0) heading +x (tangent to the
+  // circle at its bottom point), like the other two trajectories
   Path path;
-  path.add(std::make_shared<ArcSegment>(Eigen::Vector2d::Zero(), radius, 0.0,
-                                        2.0 * M_PI));
+  path.add(std::make_shared<ArcSegment>(Eigen::Vector2d(0.0, radius), radius,
+                                        -M_PI / 2.0, 2.0 * M_PI));
   return path;
 }
 

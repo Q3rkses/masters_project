@@ -6,12 +6,18 @@
 #include "results.hpp"
 #include "simulation.hpp"
 #include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
+#include "trajectory.hpp"
+#include "utilities.hpp"
 
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
+#include <cmath>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 Eigen::VectorXd read_vector(const YAML::Node &node) {
@@ -39,6 +45,36 @@ INS2DConfig read_ins_config(const YAML::Node &config) {
   ins.accelerometer_random_walk_variance = Eigen::Vector2d::Zero();
   return ins;
 } //clang-format on
+
+struct Trajectory {
+  Path path;
+  bool is_closed; // loop around the path instead of stopping at its end
+};
+
+// picks the trajectory named by the "trajectory" key and builds it from its
+// own set of keys; all three shapes' keys are expected to be present in the
+// config, whichever one is actually picked
+Trajectory build_trajectory(const YAML::Node &config) {
+  const std::string trajectory = config["trajectory"].as<std::string>();
+
+  if (trajectory == "rounded_rectangle") {
+    return {make_rounded_rectangle(config["rectangle_width"].as<double>(),
+                                   config["rectangle_height"].as<double>(),
+                                   config["rectangle_corner_radius"].as<double>()),
+           /*is_closed=*/true};
+  }
+  if (trajectory == "circle") {
+    return {make_circle(config["circle_radius"].as<double>()), /*is_closed=*/true};
+  }
+  if (trajectory == "straight_into_turn") {
+    const double turn_sweep = config["turn_sweep_deg"].as<double>() * M_PI / 180.0;
+    return {make_straight_into_turn(config["straight_length"].as<double>(),
+                                    config["turn_radius"].as<double>(), turn_sweep),
+           /*is_closed=*/false};
+  }
+
+  throw std::runtime_error("unknown trajectory: " + trajectory);
+}
 
 void run_strapdown_ins_2d(const YAML::Node &config,
                           const std::filesystem::path &output_dir) {
@@ -71,8 +107,9 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   Eigen::MatrixXd gnss_and_heading_H = Eigen::MatrixXd::Zero(3, 8);
   gnss_and_heading_H.block<3, 3>(0, 0).setIdentity(); // position and heading
   Eigen::VectorXd gnss_and_heading_r = read_vector(config["gnss_and_heading_noise_variance"]);
-  ModelConfig gnss_and_heading_measurement_config{.H = gnss_and_heading_H,
-                                 .R = gnss_and_heading_r * Eigen::MatrixXd::Identity(gnss_and_heading_r.size(),gnss_and_heading_r.size())};
+  ModelConfig gnss_and_heading_measurement_config{
+      .H = gnss_and_heading_H,
+      .R = Eigen::MatrixXd(gnss_and_heading_r.asDiagonal())};
   auto gnss_and_heading_measurement_model =
       std::make_shared<LinearMeasurementModel>(gnss_and_heading_measurement_config);
 
@@ -118,17 +155,72 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   GaussMarkov accelerometer_gauss_markov{accelerometer_gauss_markov_config, ins_config.dt};
 
   // 3. simulate truth and IMU, and keep the inputs for the filter and smoother
+  const Trajectory trajectory = build_trajectory(config);
+  const double path_speed = config["path_speed"].as<double>();
+
+  GaussianWhiteNoise accelerometer_white_noise(
+      accelerometer_white_measurement_noise_config);
+  GaussianWhiteNoise gyro_white_noise(gyro_white_measurement_noise_config);
+  SimulationConfig gnss_noise_config{.rng = rng,
+                                     .covariance = gnss_measurement_config.R,
+                                     .mean = Eigen::VectorXd::Zero(2)};
+  GaussianWhiteNoise gnss_noise(gnss_noise_config);
+
+  // each of these is simulated for the whole run up front, one entry per k
+  const std::vector<Eigen::VectorXd> accelerometer_bias_series =
+      accelerometer_gauss_markov.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> gyro_bias_series =
+      gyro_gauss_markov.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> accelerometer_white_series =
+      accelerometer_white_noise.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> gyro_white_series =
+      gyro_white_noise.simulate(timesteps);
+  const std::vector<Eigen::VectorXd> gnss_noise_series =
+      gnss_noise.simulate(timesteps);
+
   TruthResult truth_result;
   std::vector<Input> inputs;
   std::vector<Eigen::VectorXd> measurements;
+  inputs.reserve(timesteps);
   measurements.reserve(timesteps);
+
   for (int k = 0; k < timesteps; k++) {
-    // TODO: ideal a_x, a_y, omega for step k from config["trajectory"]
-    // TODO: simulate the biases, reading = ideal + true bias + white noise
-    // TODO: x_true = f(x_true, true input) + process noise (see point 1 above)
-    // TODO: z = H * x_true + v, v ~ N(0, R)
-    // truth_result.add(x_true, z, input_true); inputs.push_back(reading);
-    // measurements.push_back(z);
+    const double t = k * ins_config.dt;
+    const double arc_length = trajectory.is_closed
+                                  ? std::fmod(path_speed * t, trajectory.path.length())
+                                  : path_speed * t;
+    const PathSample sample = trajectory.path.sample(arc_length);
+
+    const double psi = sample.heading;
+    const double omega_true = path_speed * sample.curvature;
+    const Eigen::Vector2d tangent(std::cos(psi), std::sin(psi));
+    const Eigen::Vector2d normal(-std::sin(psi), std::cos(psi));
+    const Eigen::Vector2d velocity = path_speed * tangent;
+    // constant speed -> the only acceleration is centripetal
+    const Eigen::Vector2d acceleration_nav =
+        path_speed * path_speed * sample.curvature * normal;
+    // the IMU measures specific force in the body frame, not the nav frame
+    const Eigen::Vector2d acceleration_body =
+        rotation_matrix_z_2D(psi).transpose() * acceleration_nav;
+
+    Eigen::VectorXd x_true(8);
+    x_true << sample.position, psi, velocity, accelerometer_bias_series[k],
+        gyro_bias_series[k](0);
+
+    // reading = ideal + true bias + white noise
+    const Eigen::Vector2d accelerometer_reading = acceleration_body +
+        accelerometer_bias_series[k] + accelerometer_white_series[k];
+    const double gyro_reading =
+        omega_true + gyro_bias_series[k](0) + gyro_white_series[k](0);
+    Eigen::VectorXd reading_vector(3);
+    reading_vector << accelerometer_reading, gyro_reading;
+    Input reading(reading_vector);
+
+    const Eigen::VectorXd z = gnss_H * x_true + gnss_noise_series[k];
+
+    truth_result.add(x_true, z);
+    inputs.push_back(reading);
+    measurements.push_back(z);
   }
 
   // EKF forward pass
@@ -193,6 +285,14 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   truth_result.to_csv((output_dir / "truth.csv").string());
   ekf_result.to_csv((output_dir / "filter.csv").string());
   ERTS_result.to_csv((output_dir / "smoother.csv").string());
+
+  // which timesteps had a real GNSS update, for plotting; every other file
+  // has a row per timestep, this one has a row per fix
+  std::ofstream gnss_fixes_out(output_dir / "gnss_fixes.csv");
+  gnss_fixes_out << "timestep\n";
+  for (int k : gnss_fix_steps) {
+    gnss_fixes_out << k << "\n";
+  }
 
   std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
 }

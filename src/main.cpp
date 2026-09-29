@@ -13,7 +13,7 @@ int main() {
   const YAML::Node config =
       YAML::LoadFile((project_root / CONFIG_PATH).string());
 
-  run_random_walk(config, project_root / OUTPUT_DIR);
+  run_strapdown_ins_2d(config, project_root / OUTPUT_DIR);
 
   return 0;
 }

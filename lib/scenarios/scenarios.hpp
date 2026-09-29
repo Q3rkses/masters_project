@@ -22,4 +22,14 @@
 void run_random_walk(const YAML::Node &config,
                      const std::filesystem::path &output_dir);
 
+/**
+ * @brief Simulates a trajectory through a 2D strapdown INS model, runs the
+ * EKF forward pass (with GNSS arriving at random intervals) and the ERTS
+ * backward pass, and writes truth.csv, filter.csv and smoother.csv.
+ * @param config the parsed yaml config
+ * @param output_dir where the csv files are written
+ */
+void run_strapdown_ins_2d(const YAML::Node &config,
+                         const std::filesystem::path &output_dir);
+
 #endif
