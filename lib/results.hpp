@@ -12,6 +12,7 @@
 #include "filters/bayesian_filter.hpp"
 #include "smoothers/bayesian_smoother.hpp"
 #include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 #include <string>
 #include <vector>
 
@@ -90,6 +91,7 @@ private:
 struct TruthRecord {
   Eigen::VectorXd x_true; // the simulated state, unobservable to the filter
   Eigen::VectorXd z;      // the noisy measurement handed to the filter
+  Eigen::VectorXd u;      // the true input to the system
 };
 
 /**
@@ -104,6 +106,17 @@ public:
    * smoother files on the timestep column.
    */
   void add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z);
+
+  /**
+   * @brief records one timestep's true state and measurement. Must be called
+   * once per timestep, in order, for to_csv() to line up with the filter and
+   * smoother files on the timestep column.
+   * @param x_true, the true value of the state
+   * @param z, the value of the measurement
+   * @param u, the true value of the input
+   */
+  void add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z,
+           const Eigen::VectorXd &u);
 
   /**
    * @brief exports all recorded truth data to a csv file. One row per

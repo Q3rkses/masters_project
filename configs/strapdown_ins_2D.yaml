@@ -1,0 +1,15 @@
+seed: 42
+dt: 0.01 # The discretization interval
+gyro_time_constant: 1000 # Gauss Markov time constant for gyro
+accelerometer_time_constant: [1500, 1500] # Gauss Markov time constant for accelerometer
+gyro_noise_variance: 0.05 # Gauss Markov variance for gyro
+accelerometer_noise_variance: [0.025, 0.025] # Gauss Markov variance for the accelerometer 
+gyro_white_noise_intensity: 0.005 # White noise driving the GM process for the gyro
+accelerometer_white_noise_intensity: [0.005, 0.005] # White noise driving the GM process for the accelerometer
+# initial condition of the ASV: [x, y, psi, u, v, b_ax, b_ay, b_g]
+x0: [0, 0, 0, 0, 0, 0, 0, 0]
+p0_diagonal: [1, 1, 0.1, 0.1, 0.1, 0.01, 0.01, 0.001]
+# gyro_random_walk_variance: 
+# accelerometer_random_walk_variance:
+gnss_noise_variance: [1.0, 1.0]
+gnss_and_heading_noise_variance: [1.0, 1.0, 2.0]

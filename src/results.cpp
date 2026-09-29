@@ -1,17 +1,18 @@
 #include "results.hpp"
+#include <Eigen/src/Core/Matrix.h>
 #include <fstream>
 
 namespace {
 
 void write_vector_header(std::ofstream &out, const std::string &prefix,
-                          int size) {
+                         int size) {
   for (int i = 0; i < size; i++) {
     out << "," << prefix << "_" << i;
   }
 }
 
 void write_matrix_header(std::ofstream &out, const std::string &prefix,
-                          int rows, int cols) {
+                         int rows, int cols) {
   for (int r = 0; r < rows; r++) {
     for (int c = 0; c < cols; c++) {
       out << "," << prefix << "_" << r << "_" << c;
@@ -39,7 +40,7 @@ FilterResult::FilterResult(const FilterConfig &filter_config)
     : filter_config_(filter_config) {};
 
 void FilterResult::add(const FilterPredict &prediction,
-                        const FilterUpdate &update) {
+                       const FilterUpdate &update) {
   predictions_.push_back(prediction);
   updates_.push_back(update);
 }
@@ -100,16 +101,30 @@ void TruthResult::add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z) {
   records_.push_back(TruthRecord{x_true, z});
 }
 
+void TruthResult::add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z,
+                      const Eigen::VectorXd &u) {
+  records_.push_back(TruthRecord{x_true, z, u});
+}
+
 void TruthResult::to_csv(const std::string &path) const {
   std::ofstream out(path);
 
   int state_dim = records_.empty() ? 0 : records_[0].x_true.size();
   int measurement_dim = records_.empty() ? 0 : records_[0].z.size();
+  int input_dim = records_.empty() ? 0 : records_[0].u.size();
 
-  out << "timestep";
-  write_vector_header(out, "x_true", state_dim);
-  write_vector_header(out, "z", measurement_dim);
-  out << "\n";
+  if (input_dim == 0) {
+    out << "timestep";
+    write_vector_header(out, "x_true", state_dim);
+    write_vector_header(out, "z", measurement_dim);
+    out << "\n";
+  } else {
+    out << "timestep";
+    write_vector_header(out, "x_true", state_dim);
+    write_vector_header(out, "z", measurement_dim);
+    write_vector_header(out, "u", input_dim);
+    out << "\n";
+  }
 
   for (std::size_t k = 0; k < records_.size(); k++) {
     out << k;

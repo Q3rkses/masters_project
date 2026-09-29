@@ -32,6 +32,15 @@ Eigen::VectorXd sample_multivariate_normal(std::mt19937_64 &rng,
                                            const Eigen::VectorXd &mean,
                                            const Eigen::MatrixXd &covariance);
 
+/**
+ * @brief Samples from a continuous uniform distribution on [low, high).
+ * @param &rng, the random engine
+ * @param low, the lower bound of the interval, inclusive
+ * @param high, the upper bound of the interval, exclusive
+ * @return a single sample drawn uniformly from [low, high)
+ */
+double sample_uniform(std::mt19937_64 &rng, double low, double high);
+
 class GaussianWhiteNoise {
 public:
   /**

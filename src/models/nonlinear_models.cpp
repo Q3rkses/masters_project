@@ -3,19 +3,22 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <stdexcept>
 
-namespace {
-
 // where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_g]
-const auto position_slice = Eigen::seqN(0, 2);
+const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index> position_slice =
+    Eigen::seqN(0, 2);
 const int heading_index = 2;
-const auto velocity_slice = Eigen::seqN(3, 2);
-const auto accelerometer_bias_slice = Eigen::seqN(5, 2);
+const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index> velocity_slice =
+    Eigen::seqN(3, 2);
+const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index>
+    accelerometer_bias_slice = Eigen::seqN(5, 2);
 const int gyro_bias_index = 7;
 
 // where each noise source sits in the noise [n_a(2), n_g, n_ba(2), n_bg]
-const auto accelerometer_noise_slice = Eigen::seqN(0, 2);
+const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index>
+    accelerometer_noise_slice = Eigen::seqN(0, 2);
 const int gyro_noise_index = 2;
-const auto accelerometer_bias_noise_slice = Eigen::seqN(3, 2);
+const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index>
+    accelerometer_bias_noise_slice = Eigen::seqN(3, 2);
 const int gyro_bias_noise_index = 5;
 
 // The quantities that f, F and Q all build on
@@ -41,8 +44,6 @@ MidpointQuantities compute_midpoint_quantities(const State &state,
   mid.dRa = mid.dR_mid * mid.a_tilde;
   return mid;
 }
-
-} // namespace
 
 State::State(const Eigen::VectorXd initial_state)
     : x_(0.0), y_(0.0), psi_(0.0), u_(0.0), v_(0.0), bias_accelerometer_x_(0.0),

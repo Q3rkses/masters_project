@@ -21,6 +21,11 @@ Eigen::VectorXd sample_multivariate_normal(std::mt19937_64 &rng,
   return mean + llt.matrixL() * standard_normal_sample;
 }
 
+double sample_uniform(std::mt19937_64 &rng, double low, double high) {
+  std::uniform_real_distribution<double> uniform(low, high);
+  return uniform(rng);
+}
+
 GaussianWhiteNoise::GaussianWhiteNoise(
     const SimulationConfig &simulation_config)
     : mean_(simulation_config.mean), covariance_(simulation_config.covariance),

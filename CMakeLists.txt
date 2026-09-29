@@ -20,6 +20,7 @@ add_library(kalman_lib
   src/smoothers/extended_rauch_tung_striebel_smoother.cpp
   src/simulation.cpp
   src/results.cpp
+  src/trajectory.cpp
   src/scenarios/random_walk_scenario.cpp
 )
 
