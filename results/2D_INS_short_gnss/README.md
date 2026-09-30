@@ -1,6 +1,6 @@
 # 2-D strapdown INS, short GNSS gaps
 
-[Back to the overview](../../README.md) | [Previous: 2-D strapdown INS](../2D_INS/README.md)
+[Back to the overview](../../README.md) | [Previous: 2-D strapdown INS](../2D_INS/README.md) | [Next: multi-sensor fusion](../2D_INS_multi_sensor/README.md)
 
 The "very short" half of a planned pair testing how GNSS fix frequency
 affects consistency and accuracy. GNSS period dropped from uniform(5, 15)s

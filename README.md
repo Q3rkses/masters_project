@@ -69,6 +69,7 @@ Each experiment lives in `results/<name>/` with its own `README.md`, `data/` and
 | [2-D random walk](results/2D/README.md) | the same with vectors, and covariance ellipses    | 200 steps, RMSE 0.545 to 0.388, all three consistent  |
 | [2-D strapdown INS](results/2D_INS/README.md) | nonlinear model, matched IMU noise, irregular GNSS fixes | 24000 steps, RMSE 1.12 to 0.46, mostly consistent (ANIS mildly low) |
 | [2-D INS, short GNSS gaps](results/2D_INS_short_gnss/README.md) | same, GNSS period 1-3s instead of 5-15s | 24000 steps, RMSE 0.50 to 0.27, all three consistent |
+| [2-D INS, multi-sensor fusion](results/2D_INS_multi_sensor/README.md) | adds magnetometer and DVL aiding alongside GNSS | 24000 steps, RMSE 0.16 to 0.10, all three consistent |
 
 ## Repository layout
 
