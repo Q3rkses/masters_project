@@ -11,7 +11,7 @@
 #include "models/models.hpp"
 #include <Eigen/Dense>
 
-class ExtendedKalmanFilter final : public BayesianFilter {
+class ExtendedKalmanFilter final {
 public:
   /**
    * @brief Constructor for the Extended Kalman Filter class.
@@ -33,7 +33,7 @@ public:
 
   FilterPredict predict(const Eigen::VectorXd &x_current,
                         const Eigen::MatrixXd &P_current,
-                        const Input &input) override;
+                        const Input &input);
 
   /**
    * @brief The update step in an Extended Kalman Filter
@@ -46,14 +46,13 @@ public:
    * @return returns x_updated, innovation, P_updated packaged in
    * the FilterUpdate struct.
    */
-  FilterUpdate update(const Eigen::VectorXd &x_predicted,
-                      const Eigen::VectorXd &z_current,
-                      const Eigen::MatrixXd &P_predicted,
-                      const Input &input) override;
+  FilterUpdate
+  update(const Eigen::VectorXd &x_predicted, const Eigen::VectorXd &z_current,
+         const Eigen::MatrixXd &P_predicted, const Input &input,
+         const std::shared_ptr<const MeasurementModel> &measurement_model);
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
-  std::shared_ptr<const MeasurementModel> measurement_model_;
 };
 
 #endif

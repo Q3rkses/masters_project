@@ -85,7 +85,7 @@ private:
   Eigen::MatrixXd Q_matrix_;
 };
 
-class LinearMeasurementModel final : public MeasurementModel {
+class LinearMeasurementModel : public MeasurementModel {
 public:
   /**
    * @brief Constructor for the LinearMeasurementModel class, only H and R

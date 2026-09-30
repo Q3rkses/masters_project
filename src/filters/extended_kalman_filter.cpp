@@ -5,12 +5,9 @@
 #include <stdexcept>
 
 ExtendedKalmanFilter::ExtendedKalmanFilter(const FilterConfig &filter_config)
-    : motion_model_(filter_config.motion_model),
-      measurement_model_(filter_config.measurement_model) {
-  if (!motion_model_ || !measurement_model_) {
-    throw std::invalid_argument(
-        "ExtendedKalmanFilter: the filter config needs both a motion and a "
-        "measurement model");
+    : motion_model_(filter_config.motion_model) {
+  if (!motion_model_) {
+    throw std::invalid_argument("ExtendedKalmanFilter: the filter config needs a motion model");
   }
 };
 
@@ -26,20 +23,23 @@ FilterPredict ExtendedKalmanFilter::predict(const Eigen::VectorXd &x_current,
   return filter_prediction;
 }
 
-FilterUpdate ExtendedKalmanFilter::update(const Eigen::VectorXd &x_predicted,
-                                          const Eigen::VectorXd &z_current,
-                                          const Eigen::MatrixXd &P_predicted,
-                                          const Input &input) {
+FilterUpdate ExtendedKalmanFilter::update(
+    const Eigen::VectorXd &x_predicted, const Eigen::VectorXd &z_current,
+    const Eigen::MatrixXd &P_predicted, const Input &input,
+    const std::shared_ptr<const MeasurementModel> &measurement_model) {
+  if (!measurement_model) {
+    throw std::invalid_argument("ExtendedKalmanFilter::update: measurement model is null");
+  }
 
-  Eigen::MatrixXd H = measurement_model_->H(x_predicted, input);
-  Eigen::MatrixXd R = measurement_model_->R(x_predicted, input);
+  Eigen::MatrixXd H = measurement_model->H(x_predicted, input);
+  Eigen::MatrixXd R = measurement_model->R(x_predicted, input);
 
-  Eigen::VectorXd z_predicted = measurement_model_->h(x_predicted, input);
+  Eigen::VectorXd z_predicted = measurement_model->h(x_predicted, input);
 
   // remember to use the proper compostion operation, rather than
   // the default + or - operator when dealing with states / measurements
   Eigen::VectorXd innovation =
-      measurement_model_->composition_minus(z_current, z_predicted);
+      measurement_model->composition_minus(z_current, z_predicted);
 
   Eigen::MatrixXd PHt = P_predicted * H.transpose();
   Eigen::MatrixXd S = H * PHt + R;

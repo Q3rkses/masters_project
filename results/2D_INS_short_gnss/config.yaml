@@ -1,0 +1,40 @@
+# general params
+seed: 42
+timesteps: 24000 # 4 minutes at dt=0.01
+dt: 0.01 # The discretization interval [s]
+# imu noise params, deliberataly a bit worse than an imu one would use realistically
+gyro_time_constant: 1000 # Gauss Markov time constant for gyro [s]
+accelerometer_time_constant: [1000.0, 1000.0] # Gauss Markov time constant for accelerometer [s]
+gyro_noise_variance: 5e-7 # (rad/s)^2, bias instability ~146 deg/hr
+accelerometer_noise_variance: [5e-4, 5e-4] # (m/s^2)^2, bias instability ~2.3 mg
+gyro_white_noise_intensity: 5e-6 # rad^2/s, angular random walk
+accelerometer_white_noise_intensity: [5e-4, 5e-4] # (m/s^2)^2 * s, velocity random walk
+# the filter's own belief about the IMU noise above
+filter_gyro_time_constant: 1000
+filter_accelerometer_time_constant: [1000.0, 1000.0]
+filter_gyro_noise_variance: 8e-7
+filter_accelerometer_noise_variance: [7e-4, 7e-4]
+filter_gyro_white_noise_intensity: 5e-6
+filter_accelerometer_white_noise_intensity: [5e-4, 5e-4]
+# initial condition of the ASV: [x, y, psi, u, v, b_ax, b_ay, b_g]
+x0: [0, 0, 0, 2.0, 0, 0, 0, 0] # start at origin with heading +x
+p0_diagonal: [0.4, 0.4, 0.04, 0.04, 0.04, 0.004, 0.004, 0.0004]
+# measurement noise
+gnss_noise_variance: 0.20 # m^2, 1-sigma ~0.4m
+# m^2, m^2, rad^2 (heading 1-sigma ~0.18deg)
+gnss_and_heading_noise_variance: [0.20, 0.20, 1e-5]
+gnss_period_min: 1.0 # minimum period between GNSS measurements [s]
+gnss_period_max: 3.0 # maximum period between GNSS measurements [s]
+# which trajectory to run: rounded_rectangle | circle | straight_into_turn
+trajectory: rounded_rectangle
+path_speed: 2 # constant speed along the path [m/s]
+# rounded_rectangle: four straight sides with quarter-circle corners, looped
+rectangle_width: 80.0
+rectangle_height: 50.0
+rectangle_corner_radius: 10.0
+# circle: traced continuously, looped
+circle_radius: 15.0
+# straight_into_turn: one straight then one turn, stops at the end
+straight_length: 30.0
+turn_radius: 10.0
+turn_sweep_deg: 90.0 # degrees, positive = left

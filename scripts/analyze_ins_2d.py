@@ -16,27 +16,27 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Ellipse
-from scipy.stats import chi2
+from scipy.stats import chi2, norm
 
 TRUTH = "#3d3d3a"
-MEASURED = "#c3c2b7"
 FILTER = "#2a78d6"
 SMOOTHER = "#eb6834"
 BAND = "#8a8984"
-FIX = "#c0392b"
+GNSS = "#c0392b"
+MAGNETOMETER = "#8e44ad"
+DVL = "#16a085"
 
 STATE_DIM = 8
 MEASUREMENT_DIM = 2  # GNSS position only
+MAGNETOMETER_ARROW_LENGTH = 3.0  # meters, purely for visibility
+FIX_STRIDE = 20  # magnetometer/DVL fire far more often than GNSS; plot every Nth
 CONFIDENCE = 0.95
-WINDOWS = (6000, 20000, 60000)  # ~1 lap, ~3 laps, the full 10-minute run
 ELLIPSES = 6  # confidence ellipses drawn along each estimated trajectory
-AVERAGING_WINDOW = 50  # raw per-step NIS/NEES is noise; the running mean is readable
+AVERAGING_WINDOW = 150  # raw per-step NEES is noise; the running mean is readable
 
 # where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_gyro]
 POSITION = slice(0, 2)
 HEADING = 2
-VELOCITY = slice(3, 5)
-BIAS = slice(5, 8)
 
 
 def load(path):
@@ -126,14 +126,29 @@ def new_figure(title, xlabel="x position", ylabel="y position", equal=True):
 
 
 def draw_gnss_fixes(axis, z_fix):
-    axis.scatter(z_fix[:, 0], z_fix[:, 1], s=18, color=FIX, zorder=4,
+    axis.scatter(z_fix[:, 0], z_fix[:, 1], s=30, color=GNSS, zorder=5,
                 label="GNSS fix", marker="x")
+
+
+def draw_magnetometer_fixes(axis, position_fix, heading_fix):
+    """Arrows at the true position when a magnetometer fix arrived, pointing
+    in the measured (noisy) heading -- shows both where and what it read."""
+    dx = MAGNETOMETER_ARROW_LENGTH * np.cos(heading_fix)
+    dy = MAGNETOMETER_ARROW_LENGTH * np.sin(heading_fix)
+    axis.quiver(position_fix[:, 0], position_fix[:, 1], dx, dy, color=MAGNETOMETER,
+               angles="xy", scale_units="xy", scale=1, width=0.005, zorder=5,
+               label="magnetometer fix")
+
+
+def draw_dvl_fixes(axis, z_fix):
+    axis.scatter(z_fix[:, 0], z_fix[:, 1], s=30, color=DVL, zorder=5,
+                label="DVL fix", marker="^")
 
 
 def draw_truth(axis, x_true):
     axis.plot(x_true[:, 0], x_true[:, 1], color=TRUTH, linewidth=1.2,
-              label="ground truth", zorder=2)
-    axis.scatter(x_true[0, 0], x_true[0, 1], s=30, color=TRUTH, zorder=5, label="start")
+              label="ground truth", zorder=3)
+    axis.scatter(x_true[0, 0], x_true[0, 1], s=30, color=TRUTH, zorder=6, label="start")
 
 
 def draw_estimate(axis, indices, x, P, color, label):
@@ -161,22 +176,6 @@ def effective_samples(values, count):
     return count * (1 - rho) / (1 + rho)
 
 
-def plot_consistency(axis, k, series, dof, name):
-    """Running mean of a NIS or NEES sequence against its acceptance band."""
-    samples = min(effective_samples(v, min(AVERAGING_WINDOW, len(v))) for v, _ in series.values())
-    low, high = chi2_interval(dof, samples=samples)
-    axis.axhspan(low, high, color=BAND, alpha=0.15, linewidth=0,
-                 label=f"95% band [{low:.2f}, {high:.2f}]")
-    axis.axhline(dof, color=BAND, linewidth=1, linestyle="--",
-                 label=f"expected value ({dof})")
-    for label, (values, color) in series.items():
-        window = min(AVERAGING_WINDOW, len(values))
-        axis.plot(k[window - 1:], running_mean(values, window),
-                  color=color, linewidth=1.5, label=label)
-    axis.set_title(name, loc="left")
-    axis.set_ylabel(f"{name}, {AVERAGING_WINDOW}-step running mean")
-
-
 def summarise(name, values, dof):
     """Time-averaged consistency, which is a far tighter test than per-timestep.
 
@@ -196,66 +195,50 @@ def summarise(name, values, dof):
           f"{inside:5.1%} of steps in band  -> {verdict}{dropped_note}")
 
 
-def trajectory_figures(window, x_true, z_fix, fix_in_window, x_filter, P_filter,
-                       x_smoother, P_smoother):
-    """The four trajectory views over the first `window` timesteps."""
-    shown = min(window, len(x_true))
-    w = slice(0, shown)
-    indices = np.linspace(0, shown - 1, ELLIPSES).astype(int)
-    span = f"first {shown} timesteps" if shown < len(x_true) else f"all {len(x_true)} timesteps"
-    z_w = z_fix[fix_in_window < shown]
-    figures = {}
-
-    figure, axis = new_figure(f"Simulation, {span}")
-    draw_gnss_fixes(axis, z_w)
-    draw_truth(axis, x_true[w])
+def filter_vs_smoother_figure(x_true, x_filter, P_filter, x_smoother, P_smoother):
+    """2+3. Ground truth against both the filter and the smoother, each with
+    its own 95% confidence ellipses, in one window."""
+    indices = np.linspace(0, len(x_true) - 1, ELLIPSES).astype(int)
+    figure, axis = new_figure(f"Filter vs smoother, all {len(x_true)} timesteps")
+    draw_truth(axis, x_true)
+    draw_estimate(axis, indices, x_filter, P_filter, FILTER, "filter")
+    draw_estimate(axis, indices, x_smoother, P_smoother, SMOOTHER, "smoother")
     finish(axis)
-    figures[f"ins_1_simulation_{window}.png"] = figure
+    return figure
 
-    figure, axis = new_figure(f"EKF, {span}")
-    draw_gnss_fixes(axis, z_w)
-    draw_truth(axis, x_true[w])
-    draw_estimate(axis, indices, x_filter[w], P_filter[w], FILTER, "filter")
+
+def gnss_fixes_figure(x_true, z_gnss):
+    """1a. Ground truth against the GNSS fixes actually used by the filter."""
+    figure, axis = new_figure("GNSS fixes")
+    draw_truth(axis, x_true)
+    draw_gnss_fixes(axis, z_gnss)
     finish(axis)
-    figures[f"ins_2_filter_{window}.png"] = figure
+    return figure
 
-    figure, axis = new_figure(f"ERTS smoother, {span}")
-    draw_gnss_fixes(axis, z_w)
-    draw_truth(axis, x_true[w])
-    draw_estimate(axis, indices, x_smoother[w], P_smoother[w], SMOOTHER, "smoother")
+
+def magnetometer_fixes_figure(x_true, position_fix, heading_fix):
+    """1b. Ground truth against magnetometer fixes. Magnetometer fires far
+    more often than GNSS, so only every FIX_STRIDE-th one is drawn."""
+    figure, axis = new_figure("Magnetometer fixes")
+    draw_truth(axis, x_true)
+    draw_magnetometer_fixes(axis, position_fix[::FIX_STRIDE], heading_fix[::FIX_STRIDE])
     finish(axis)
-    figures[f"ins_3_smoother_{window}.png"] = figure
-
-    figure, axis = new_figure(f"Filter vs smoother, {span}")
-    draw_truth(axis, x_true[w])
-    draw_estimate(axis, indices, x_filter[w], P_filter[w], FILTER, "filter")
-    draw_estimate(axis, indices, x_smoother[w], P_smoother[w], SMOOTHER, "smoother")
-    finish(axis)
-    figures[f"ins_4_filter_vs_smoother_{window}.png"] = figure
-
-    return figures
+    return figure
 
 
-def growth_between_fixes_figure(fix_steps, x_true, x_filter, P_filter, dt):
-    """Zooms into the single longest gap between two GNSS fixes, and draws the
-    filter's position ellipse growing at several points through it -- the
-    filter free-runs on the IMU alone for that whole stretch."""
-    gaps = np.diff(fix_steps)
-    longest = np.argmax(gaps)
-    start, end = fix_steps[longest], fix_steps[longest + 1]
-    span = slice(start, end + 1)
-    indices = np.linspace(0, end - start, ELLIPSES).astype(int) + start
-
-    figure, axis = new_figure(
-        f"Covariance growth between two GNSS fixes ({(end - start) * dt:.1f}s apart)")
-    draw_truth(axis, x_true[span])
-    draw_estimate(axis, indices - start, x_filter[span], P_filter[span], FILTER, "filter")
+def dvl_fixes_figure(x_true, z_dvl):
+    """1c. Ground truth against DVL fixes. DVL fires far more often than
+    GNSS, so only every FIX_STRIDE-th one is drawn."""
+    figure, axis = new_figure("DVL fixes")
+    draw_truth(axis, x_true)
+    draw_dvl_fixes(axis, z_dvl[::FIX_STRIDE])
     finish(axis)
     return figure
 
 
 def bias_figure(k, x_true, x_filter, x_smoother):
-    """True vs estimated sensor bias over time -- can the filter learn it?"""
+    """True vs estimated sensor bias over time, one window, three stacked
+    plots -- can the filter learn it?"""
     figure, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
     labels = ("accelerometer bias x [m/s^2]", "accelerometer bias y [m/s^2]",
              "gyro bias [rad/s]")
@@ -273,24 +256,74 @@ def bias_figure(k, x_true, x_filter, x_smoother):
     return figure
 
 
-def heading_error_figure(k, heading_error_filter, heading_error_smoother):
-    figure, axis = new_figure("Heading error", xlabel="timestep",
-                              ylabel="heading error [rad]", equal=False)
-    axis.axhline(0, color=BAND, linewidth=1, linestyle="--")
-    axis.plot(k, heading_error_filter, color=FILTER, linewidth=1, label="filter")
-    axis.plot(k, heading_error_smoother, color=SMOOTHER, linewidth=1, label="smoother")
+def confidence_interval_figure(k, x_true, x_filter, P_filter, x_smoother, P_smoother):
+    """4. Position and heading error against each estimator's own 95%
+    confidence interval, filter and smoother overlaid so they're directly
+    comparable."""
+    sigma_scale = norm.ppf(0.5 + CONFIDENCE / 2)
+    specs = (("x error [m]", 0), ("y error [m]", 1), ("heading error [rad]", 2))
+    figure, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
+    for axis, (label, i) in zip(axes, specs):
+        axis.axhline(0, color=BAND, linewidth=1, linestyle="--")
+        for x_est, P_est, color, name in ((x_filter, P_filter, FILTER, "filter"),
+                                          (x_smoother, P_smoother, SMOOTHER, "smoother")):
+            error = angle_diff(x_true[:, i], x_est[:, i]) if i == HEADING else x_true[:, i] - x_est[:, i]
+            # clip: the smoother's P has no PSD guarantee, see masked_quadratic_form
+            sigma = sigma_scale * np.sqrt(np.clip(P_est[:, i, i], 0, None))
+            axis.fill_between(k, -sigma, sigma, color=color, alpha=0.15, linewidth=0,
+                             label=f"{name} 95%")
+            axis.plot(k, error, color=color, linewidth=1, label=name)
+        axis.set_ylabel(label)
+        axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
+        axis.set_axisbelow(True)
+        axis.spines[["top", "right"]].set_visible(False)
+    axes[0].set_title("Error with 95% confidence interval", loc="left")
+    axes[-1].set_xlabel("timestep")
+    finish(axes[0])
+    return figure
+
+
+def nis_figure(k_fix, nis):
+    """5a. NIS at each of the ~dozen real GNSS fixes, against the per-sample
+    95% band. There are too few fixes for a running-mean plot to mean
+    anything -- each point here is one real measurement."""
+    low, high = chi2_interval(MEASUREMENT_DIM)
+    figure, axis = new_figure("NIS per GNSS fix", xlabel="timestep",
+                              ylabel="NIS", equal=False)
+    axis.axhspan(low, high, color=BAND, alpha=0.15, linewidth=0,
+                label=f"95% band [{low:.2f}, {high:.2f}]")
+    axis.axhline(MEASUREMENT_DIM, color=BAND, linewidth=1, linestyle="--",
+                label=f"expected value ({MEASUREMENT_DIM})")
+    axis.plot(k_fix, nis, color=FILTER, linewidth=0.8, alpha=0.6)
+    axis.scatter(k_fix, nis, color=FILTER, s=25, zorder=3, label="filter")
     finish(axis)
     return figure
 
 
-def position_error_figure(k, position_error_filter, position_error_smoother, fix_steps):
-    figure, axis = new_figure("Position error, with GNSS fixes marked",
-                              xlabel="timestep", ylabel="position error [m]", equal=False)
-    for count, step in enumerate(fix_steps):
-        axis.axvline(step, color=FIX, alpha=0.25, linewidth=0.8,
-                     label="GNSS fix" if count == 0 else None)
-    axis.plot(k, position_error_filter, color=FILTER, linewidth=1, label="filter")
-    axis.plot(k, position_error_smoother, color=SMOOTHER, linewidth=1, label="smoother")
+def nees_figure(k, nees_filter, nees_smoother):
+    """5b. Running mean of position NEES, filter and smoother, against the
+    genuine per-sample 95% region (same one NIS uses). Position NEES here
+    stays autocorrelated out past 600 steps -- there's no AVERAGING_WINDOW
+    small enough to smooth usefully but large enough to treat as "many
+    independent samples", so the line is smoothed for readability only, not
+    compared against a band that assumes averaging power it doesn't have.
+    NaN (P not PSD, see masked_quadratic_form) is zeroed only for this plot;
+    the printed summary above is the honest number."""
+    series = {"filter": (np.nan_to_num(nees_filter), FILTER),
+             "smoother": (np.nan_to_num(nees_smoother), SMOOTHER)}
+    low, high = chi2_interval(2)  # per-sample, dof=2 -- no averaging assumed
+
+    figure, axis = new_figure("position NEES", xlabel="timestep",
+                              ylabel=f"position NEES ({AVERAGING_WINDOW}-step running mean, "
+                                    "per-sample 95% region)",
+                              equal=False)
+    axis.axhspan(low, high, color=BAND, alpha=0.15, linewidth=0,
+                label=f"95% band [{low:.2f}, {high:.2f}]")
+    axis.axhline(2, color=BAND, linewidth=1, linestyle="--", label="expected value (2)")
+    for label, (values, color) in series.items():
+        window = min(AVERAGING_WINDOW, len(values))
+        axis.plot(k[window - 1:], running_mean(values, window), color=color,
+                 linewidth=1.5, label=label)
     finish(axis)
     return figure
 
@@ -303,11 +336,18 @@ def main():
     filtered = load(data_dir / "filter.csv")
     smoothed = load(data_dir / "smoother.csv")
     fix_steps = load_fix_steps(data_dir / "gnss_fixes.csv")
+    magnetometer_fixes = load(data_dir / "magnetometer_fixes.csv")
+    dvl_fixes = load(data_dir / "dvl_fixes.csv")
 
     k = truth["timestep"].astype(int)
     x_true = vectors(truth, "x_true", STATE_DIM)
     z = vectors(truth, "z", MEASUREMENT_DIM)
     z_fix = z[fix_steps]
+
+    magnetometer_steps = magnetometer_fixes["timestep"].astype(int)
+    magnetometer_heading = magnetometer_fixes["z_0"]
+    magnetometer_position = x_true[magnetometer_steps, :2]
+    z_dvl = vectors(dvl_fixes, "z", 4)[:, :2]  # DVL's own reported position
 
     x_filter = vectors(filtered, "x_updated", STATE_DIM)
     P_filter = matrices(filtered, "P_updated", STATE_DIM)
@@ -323,62 +363,32 @@ def main():
     def position_nees(x_est, P_est):
         return masked_quadratic_form(x_true[:, POSITION] - x_est[:, POSITION], P_est[:, :2, :2])
 
-    def heading_nees(x_est, P_est):
-        error = angle_diff(x_true[:, HEADING], x_est[:, HEADING])
-        variance = P_est[:, 2, 2]
-        return np.where(variance >= 0, error ** 2 / variance, np.nan)
-
-    def velocity_nees(x_est, P_est):
-        return masked_quadratic_form(x_true[:, VELOCITY] - x_est[:, VELOCITY], P_est[:, 3:5, 3:5])
-
-    def bias_nees(x_est, P_est):
-        return masked_quadratic_form(x_true[:, BIAS] - x_est[:, BIAS], P_est[:, 5:8, 5:8])
-
     position_error_filter = np.linalg.norm(x_true[:, POSITION] - x_filter[:, POSITION], axis=1)
     position_error_smoother = np.linalg.norm(x_true[:, POSITION] - x_smoother[:, POSITION], axis=1)
-    heading_error_filter = angle_diff(x_true[:, HEADING], x_filter[:, HEADING])
-    heading_error_smoother = angle_diff(x_true[:, HEADING], x_smoother[:, HEADING])
 
     print(f"{len(k)} timesteps, {len(fix_steps)} GNSS fixes\n")
     print("consistency (time-averaged):")
     summarise("ANIS", nis, MEASUREMENT_DIM)
-    for name, dof, fn in (("position", 2, position_nees), ("heading", 1, heading_nees),
-                          ("velocity", 2, velocity_nees), ("bias", 3, bias_nees)):
-        summarise(f"ANEES {name} filter", fn(x_filter, P_filter), dof)
-        summarise(f"ANEES {name} smoother", fn(x_smoother, P_smoother), dof)
+    summarise("ANEES position filter", position_nees(x_filter, P_filter), 2)
+    summarise("ANEES position smoother", position_nees(x_smoother, P_smoother), 2)
     print("\naccuracy:")
     print(f"  RMSE position filter    {np.sqrt(np.mean(position_error_filter ** 2)):6.4f} m")
     print(f"  RMSE position smoother  {np.sqrt(np.mean(position_error_smoother ** 2)):6.4f} m")
 
-    figures = {}
-    for window in WINDOWS:
-        figures.update(trajectory_figures(
-            window, x_true, z_fix, fix_steps, x_filter, P_filter, x_smoother, P_smoother))
-
-    dt = 0.01  # not in any CSV; keep in sync with the config's dt, only used for a label
-    figures["ins_5_covariance_growth.png"] = growth_between_fixes_figure(
-        fix_steps, x_true, x_filter, P_filter, dt)
-    figures["ins_6_bias.png"] = bias_figure(k, x_true, x_filter, x_smoother)
-    figures["ins_7_heading_error.png"] = heading_error_figure(
-        k, heading_error_filter, heading_error_smoother)
-    figures["ins_8_position_error.png"] = position_error_figure(
-        k, position_error_filter, position_error_smoother, fix_steps)
-
-    # running-mean plots can't handle NaN (see masked_quadratic_form); zero is
-    # a display compromise, the printed summary above is the honest number
-    figure, axes = plt.subplots(2, 1, figsize=(11, 8))
-    plot_consistency(axes[0], k[fix_steps], {"filter": (nis, FILTER)}, MEASUREMENT_DIM, "NIS")
-    plot_consistency(axes[1], k, {
-        "filter": (np.nan_to_num(position_nees(x_filter, P_filter)), FILTER),
-        "smoother": (np.nan_to_num(position_nees(x_smoother, P_smoother)), SMOOTHER)},
-        2, "position NEES")
-    for axis in axes:
-        axis.set_xlabel("timestep")
-        axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
-        axis.set_axisbelow(True)
-        axis.spines[["top", "right"]].set_visible(False)
-        finish(axis)
-    figures["ins_9_consistency.png"] = figure
+    figures = {
+        "ins_1a_gnss_fixes.png": gnss_fixes_figure(x_true, z_fix),
+        "ins_1b_magnetometer_fixes.png": magnetometer_fixes_figure(
+            x_true, magnetometer_position, magnetometer_heading),
+        "ins_1c_dvl_fixes.png": dvl_fixes_figure(x_true, z_dvl),
+        "ins_2_filter_vs_smoother.png": filter_vs_smoother_figure(
+            x_true, x_filter, P_filter, x_smoother, P_smoother),
+        "ins_3_confidence_interval.png": confidence_interval_figure(
+            k, x_true, x_filter, P_filter, x_smoother, P_smoother),
+        "ins_4_nis.png": nis_figure(k[fix_steps], nis),
+        "ins_5_nees.png": nees_figure(
+            k, position_nees(x_filter, P_filter), position_nees(x_smoother, P_smoother)),
+        "ins_7_bias.png": bias_figure(k, x_true, x_filter, x_smoother),
+    }
 
     print()
     for name, figure in figures.items():
