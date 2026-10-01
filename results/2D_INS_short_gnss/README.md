@@ -54,6 +54,20 @@ fixes to leave the well-behaved, roughly-linear part of the covariance growth
 curve (see the [baseline's growth plot](../2D_INS/README.md#results)), so it
 tracks almost as tightly as the smoother throughout.
 
+![Sensor bias, truth vs estimate](figures/ins_7_bias.png)
+
+Compare against the [baseline's bias plot](../2D_INS/README.md#results): the
+filter's staircase is visibly finer here (118 correction steps instead of 22),
+and tracks the true bias much more closely, most strikingly on gyro bias,
+which in the baseline wanders off and tracks the true trend poorly for most
+of the run, but here locks onto it closely from about timestep 10000 onward.
+Both runs show the same early transient (the filter briefly overshoots on the
+first couple of fixes before settling), it's just compressed into fewer
+timesteps here since the first fixes arrive sooner. Makes sense: bias isn't
+observed directly, only indirectly through how it misaligns a GNSS-corrected
+position/heading from the predicted one, so more corrections give the filter
+more chances to pull it in.
+
 ## Consistency
 
 |                         | value  | band             | verdict    | baseline verdict |
