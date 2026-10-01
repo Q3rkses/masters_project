@@ -14,33 +14,33 @@ Unlike the earlier (now removed) one-trajectory-per-folder results, every
 scenario here is run on all three trajectories (`rounded_rectangle`,
 `circle`, `straight_into_turn`) and reported together in this one README.
 
-|               |                                                   |
-| ------------- | ------------------------------------------------- |
-| **Status**    | done, consistent except one turn-heavy case        |
-| **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42   |
-| **Reproduce** | see [Reproduce](#reproduce)                        |
+|               |                                                  |
+| ------------- | ------------------------------------------------ |
+| **Status**    | done, consistent except one turn-heavy case      |
+| **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42 |
+| **Reproduce** | see [Reproduce](#reproduce)                      |
 
 ## Setup
 
 Shared across all three scenarios in this set (this one, multi-sensor
 fusion, and dead reckoning) and all three trajectories within each:
 
-| parameter | value | meaning |
-| --- | --- | --- |
-| gyro bias instability | 5e-5 (rad/s)^2 | true and filter belief matched, no deliberate mismatch |
-| accel bias instability | 5e-2 (m/s^2)^2, both axes | true and filter belief matched |
-| gyro / accel bias time constant | 1000s | slow enough to look like a near-constant offset over one run |
-| GNSS position noise | 0.20 m^2 | 1-sigma ~0.45m |
-| magnetometer heading noise | 3e-3 rad^2 | 1-sigma ~3deg |
-| DVL body-frame velocity noise | 1e-2 (m/s)^2, both axes | |
+| parameter                       | value                     | meaning                                                      |
+| ------------------------------- | ------------------------- | ------------------------------------------------------------ |
+| gyro bias instability           | 5e-5 (rad/s)^2            | true and filter belief matched, no deliberate mismatch       |
+| accel bias instability          | 5e-2 (m/s^2)^2, both axes | true and filter belief matched                               |
+| gyro / accel bias time constant | 1000s                     | slow enough to look like a near-constant offset over one run |
+| GNSS position noise             | 0.20 m^2                  | 1-sigma ~0.45m                                               |
+| magnetometer heading noise      | 3e-3 rad^2                | 1-sigma ~3deg                                                |
+| DVL body-frame velocity noise   | 1e-2 (m/s)^2, both axes   |                                                              |
 
 This scenario's own sensor periods:
 
-| sensor       | period            | fixes per run (typical) |
-| ------------ | ------------------ | ------------------------ |
-| GNSS         | uniform(1, 3)s      | ~150                     |
-| Magnetometer | disabled (1e5 s)    | 0                        |
-| DVL          | disabled (1e5 s)    | 0                        |
+| sensor       | period           | fixes per run (typical) |
+| ------------ | ---------------- | ----------------------- |
+| GNSS         | uniform(1, 3)s   | ~150                    |
+| Magnetometer | disabled (1e5 s) | 0                       |
+| DVL          | disabled (1e5 s) | 0                       |
 
 Trajectories: `rounded_rectangle` (80x50m, 10m corner radius, looped),
 `circle` (40m radius, looped), `straight_into_turn` (296m straight, 90deg
@@ -72,11 +72,11 @@ python3 scripts/analyze_ins_2d.py results/INS2D/only_gnss/<trajectory>/data
 ![Filter vs smoother](rounded_rectangle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](rounded_rectangle/figures/ins_4_nis.png)
 
-|                        | value  | band             | verdict    |
-| ---------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS              | 1.9679 | [1.6991, 2.3251] | consistent |
-| ANEES position filter  | 1.8826 | [1.4533, 2.6326] | consistent |
-| ANEES position smoother| 1.7055 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict    |
+| ----------------------- | ------ | ---------------- | ---------- |
+| ANIS GNSS               | 1.9679 | [1.6991, 2.3251] | consistent |
+| ANEES position filter   | 1.8826 | [1.4533, 2.6326] | consistent |
+| ANEES position smoother | 1.7055 | [0.0506, 7.3778] | consistent |
 
 RMSE: filter 0.69m, smoother 0.26m.
 
@@ -86,11 +86,11 @@ RMSE: filter 0.69m, smoother 0.26m.
 ![Filter vs smoother](circle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](circle/figures/ins_4_nis.png)
 
-|                        | value  | band             | verdict    |
-| ---------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS              | 1.9853 | [1.6986, 2.3256] | consistent |
-| ANEES position filter  | 1.8765 | [1.4979, 2.5735] | consistent |
-| ANEES position smoother| 1.7225 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict    |
+| ----------------------- | ------ | ---------------- | ---------- |
+| ANIS GNSS               | 1.9853 | [1.6986, 2.3256] | consistent |
+| ANEES position filter   | 1.8765 | [1.4979, 2.5735] | consistent |
+| ANEES position smoother | 1.7225 | [0.0506, 7.3778] | consistent |
 
 RMSE: filter 0.68m, smoother 0.26m.
 
@@ -100,11 +100,11 @@ RMSE: filter 0.68m, smoother 0.26m.
 ![Filter vs smoother](straight_into_turn/figures/ins_2_filter_vs_smoother.png)
 ![NIS](straight_into_turn/figures/ins_4_nis.png)
 
-|                        | value  | band             | verdict      |
-| ---------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS              | 3.6455 | [1.2468, 2.9283] | INCONSISTENT |
-| ANEES position filter  | 3.8392 | [1.2977, 2.8518] | INCONSISTENT |
-| ANEES position smoother| 5.2963 | [0.0506, 7.3778] | consistent   |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 3.6455 | [1.2468, 2.9283] | INCONSISTENT |
+| ANEES position filter   | 3.8392 | [1.2977, 2.8518] | INCONSISTENT |
+| ANEES position smoother | 5.2963 | [0.0506, 7.3778] | consistent   |
 
 RMSE: filter 0.99m, smoother 0.45m.
 
