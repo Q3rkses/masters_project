@@ -23,16 +23,16 @@ p0_diagonal: [0.4, 0.4, 0.04, 0.04, 0.04, 0.004, 0.004, 0.0004]
 # measurement noise
 gnss_noise_variance: 0.20 # m^2, 1-sigma ~0.4m
 gnss_and_heading_noise_variance: [0.20, 0.20, 1e-5] # m^2, m^2, rad^2 (heading 1-sigma ~0.18deg)
-gnss_period_min: 10.0 # minimum period between GNSS measurements [s]
-gnss_period_max: 20.0 # maximum period between GNSS measurements [s]
+gnss_period_min: 1.0 # minimum period between GNSS measurements [s]
+gnss_period_max: 3.0 # maximum period between GNSS measurements [s]
 magnetometer_noise_variance: 3e-3 # rad^2, 1-sigma ~3deg
-magnetometer_period_min: 0.25 # minimum period between magnetometer fixes [s]
-magnetometer_period_max: 1.0 # maximum period between magnetometer fixes [s]
+magnetometer_period_min: 100000.0 # minimum period between magnetometer fixes [s]
+magnetometer_period_max: 100000.0 # maximum period between magnetometer fixes [s]
 dvl_noise_variance: [1e-2, 1e-2] # (m/s)^2, (m/s)^2, body-frame velocity
-dvl_period_min: 0.2 # minimum period between DVL fixes [s]
-dvl_period_max: 1.0 # maximum period between DVL fixes [s]
+dvl_period_min: 100000.0 # minimum period between DVL fixes [s]
+dvl_period_max: 100000.0 # maximum period between DVL fixes [s]
 # which trajectory to run: rounded_rectangle | circle | straight_into_turn
-trajectory: rounded_rectangle
+trajectory: straight_into_turn
 path_speed: 2 # constant speed along the path [m/s]
 # rounded_rectangle: four straight sides with quarter-circle corners, looped
 rectangle_width: 80.0

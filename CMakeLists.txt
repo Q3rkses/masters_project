@@ -22,6 +22,7 @@ add_library(kalman_lib
   src/simulation.cpp
   src/results.cpp
   src/trajectory.cpp
+  src/utilities.cpp
   src/scenarios/random_walk_scenario.cpp
   src/scenarios/strapdown_ins_2D_scenario.cpp
 )

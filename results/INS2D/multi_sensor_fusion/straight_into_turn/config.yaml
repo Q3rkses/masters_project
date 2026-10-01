@@ -32,7 +32,7 @@ dvl_noise_variance: [1e-2, 1e-2] # (m/s)^2, (m/s)^2, body-frame velocity
 dvl_period_min: 0.2 # minimum period between DVL fixes [s]
 dvl_period_max: 1.0 # maximum period between DVL fixes [s]
 # which trajectory to run: rounded_rectangle | circle | straight_into_turn
-trajectory: rounded_rectangle
+trajectory: straight_into_turn
 path_speed: 2 # constant speed along the path [m/s]
 # rounded_rectangle: four straight sides with quarter-circle corners, looped
 rectangle_width: 80.0

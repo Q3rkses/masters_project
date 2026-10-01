@@ -1,0 +1,19 @@
+30000 timesteps, 0 GNSS fixes
+
+consistency (time-averaged):
+  ANIS GNSS            no fixes recorded, nothing to compute
+  ANIS magnetometer       0.9634  band [0.8808, 1.1266]  95.0% of steps in band  -> consistent
+  ANIS DVL                1.6713  band [1.8186, 2.1899]  94.1% of steps in band  -> INCONSISTENT
+  ANEES position filter    1.8161  band [0.1875, 5.9050]  97.4% of steps in band  -> consistent
+  ANEES position smoother    1.8138  band [0.0506, 7.3778]  97.1% of steps in band  -> consistent
+
+accuracy:
+  RMSE position filter    2.1381 m
+  RMSE position smoother  2.1341 m
+
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_1_sensor_fixes.png
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_2_filter_vs_smoother.png
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_3_confidence_interval.png
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_4_nis.png
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_5_nees.png
+wrote results/INS2D/dead_reckoning/straight_into_turn/figures/ins_7_bias.png

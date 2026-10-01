@@ -1,7 +1,8 @@
 /**
  * @file measurement_models.hpp
- * @brief Aiding sensor measurement models beyond GNSS: a magnetometer that
- * reports heading, and a DVL that reports velocity and position.
+ * @brief GNSS, magnetometer and DVL measurement models. Each knows its own
+ * measurement dimension, so each writes its own fix CSV (one row per fix:
+ * timestep, raw measurement, innovation, innovation covariance S).
  */
 
 #ifndef MEASUREMENT_MODELS_HPP
@@ -9,7 +10,29 @@
 
 #include "models/linear_models.hpp"
 #include "models/models.hpp"
+#include "utilities.hpp"
 #include <Eigen/Dense>
+#include <filesystem>
+#include <vector>
+
+struct GNSSConfig {
+  Eigen::MatrixXd position_noise; // R, 2x2
+};
+
+/**
+ * @brief GNSS, reporting position directly. h and H are inherited
+ * unchanged from LinearMeasurementModel.
+ */
+class GNSSMeasurementModel final : public LinearMeasurementModel {
+public:
+  explicit GNSSMeasurementModel(const GNSSConfig &config);
+
+  void write_fix_csv(const std::filesystem::path &path,
+                     const std::vector<int> &fix_steps,
+                     const std::vector<Eigen::VectorXd> &measurements,
+                     const std::vector<Eigen::VectorXd> &innovations,
+                     const std::vector<Eigen::MatrixXd> &S) const;
+};
 
 struct MagnetometerConfig {
   double heading_noise_variance; // rad^2
@@ -30,22 +53,28 @@ public:
   Eigen::VectorXd
   composition_minus(const Eigen::VectorXd &measurement_a,
                     const Eigen::VectorXd &measurement_b) const override;
+
+  void write_fix_csv(const std::filesystem::path &path,
+                     const std::vector<int> &fix_steps,
+                     const std::vector<Eigen::VectorXd> &measurements,
+                     const std::vector<Eigen::VectorXd> &innovations,
+                     const std::vector<Eigen::MatrixXd> &S) const;
 };
 
 struct DVLConfig {
-  Eigen::MatrixXd position_velocity_noise; // R, 4x4
+  Eigen::MatrixXd velocity_noise; // R, 2x2
 };
 
 /**
- * @brief A DVL that reports position and body-frame velocity. Nonlinear,
- * since converting velocity to body frame needs the rotation matrix.
+ * @brief A DVL that reports body-frame velocity. Nonlinear, since
+ * converting velocity to body frame needs the rotation matrix.
  */
 class DVLMeasurementModel final : public MeasurementModel {
 public:
   explicit DVLMeasurementModel(const DVLConfig &config);
 
   /**
-   * @brief [x, y, u_body, v_body]
+   * @brief [u_body, v_body]
    */
   Eigen::VectorXd h(const Eigen::VectorXd &state,
                     const Input &input) const override;
@@ -75,8 +104,14 @@ public:
 
   bool is_linear() const override;
 
+  void write_fix_csv(const std::filesystem::path &path,
+                     const std::vector<int> &fix_steps,
+                     const std::vector<Eigen::VectorXd> &measurements,
+                     const std::vector<Eigen::VectorXd> &innovations,
+                     const std::vector<Eigen::MatrixXd> &S) const;
+
 private:
-  Eigen::MatrixXd position_velocity_noise_;
+  Eigen::MatrixXd velocity_noise_;
 };
 
 #endif

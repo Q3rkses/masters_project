@@ -1,6 +1,6 @@
 # 2-D random walk
 
-[Back to the overview](../../README.md) | [Previous: 1-D random walk](../1D/README.md) | [Next: 2-D strapdown INS](../2D_INS/README.md)
+[Back to the overview](../../README.md) | [Previous: 1-D random walk](../1D/README.md) | [Next: 2-D strapdown INS, GNSS only](../INS2D/only_gnss/README.md)
 
 The same experiment as [the 1-D run](../1D/README.md), with a 2-D state. This is
 the first run with real vectors and covariance matrices, and the first where

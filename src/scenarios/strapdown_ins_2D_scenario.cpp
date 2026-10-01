@@ -13,7 +13,6 @@
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <random>
@@ -33,7 +32,7 @@ Eigen::VectorXd read_vector(const YAML::Node &node) {
 }
 // clang-format off
 // prefix picks which set of IMU noise keys to read: "" for the truth that
-// actually gets simulated, "filter_" for what the EKF/ERTS believe -- kept
+// actually gets simulated, "filter_" for what the EKF/ERTS believe, kept
 // separate so the two can be mismatched on purpose to test an inconsistent
 // filter. dt is never prefixed, it's a property of the simulation, not a
 // belief.
@@ -51,46 +50,6 @@ INS2DConfig read_ins_config(const YAML::Node &config, const std::string &prefix 
   ins.accelerometer_random_walk_variance = Eigen::Vector2d::Zero();
   return ins;
 } //clang-format on
-
-// one row per fix, timestep + the raw measurement + innovation + S
-void write_fix_csv(const std::filesystem::path &path,
-                   const std::vector<int> &fix_steps,
-                   const std::vector<Eigen::VectorXd> &measurements,
-                   const std::vector<Eigen::VectorXd> &innovations,
-                   const std::vector<Eigen::MatrixXd> &S) {
-  std::ofstream out(path);
-  const int dim = innovations.empty() ? 0 : innovations[0].size();
-
-  out << "timestep";
-  for (int i = 0; i < dim; i++) {
-    out << ",z_" << i;
-  }
-  for (int i = 0; i < dim; i++) {
-    out << ",innovation_" << i;
-  }
-  for (int r = 0; r < dim; r++) {
-    for (int c = 0; c < dim; c++) {
-      out << ",S_" << r << "_" << c;
-    }
-  }
-  out << "\n";
-
-  for (size_t i = 0; i < fix_steps.size(); i++) {
-    out << fix_steps[i];
-    for (int j = 0; j < dim; j++) {
-      out << "," << measurements[i](j);
-    }
-    for (int j = 0; j < dim; j++) {
-      out << "," << innovations[i](j);
-    }
-    for (int r = 0; r < dim; r++) {
-      for (int c = 0; c < dim; c++) {
-        out << "," << S[i](r, c);
-      }
-    }
-    out << "\n";
-  }
-}
 
 struct Trajectory {
   Path path;
@@ -148,13 +107,10 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       std::make_shared<StrapdownINS2D>(read_ins_config(config, "filter_"));
 
   // GNSS model
-  Eigen::MatrixXd gnss_H = Eigen::MatrixXd::Zero(2, 8);
-  gnss_H.block<2, 2>(0, 0).setIdentity(); // position only
   const double gnss_r = config["gnss_noise_variance"].as<double>();
-  ModelConfig gnss_measurement_config{.H = gnss_H,
-                                 .R = gnss_r * Eigen::MatrixXd::Identity(2, 2)};
+  GNSSConfig gnss_config{.position_noise = gnss_r * Eigen::MatrixXd::Identity(2, 2)};
   auto gnss_measurement_model =
-      std::make_shared<LinearMeasurementModel>(gnss_measurement_config);
+      std::make_shared<GNSSMeasurementModel>(gnss_config);
 
   // GNSS dual antenna (gnss + heading) model
 
@@ -174,10 +130,10 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   auto magnetometer_measurement_model =
       std::make_shared<MagnetometerMeasurementModel>(magnetometer_config);
 
-  // DVL model, reports position and body-frame velocity
+  // DVL model, reports body-frame velocity
   const Eigen::VectorXd dvl_r = read_vector(config["dvl_noise_variance"]);
   const Eigen::MatrixXd dvl_R = Eigen::MatrixXd(dvl_r.asDiagonal());
-  DVLConfig dvl_config{.position_velocity_noise = dvl_R};
+  DVLConfig dvl_config{.velocity_noise = dvl_R};
   auto dvl_measurement_model =
       std::make_shared<DVLMeasurementModel>(dvl_config);
 
@@ -226,7 +182,7 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       accelerometer_white_measurement_noise_config);
   GaussianWhiteNoise gyro_white_noise(gyro_white_measurement_noise_config);
   SimulationConfig gnss_noise_config{.rng = rng,
-                                     .covariance = gnss_measurement_config.R,
+                                     .covariance = gnss_config.position_noise,
                                      .mean = Eigen::VectorXd::Zero(2)};
   GaussianWhiteNoise gnss_noise(gnss_noise_config);
   SimulationConfig magnetometer_noise_config{
@@ -236,7 +192,7 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       .mean = Eigen::VectorXd::Zero(1)};
   GaussianWhiteNoise magnetometer_noise(magnetometer_noise_config);
   SimulationConfig dvl_noise_config{
-      .rng = rng, .covariance = dvl_R, .mean = Eigen::VectorXd::Zero(4)};
+      .rng = rng, .covariance = dvl_R, .mean = Eigen::VectorXd::Zero(2)};
   GaussianWhiteNoise dvl_noise(dvl_noise_config);
 
   // each of these is simulated for the whole run up front, one entry per k
@@ -297,7 +253,8 @@ void run_strapdown_ins_2d(const YAML::Node &config,
     reading_vector << accelerometer_reading, gyro_reading;
     Input reading(reading_vector);
 
-    const Eigen::VectorXd z = gnss_H * x_true + gnss_noise_series[k];
+    const Eigen::VectorXd z =
+        gnss_measurement_model->h(x_true, reading) + gnss_noise_series[k];
     const Eigen::VectorXd magnetometer_z =
         magnetometer_measurement_model->h(x_true, reading) +
         magnetometer_noise_series[k];
@@ -325,6 +282,9 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   const double gnss_period_max = config["gnss_period_max"].as<double>();
   double next_gnss_time = sample_uniform(rng, gnss_period_min, gnss_period_max);
   std::vector<int> gnss_fix_steps;
+  std::vector<Eigen::VectorXd> gnss_fix_z;
+  std::vector<Eigen::VectorXd> gnss_innovations;
+  std::vector<Eigen::MatrixXd> gnss_S;
 
   const double magnetometer_period_min =
       config["magnetometer_period_min"].as<double>();
@@ -356,14 +316,17 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       gnss_update = ekf.update(x, measurements[k], P, inputs[k],
                                gnss_measurement_model);
       gnss_fix_steps.push_back(k);
+      gnss_fix_z.push_back(measurements[k]);
+      gnss_innovations.push_back(gnss_update.innovation);
+      gnss_S.push_back(gnss_update.S);
       next_gnss_time += sample_uniform(rng, gnss_period_min, gnss_period_max);
       x = gnss_update.x_updated;
       P = gnss_update.P_updated;
     } else {
       gnss_update = FilterUpdate{
           .x_updated = x,
-          .innovation = Eigen::VectorXd::Zero(gnss_H.rows()),
-          .S = Eigen::MatrixXd::Zero(gnss_H.rows(), gnss_H.rows()),
+          .innovation = Eigen::VectorXd::Zero(2),
+          .S = Eigen::MatrixXd::Zero(2, 2),
           .P_updated = P,
       };
     }
@@ -426,18 +389,15 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   ekf_result.to_csv((output_dir / "filter.csv").string());
   ERTS_result.to_csv((output_dir / "smoother.csv").string());
 
-  // which timesteps had a real GNSS update, for plotting; every other file
-  // has a row per timestep, this one has a row per fix
-  std::ofstream gnss_fixes_out(output_dir / "gnss_fixes.csv");
-  gnss_fixes_out << "timestep\n";
-  for (int k : gnss_fix_steps) {
-    gnss_fixes_out << k << "\n";
-  }
-
-  write_fix_csv(output_dir / "magnetometer_fixes.csv", magnetometer_fix_steps,
-               magnetometer_fix_z, magnetometer_innovations, magnetometer_S);
-  write_fix_csv(output_dir / "dvl_fixes.csv", dvl_fix_steps, dvl_fix_z,
-               dvl_innovations, dvl_S);
+  gnss_measurement_model->write_fix_csv(output_dir / "gnss_fixes.csv",
+                                        gnss_fix_steps, gnss_fix_z,
+                                        gnss_innovations, gnss_S);
+  magnetometer_measurement_model->write_fix_csv(
+      output_dir / "magnetometer_fixes.csv", magnetometer_fix_steps,
+      magnetometer_fix_z, magnetometer_innovations, magnetometer_S);
+  dvl_measurement_model->write_fix_csv(output_dir / "dvl_fixes.csv",
+                                       dvl_fix_steps, dvl_fix_z,
+                                       dvl_innovations, dvl_S);
 
   std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
 }

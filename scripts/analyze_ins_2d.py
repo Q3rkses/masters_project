@@ -2,10 +2,10 @@
 """Plot the 2D strapdown INS filter and smoother results and check their
 consistency.
 
-State is [x, y, psi, u, v, b_ax, b_ay, b_gyro]. GNSS arrives at irregular
-intervals (see gnss_fixes.csv), not every timestep, so NIS and the
-"measurements" shown on a trajectory only ever use the real fix timesteps,
-never every row of truth.csv's z column.
+State is [x, y, psi, u, v, b_ax, b_ay, b_gyro]. Each sensor (GNSS,
+magnetometer, DVL) arrives at irregular intervals, not every timestep, and
+has its own fix CSV (timestep, raw measurement, innovation, S), one row per
+real fix, never every row of truth.csv.
 
 usage: analyze_ins_2d.py [data_dir]
 """
@@ -28,7 +28,10 @@ DVL = "#16a085"
 
 STATE_DIM = 8
 MEASUREMENT_DIM = 2  # GNSS position only
+MAGNETOMETER_DIM = 1  # heading only
+DVL_DIM = 2  # body-frame velocity only
 MAGNETOMETER_ARROW_LENGTH = 3.0  # meters, purely for visibility
+DVL_ARROW_SCALE = 1.5  # meters per m/s, purely for visibility
 FIX_STRIDE = 20  # magnetometer/DVL fire far more often than GNSS; plot every Nth
 CONFIDENCE = 0.95
 ELLIPSES = 6  # confidence ellipses drawn along each estimated trajectory
@@ -41,12 +44,6 @@ HEADING = 2
 
 def load(path):
     return np.genfromtxt(path, delimiter=",", names=True)
-
-
-def load_fix_steps(path):
-    """The timesteps that got a real GNSS update, as an int array."""
-    steps = np.genfromtxt(path, delimiter=",", names=True, dtype=int)
-    return np.atleast_1d(steps["timestep"])
 
 
 def vectors(table, name, dim):
@@ -132,7 +129,7 @@ def draw_gnss_fixes(axis, z_fix):
 
 def draw_magnetometer_fixes(axis, position_fix, heading_fix):
     """Arrows at the true position when a magnetometer fix arrived, pointing
-    in the measured (noisy) heading -- shows both where and what it read."""
+    in the measured (noisy) heading. Shows both where and what it read."""
     dx = MAGNETOMETER_ARROW_LENGTH * np.cos(heading_fix)
     dy = MAGNETOMETER_ARROW_LENGTH * np.sin(heading_fix)
     axis.quiver(position_fix[:, 0], position_fix[:, 1], dx, dy, color=MAGNETOMETER,
@@ -140,9 +137,17 @@ def draw_magnetometer_fixes(axis, position_fix, heading_fix):
                label="magnetometer fix")
 
 
-def draw_dvl_fixes(axis, z_fix):
-    axis.scatter(z_fix[:, 0], z_fix[:, 1], s=30, color=DVL, zorder=5,
-                label="DVL fix", marker="^")
+def draw_dvl_fixes(axis, position_fix, velocity_body_fix, heading_fix):
+    """Arrows at the true position when a DVL fix arrived, showing the
+    measured body-frame velocity rotated into the nav frame by the true
+    heading. The DVL measures velocity only, not position."""
+    cos_psi, sin_psi = np.cos(heading_fix), np.sin(heading_fix)
+    u, v = velocity_body_fix[:, 0], velocity_body_fix[:, 1]
+    dx = DVL_ARROW_SCALE * (cos_psi * u - sin_psi * v)
+    dy = DVL_ARROW_SCALE * (sin_psi * u + cos_psi * v)
+    axis.quiver(position_fix[:, 0], position_fix[:, 1], dx, dy, color=DVL,
+               angles="xy", scale_units="xy", scale=1, width=0.005, zorder=5,
+               label="DVL fix")
 
 
 def draw_truth(axis, x_true):
@@ -184,8 +189,17 @@ def summarise(name, values, dof):
     inconsistent, and how many were dropped is reported.
     """
     valid = values[~np.isnan(values)]
+    if len(valid) == 0:
+        print(f"  {name:<20} no fixes recorded, nothing to compute")
+        return
     dropped = len(values) - len(valid)
-    low, high = chi2_interval(dof, samples=effective_samples(valid, len(valid)))
+    # effective_samples can come out below 1 when the signal is almost
+    # perfectly autocorrelated (e.g. position NEES over a run with no GNSS
+    # fixes to decorrelate it); clamped to 1 since "fewer than one
+    # independent sample" would make the averaged band tighter than the
+    # always-valid per-sample band, which is nonsensical
+    samples = max(1.0, effective_samples(valid, len(valid)))
+    low, high = chi2_interval(dof, samples=samples)
     step_low, step_high = chi2_interval(dof)
     inside = np.mean((valid >= step_low) & (valid <= step_high))
     average = valid.mean()
@@ -207,38 +221,25 @@ def filter_vs_smoother_figure(x_true, x_filter, P_filter, x_smoother, P_smoother
     return figure
 
 
-def gnss_fixes_figure(x_true, z_gnss):
-    """1a. Ground truth against the GNSS fixes actually used by the filter."""
-    figure, axis = new_figure("GNSS fixes")
+def sensor_fixes_figure(x_true, z_gnss, magnetometer_position, magnetometer_heading,
+                        dvl_position, dvl_velocity_body, dvl_heading):
+    """1. Ground truth against all three sensors' fixes, overlaid. Magnetometer
+    and DVL fire far more often than GNSS, so only every FIX_STRIDE-th one is
+    drawn."""
+    figure, axis = new_figure("Sensor fixes")
     draw_truth(axis, x_true)
     draw_gnss_fixes(axis, z_gnss)
-    finish(axis)
-    return figure
-
-
-def magnetometer_fixes_figure(x_true, position_fix, heading_fix):
-    """1b. Ground truth against magnetometer fixes. Magnetometer fires far
-    more often than GNSS, so only every FIX_STRIDE-th one is drawn."""
-    figure, axis = new_figure("Magnetometer fixes")
-    draw_truth(axis, x_true)
-    draw_magnetometer_fixes(axis, position_fix[::FIX_STRIDE], heading_fix[::FIX_STRIDE])
-    finish(axis)
-    return figure
-
-
-def dvl_fixes_figure(x_true, z_dvl):
-    """1c. Ground truth against DVL fixes. DVL fires far more often than
-    GNSS, so only every FIX_STRIDE-th one is drawn."""
-    figure, axis = new_figure("DVL fixes")
-    draw_truth(axis, x_true)
-    draw_dvl_fixes(axis, z_dvl[::FIX_STRIDE])
+    draw_magnetometer_fixes(axis, magnetometer_position[::FIX_STRIDE],
+                            magnetometer_heading[::FIX_STRIDE])
+    draw_dvl_fixes(axis, dvl_position[::FIX_STRIDE], dvl_velocity_body[::FIX_STRIDE],
+                   dvl_heading[::FIX_STRIDE])
     finish(axis)
     return figure
 
 
 def bias_figure(k, x_true, x_filter, x_smoother):
     """True vs estimated sensor bias over time, one window, three stacked
-    plots -- can the filter learn it?"""
+    plots. Can the filter learn it?"""
     figure, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
     labels = ("accelerometer bias x [m/s^2]", "accelerometer bias y [m/s^2]",
              "gyro bias [rad/s]")
@@ -283,27 +284,34 @@ def confidence_interval_figure(k, x_true, x_filter, P_filter, x_smoother, P_smoo
     return figure
 
 
-def nis_figure(k_fix, nis):
-    """5a. NIS at each of the ~dozen real GNSS fixes, against the per-sample
-    95% band. There are too few fixes for a running-mean plot to mean
-    anything -- each point here is one real measurement."""
-    low, high = chi2_interval(MEASUREMENT_DIM)
-    figure, axis = new_figure("NIS per GNSS fix", xlabel="timestep",
-                              ylabel="NIS", equal=False)
-    axis.axhspan(low, high, color=BAND, alpha=0.15, linewidth=0,
-                label=f"95% band [{low:.2f}, {high:.2f}]")
-    axis.axhline(MEASUREMENT_DIM, color=BAND, linewidth=1, linestyle="--",
-                label=f"expected value ({MEASUREMENT_DIM})")
-    axis.plot(k_fix, nis, color=FILTER, linewidth=0.8, alpha=0.6)
-    axis.scatter(k_fix, nis, color=FILTER, s=25, zorder=3, label="filter")
-    finish(axis)
+def nis_figure(specs):
+    """5a. NIS at each fix, against the per-sample 95% band, one subplot per
+    sensor since each has its own dimension (and so its own expected value
+    and band). There are too few fixes for a running-mean plot to mean
+    anything, each point here is one real measurement."""
+    figure, axes = plt.subplots(len(specs), 1, figsize=(11, 3 * len(specs)), sharex=True)
+    for axis, (name, k_fix, nis, dof) in zip(axes, specs):
+        low, high = chi2_interval(dof)
+        axis.axhspan(low, high, color=BAND, alpha=0.15, linewidth=0,
+                    label=f"95% band [{low:.2f}, {high:.2f}]")
+        axis.axhline(dof, color=BAND, linewidth=1, linestyle="--",
+                    label=f"expected value ({dof})")
+        axis.plot(k_fix, nis, color=FILTER, linewidth=0.8, alpha=0.6)
+        axis.scatter(k_fix, nis, color=FILTER, s=20, zorder=3, label="filter")
+        axis.set_title(name, loc="left")
+        axis.set_ylabel("NIS")
+        axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
+        axis.set_axisbelow(True)
+        axis.spines[["top", "right"]].set_visible(False)
+        axis.legend(loc="best", frameon=False, fontsize=8)
+    axes[-1].set_xlabel("timestep")
     return figure
 
 
 def nees_figure(k, nees_filter, nees_smoother):
     """5b. Running mean of position NEES, filter and smoother, against the
     genuine per-sample 95% region (same one NIS uses). Position NEES here
-    stays autocorrelated out past 600 steps -- there's no AVERAGING_WINDOW
+    stays autocorrelated out past 600 steps, there's no AVERAGING_WINDOW
     small enough to smooth usefully but large enough to treat as "many
     independent samples", so the line is smoothed for readability only, not
     compared against a band that assumes averaging power it doesn't have.
@@ -311,7 +319,7 @@ def nees_figure(k, nees_filter, nees_smoother):
     the printed summary above is the honest number."""
     series = {"filter": (np.nan_to_num(nees_filter), FILTER),
              "smoother": (np.nan_to_num(nees_smoother), SMOOTHER)}
-    low, high = chi2_interval(2)  # per-sample, dof=2 -- no averaging assumed
+    low, high = chi2_interval(2)  # per-sample, dof=2, no averaging assumed
 
     figure, axis = new_figure("position NEES", xlabel="timestep",
                               ylabel=f"position NEES ({AVERAGING_WINDOW}-step running mean, "
@@ -335,30 +343,36 @@ def main():
     truth = load(data_dir / "truth.csv")
     filtered = load(data_dir / "filter.csv")
     smoothed = load(data_dir / "smoother.csv")
-    fix_steps = load_fix_steps(data_dir / "gnss_fixes.csv")
+    gnss_fixes = load(data_dir / "gnss_fixes.csv")
     magnetometer_fixes = load(data_dir / "magnetometer_fixes.csv")
     dvl_fixes = load(data_dir / "dvl_fixes.csv")
 
     k = truth["timestep"].astype(int)
     x_true = vectors(truth, "x_true", STATE_DIM)
-    z = vectors(truth, "z", MEASUREMENT_DIM)
-    z_fix = z[fix_steps]
+
+    gnss_steps = gnss_fixes["timestep"].astype(int)
+    z_fix = vectors(gnss_fixes, "z", MEASUREMENT_DIM)
 
     magnetometer_steps = magnetometer_fixes["timestep"].astype(int)
     magnetometer_heading = magnetometer_fixes["z_0"]
     magnetometer_position = x_true[magnetometer_steps, :2]
-    z_dvl = vectors(dvl_fixes, "z", 4)[:, :2]  # DVL's own reported position
+
+    dvl_steps = dvl_fixes["timestep"].astype(int)
+    dvl_velocity_body = vectors(dvl_fixes, "z", 2)
+    dvl_position = x_true[dvl_steps, :2]  # DVL has no position of its own
+    dvl_heading = x_true[dvl_steps, HEADING]
 
     x_filter = vectors(filtered, "x_updated", STATE_DIM)
     P_filter = matrices(filtered, "P_updated", STATE_DIM)
-    innovation = vectors(filtered, "innovation", MEASUREMENT_DIM)
-    S = matrices(filtered, "S", MEASUREMENT_DIM)
     x_smoother = vectors(smoothed, "x_smoothed", STATE_DIM)
     P_smoother = matrices(smoothed, "P_smoothed", STATE_DIM)
 
-    # NIS only means anything at the timesteps a measurement actually arrived;
-    # S is exactly singular everywhere else (see gnss_fixes.csv docstring above)
-    nis = quadratic_form(innovation[fix_steps], S[fix_steps])
+    nis = quadratic_form(vectors(gnss_fixes, "innovation", MEASUREMENT_DIM),
+                         matrices(gnss_fixes, "S", MEASUREMENT_DIM))
+    magnetometer_nis = quadratic_form(vectors(magnetometer_fixes, "innovation", MAGNETOMETER_DIM),
+                                      matrices(magnetometer_fixes, "S", MAGNETOMETER_DIM))
+    dvl_nis = quadratic_form(vectors(dvl_fixes, "innovation", DVL_DIM),
+                             matrices(dvl_fixes, "S", DVL_DIM))
 
     def position_nees(x_est, P_est):
         return masked_quadratic_form(x_true[:, POSITION] - x_est[:, POSITION], P_est[:, :2, :2])
@@ -366,9 +380,11 @@ def main():
     position_error_filter = np.linalg.norm(x_true[:, POSITION] - x_filter[:, POSITION], axis=1)
     position_error_smoother = np.linalg.norm(x_true[:, POSITION] - x_smoother[:, POSITION], axis=1)
 
-    print(f"{len(k)} timesteps, {len(fix_steps)} GNSS fixes\n")
+    print(f"{len(k)} timesteps, {len(gnss_steps)} GNSS fixes\n")
     print("consistency (time-averaged):")
-    summarise("ANIS", nis, MEASUREMENT_DIM)
+    summarise("ANIS GNSS", nis, MEASUREMENT_DIM)
+    summarise("ANIS magnetometer", magnetometer_nis, MAGNETOMETER_DIM)
+    summarise("ANIS DVL", dvl_nis, DVL_DIM)
     summarise("ANEES position filter", position_nees(x_filter, P_filter), 2)
     summarise("ANEES position smoother", position_nees(x_smoother, P_smoother), 2)
     print("\naccuracy:")
@@ -376,15 +392,18 @@ def main():
     print(f"  RMSE position smoother  {np.sqrt(np.mean(position_error_smoother ** 2)):6.4f} m")
 
     figures = {
-        "ins_1a_gnss_fixes.png": gnss_fixes_figure(x_true, z_fix),
-        "ins_1b_magnetometer_fixes.png": magnetometer_fixes_figure(
-            x_true, magnetometer_position, magnetometer_heading),
-        "ins_1c_dvl_fixes.png": dvl_fixes_figure(x_true, z_dvl),
+        "ins_1_sensor_fixes.png": sensor_fixes_figure(
+            x_true, z_fix, magnetometer_position, magnetometer_heading,
+            dvl_position, dvl_velocity_body, dvl_heading),
         "ins_2_filter_vs_smoother.png": filter_vs_smoother_figure(
             x_true, x_filter, P_filter, x_smoother, P_smoother),
         "ins_3_confidence_interval.png": confidence_interval_figure(
             k, x_true, x_filter, P_filter, x_smoother, P_smoother),
-        "ins_4_nis.png": nis_figure(k[fix_steps], nis),
+        "ins_4_nis.png": nis_figure([
+            ("GNSS", k[gnss_steps], nis, MEASUREMENT_DIM),
+            ("Magnetometer", magnetometer_steps, magnetometer_nis, MAGNETOMETER_DIM),
+            ("DVL", dvl_steps, dvl_nis, DVL_DIM),
+        ]),
         "ins_5_nees.png": nees_figure(
             k, position_nees(x_filter, P_filter), position_nees(x_smoother, P_smoother)),
         "ins_7_bias.png": bias_figure(k, x_true, x_filter, x_smoother),

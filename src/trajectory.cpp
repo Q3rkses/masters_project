@@ -155,5 +155,18 @@ Path make_straight_into_turn(double straight_length, double turn_radius,
 
   path.add(std::make_shared<ArcSegment>(center, turn_radius, start_angle,
                                         turn_sweep));
+
+  // continue straight after the turn, in whatever direction it left us
+  // heading, instead of stopping right at the end of the arc
+  const double direction = turn_sweep >= 0.0 ? 1.0 : -1.0;
+  const double end_angle = start_angle + turn_sweep;
+  const double heading_after_turn = end_angle + direction * (M_PI / 2.0);
+  const Eigen::Vector2d turn_end =
+      center + turn_radius * Eigen::Vector2d(std::cos(end_angle), std::sin(end_angle));
+  const Eigen::Vector2d after_turn_direction(std::cos(heading_after_turn),
+                                             std::sin(heading_after_turn));
+  path.add(std::make_shared<LineSegment>(
+      turn_end, turn_end + straight_length * after_turn_direction));
+
   return path;
 }
