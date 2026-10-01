@@ -1,0 +1,22 @@
+30000 timesteps, 45 GNSS fixes
+
+consistency (time-averaged):
+  ANIS GNSS               1.9969  band [1.4434, 2.6459]  100.0% of steps in band  -> consistent
+  ANIS magnetometer       0.8487  band [0.8668, 1.1426]  94.5% of steps in band  -> INCONSISTENT
+  ANIS DVL                1.9253  band [1.8274, 2.1803]  95.3% of steps in band  -> consistent
+  ANEES position filter    1.4555  band [1.3109, 2.8323]  97.5% of steps in band  -> consistent
+  ANEES position smoother    1.5343  band [0.0506, 7.3778]  97.4% of steps in band  -> consistent
+
+accuracy:
+  RMSE position filter    1.0067 m
+  RMSE position smoother  0.6994 m
+
+smoother trace(P) <= filter trace(P) at every step: True
+
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_1_sensor_fixes.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_2_filter_vs_smoother.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_3_confidence_interval.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_4_nis.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_5_nees.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_6_variance.png
+wrote results/INS2D/gnss_outage/mistuned/figures/ins_7_bias.png

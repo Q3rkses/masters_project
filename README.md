@@ -70,6 +70,7 @@ Each experiment lives in `results/<name>/` with its own `README.md`, `data/` and
 | [2-D strapdown INS, GNSS only](results/INS2D/only_gnss/README.md) | nonlinear model, GNSS the only aiding sensor, all 3 trajectories | 30000 steps, consistent except one sharp-turn case |
 | [2-D strapdown INS, multi-sensor fusion](results/INS2D/multi_sensor_fusion/README.md) | GNSS + magnetometer + DVL fused sequentially, all 3 trajectories | 30000 steps, consistent on all 3 trajectories |
 | [2-D strapdown INS, dead reckoning](results/INS2D/dead_reckoning/README.md) | GNSS disabled entirely, magnetometer + DVL only, all 3 trajectories | 30000 steps, position-consistent; DVL NIS mildly off |
+| [2-D strapdown INS, GNSS outage](results/INS2D/gnss_outage/README.md) | GNSS denied for the middle 70% of the run, matched and mistuned IMU noise | 30000 steps, consistent except magnetometer |
 
 ## Repository layout
 

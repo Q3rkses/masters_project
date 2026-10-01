@@ -1,6 +1,6 @@
 # 2-D strapdown INS, dead reckoning
 
-[Back to the overview](../../../README.md) | [Previous: multi-sensor fusion](../multi_sensor_fusion/README.md)
+[Back to the overview](../../../README.md) | [Previous: multi-sensor fusion](../multi_sensor_fusion/README.md) | [Next: GNSS outage](../gnss_outage/README.md)
 
 Third of three scenarios sharing one setup (see
 [GNSS only](../only_gnss/README.md#setup) for the shared parameters): GNSS

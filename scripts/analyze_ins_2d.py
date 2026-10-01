@@ -336,6 +336,21 @@ def nees_figure(k, nees_filter, nees_smoother):
     return figure
 
 
+def variance_figure(k, P_filter, P_smoother):
+    """6. Filter vs smoother position variance over time, the INS analogue
+    of the random walk case's variance plot (Sarkka figure 12.2). Log scale,
+    since an outage can make the filter's variance span several orders of
+    magnitude more than the smoother's."""
+    trace = lambda P: np.trace(P[:, :2, :2], axis1=1, axis2=2)
+    figure, axis = new_figure("Filter vs smoother variance", xlabel="timestep",
+                              ylabel="trace(P) = x variance + y variance", equal=False)
+    axis.set_yscale("log")
+    axis.plot(k, trace(P_filter), color=FILTER, linewidth=1.5, label="filter trace(P)")
+    axis.plot(k, trace(P_smoother), color=SMOOTHER, linewidth=1.5, label="smoother trace(P)")
+    finish(axis)
+    return figure
+
+
 def main():
     data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent.parent / "data"
     figures_dir = data_dir.parent / "figures"
@@ -391,6 +406,11 @@ def main():
     print(f"  RMSE position filter    {np.sqrt(np.mean(position_error_filter ** 2)):6.4f} m")
     print(f"  RMSE position smoother  {np.sqrt(np.mean(position_error_smoother ** 2)):6.4f} m")
 
+    trace_filter = np.trace(P_filter[:, :2, :2], axis1=1, axis2=2)
+    trace_smoother = np.trace(P_smoother[:, :2, :2], axis1=1, axis2=2)
+    always_smaller = np.all(trace_smoother <= trace_filter + 1e-9)
+    print(f"\nsmoother trace(P) <= filter trace(P) at every step: {always_smaller}")
+
     figures = {
         "ins_1_sensor_fixes.png": sensor_fixes_figure(
             x_true, z_fix, magnetometer_position, magnetometer_heading,
@@ -406,6 +426,7 @@ def main():
         ]),
         "ins_5_nees.png": nees_figure(
             k, position_nees(x_filter, P_filter), position_nees(x_smoother, P_smoother)),
+        "ins_6_variance.png": variance_figure(k, P_filter, P_smoother),
         "ins_7_bias.png": bias_figure(k, x_true, x_filter, x_smoother),
     }
 

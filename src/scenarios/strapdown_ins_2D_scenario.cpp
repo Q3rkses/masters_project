@@ -280,6 +280,10 @@ void run_strapdown_ins_2d(const YAML::Node &config,
 
   const double gnss_period_min = config["gnss_period_min"].as<double>();
   const double gnss_period_max = config["gnss_period_max"].as<double>();
+  // a time window with no GNSS at all, e.g. to simulate an outage in the
+  // middle of a run; defaults to never denied if not set in the config
+  const double gnss_denied_start = config["gnss_denied_start"].as<double>(1e9);
+  const double gnss_denied_end = config["gnss_denied_end"].as<double>(1e9);
   double next_gnss_time = sample_uniform(rng, gnss_period_min, gnss_period_max);
   std::vector<int> gnss_fix_steps;
   std::vector<Eigen::VectorXd> gnss_fix_z;
@@ -311,15 +315,16 @@ void run_strapdown_ins_2d(const YAML::Node &config,
     x = prediction.x_predicted;
     P = prediction.P_predicted;
 
+    const bool gnss_denied = t >= gnss_denied_start && t < gnss_denied_end;
     FilterUpdate gnss_update;
-    if (t >= next_gnss_time) {
+    if (t >= next_gnss_time && !gnss_denied) {
       gnss_update = ekf.update(x, measurements[k], P, inputs[k],
                                gnss_measurement_model);
       gnss_fix_steps.push_back(k);
       gnss_fix_z.push_back(measurements[k]);
       gnss_innovations.push_back(gnss_update.innovation);
       gnss_S.push_back(gnss_update.S);
-      next_gnss_time += sample_uniform(rng, gnss_period_min, gnss_period_max);
+      next_gnss_time = t + sample_uniform(rng, gnss_period_min, gnss_period_max);
       x = gnss_update.x_updated;
       P = gnss_update.P_updated;
     } else {
@@ -339,8 +344,8 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       magnetometer_fix_z.push_back(magnetometer_measurements[k]);
       magnetometer_innovations.push_back(magnetometer_update.innovation);
       magnetometer_S.push_back(magnetometer_update.S);
-      next_magnetometer_time +=
-          sample_uniform(rng, magnetometer_period_min, magnetometer_period_max);
+      next_magnetometer_time =
+          t + sample_uniform(rng, magnetometer_period_min, magnetometer_period_max);
       x = magnetometer_update.x_updated;
       P = magnetometer_update.P_updated;
     }
@@ -352,7 +357,7 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       dvl_fix_z.push_back(dvl_measurements[k]);
       dvl_innovations.push_back(dvl_update.innovation);
       dvl_S.push_back(dvl_update.S);
-      next_dvl_time += sample_uniform(rng, dvl_period_min, dvl_period_max);
+      next_dvl_time = t + sample_uniform(rng, dvl_period_min, dvl_period_max);
       x = dvl_update.x_updated;
       P = dvl_update.P_updated;
     }
