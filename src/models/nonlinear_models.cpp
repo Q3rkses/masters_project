@@ -1,6 +1,5 @@
 #include "models/nonlinear_models.hpp"
 #include "utilities.hpp"
-#include <Eigen/src/Core/Matrix.h>
 #include <stdexcept>
 
 // where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_g]

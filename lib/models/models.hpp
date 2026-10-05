@@ -7,8 +7,8 @@
 #ifndef MODELS_HPP
 #define MODELS_HPP
 
+#include "models/manifold.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 
 class Input {
 public:
@@ -43,7 +43,7 @@ public:
   double omega_psi_;
 };
 
-class MotionModel {
+class MotionModel : public Manifold {
 public:
   virtual ~MotionModel() = default;
 
@@ -73,35 +73,13 @@ public:
                             const Input &input) const = 0;
 
   /**
-   * @brief The generic composition operator that the motion
-   * model has to define in order to respect the manifold
-   * @param state, the state of the system
-   * @param delta, the pertrubation of the state
-   * @return the composed state
-   */
-  virtual Eigen::VectorXd
-  composition_plus(const Eigen::VectorXd &state,
-                   const Eigen::VectorXd &delta) const = 0;
-
-  /**
-   * @brief The generic composition operator that the motion
-   * model has to define in order to respect the manifold
-   * @param state_a, the state we subtract from
-   * @param state_b, the state we subtract
-   * @return the delta between the two states
-   */
-  virtual Eigen::VectorXd
-  composition_minus(const Eigen::VectorXd &state_a,
-                    const Eigen::VectorXd &state_b) const = 0;
-
-  /**
    * @brief A simple function that linear models can override and return
    * true if and only if the model is truly linear.
    */
   virtual bool is_linear() const { return false; }
 };
 
-class MeasurementModel {
+class MeasurementModel : public Manifold {
 public:
   virtual ~MeasurementModel() = default;
 
@@ -130,28 +108,6 @@ public:
    */
   virtual Eigen::MatrixXd R(const Eigen::VectorXd &state,
                             const Input &input) const = 0;
-
-  /**
-   * @brief The generic composition operator that the motion
-   * model has to define in order to respect the manifold
-   * @param state, the state of the system
-   * @param delta, the pertrubation of the state
-   * @return the composed state
-   */
-  virtual Eigen::VectorXd
-  composition_plus(const Eigen::VectorXd &state,
-                   const Eigen::VectorXd &delta) const = 0;
-
-  /**
-   * @brief The generic composition operator that the motion
-   * model has to define in order to respect the manifold
-   * @param state_a, the state we subtract from
-   * @param state_b, the state we subtract
-   * @return the delta between the two states
-   */
-  virtual Eigen::VectorXd
-  composition_minus(const Eigen::VectorXd &state_a,
-                    const Eigen::VectorXd &state_b) const = 0;
 
   /**
    * @brief A simple function that linear models can override and return

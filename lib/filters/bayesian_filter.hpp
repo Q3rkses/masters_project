@@ -27,7 +27,6 @@ struct FilterConfig {
   Eigen::VectorXd x_prior;
   Eigen::MatrixXd P_prior;
   std::shared_ptr<const MotionModel> motion_model;
-  std::shared_ptr<const MeasurementModel> measurement_model;
 };
 
 /**
@@ -58,16 +57,20 @@ public:
    * @brief The update step in a Bayesian Filter
    * needs to be overridden by the filter that inherits
    * from the bayesian filter class
-   * @param x_predicted, the density of the current prediction
+   * @param x_predicted, the mean of the current prediction
+   * @param P_predicted, the covariance of the current prediction
    * @param z_current, the current measurement
    * @param input, the input to the system during this step
+   * @param measurement_model, the model of the sensor that produced
+   * z_current
    * @return returns x_updated, innovation, P_updated packaged in the
    * FilterUpdate class
    */
   virtual FilterUpdate
   update(const Eigen::VectorXd &x_predicted, const Eigen::VectorXd &z_current,
-         const Eigen::MatrixXd &P_predicted,
-         const Input &input) = 0; // -> x_updated, innovation, P_updated
+         const Eigen::MatrixXd &P_predicted, const Input &input,
+         const std::shared_ptr<const MeasurementModel> &measurement_model) =
+      0; // -> x_updated, innovation, P_updated
 };
 
 #endif

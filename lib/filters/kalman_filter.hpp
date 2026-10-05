@@ -37,19 +37,22 @@ public:
    * @brief The update step in a Kalman Filter
    * based on algorithm 1 in Fundamentals of Sensorfusion (Brekke, p.56)
    * utilizes the Joseph form for better numerical stability of P
-   * @param x_predicted, the density of the current prediction
+   * @param x_predicted, the mean of the current prediction
+   * @param P_predicted, the covariance of the current prediction
    * @param z_current, the current measurement
    * @param input, the input to the system during this step
+   * @param measurement_model, the model of the sensor that produced
+   * z_current, must be linear
    * @return returns x_updated, innovation, P_updated
    */
   FilterUpdate update(const Eigen::VectorXd &x_predicted,
                       const Eigen::VectorXd &z_current,
-                      const Eigen::MatrixXd &P_current,
-                      const Input &input) override;
+                      const Eigen::MatrixXd &P_predicted, const Input &input,
+                      const std::shared_ptr<const MeasurementModel>
+                          &measurement_model) override;
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
-  std::shared_ptr<const MeasurementModel> measurement_model_;
 };
 
 #endif

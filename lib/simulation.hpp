@@ -8,7 +8,6 @@
 #define SIMULATION_HPP
 
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 #include <random>
 #include <vector>
 

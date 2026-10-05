@@ -12,7 +12,6 @@
 #include "filters/bayesian_filter.hpp"
 #include "smoothers/bayesian_smoother.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 #include <string>
 #include <vector>
 

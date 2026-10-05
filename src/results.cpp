@@ -1,5 +1,4 @@
 #include "results.hpp"
-#include <Eigen/src/Core/Matrix.h>
 #include <fstream>
 
 namespace {

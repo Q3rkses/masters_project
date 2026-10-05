@@ -1,6 +1,5 @@
 #include "simulation.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 #include <random>
 #include <stdexcept>
 #include <vector>

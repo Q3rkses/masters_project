@@ -10,7 +10,6 @@
 
 #include "models/nonlinear_models.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 #include <cmath>
 #include <filesystem>
 #include <vector>

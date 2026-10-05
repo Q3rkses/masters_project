@@ -11,7 +11,6 @@
 #include "utilities.hpp"
 
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 #include <cmath>
 #include <iostream>
 #include <memory>

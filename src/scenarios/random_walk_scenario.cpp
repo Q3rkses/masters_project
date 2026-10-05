@@ -59,7 +59,6 @@ void run_random_walk(const YAML::Node &config,
       .x_prior = x0,
       .P_prior = p0,
       .motion_model = motion_model,
-      .measurement_model = measurement_model,
   };
 
   SmootherConfig smoother_config{
@@ -109,7 +108,8 @@ void run_random_walk(const YAML::Node &config,
   for (int k = 0; k < timesteps; k++) {
     FilterPredict prediction = kalman_filter.predict(x, P, input);
     FilterUpdate update = kalman_filter.update(
-        prediction.x_predicted, measurements[k], prediction.P_predicted, input);
+        prediction.x_predicted, measurements[k], prediction.P_predicted, input,
+        measurement_model);
     filter_result.add(prediction, update);
     x = update.x_updated;
     P = update.P_updated;

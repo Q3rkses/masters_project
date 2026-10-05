@@ -1,7 +1,7 @@
 /**
  * @file unscented_rauch_tung_striebel_smoother.hpp
- * @brief Contains a basic erts_smoother class, that smooths
- * estimates that were previously obtained by utilizing an extended kalman
+ * @brief Contains a basic urts_smoother class, that smooths
+ * estimates that were previously obtained by utilizing an unscented kalman
  * filter as a state estimator
  */
 
@@ -15,7 +15,7 @@
 class URTSSmoother final : public BayesianSmoother {
 public:
   /**
-   * @brief Constructor for the ERTS smoother class.
+   * @brief Constructor for the URTS smoother class.
    * @param smoother_config all configuration parameters that are
    * used by the constructor
    */
@@ -38,7 +38,6 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
-  std::shared_ptr<const MeasurementModel> measurement_model_;
 };
 
 #endif

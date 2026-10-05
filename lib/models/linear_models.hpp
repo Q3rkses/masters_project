@@ -9,7 +9,6 @@
 
 #include "models/models.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Core/Matrix.h>
 
 struct ModelConfig {
   Eigen::MatrixXd F;
