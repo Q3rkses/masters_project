@@ -27,7 +27,8 @@ public:
    * @param filtered_current, x_updated and P_updated at timestep k as
    * produced by the forward filter pass
    * @param predicted_next, x_predicted and P_predicted at timestep k+1
-   * @param input, which is the input at time k
+   * @param input, the input the forward pass used when it predicted
+   * timestep k+1 from timestep k
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */

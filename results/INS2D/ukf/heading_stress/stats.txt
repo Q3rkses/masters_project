@@ -1,0 +1,48 @@
+30000 timesteps, 46 GNSS fixes
+
+consistency (time-averaged):
+  ANIS GNSS EKF           5.1769  band [0.8838, 3.5642]  80.4% of steps in band  -> INCONSISTENT
+  ANIS magnetometer EKF    2.2892  band [0.3276, 2.0408]  83.3% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF            2.3314  band [1.6738, 2.3548]  94.4% of steps in band  -> consistent
+  ANIS GNSS UKF           2.0967  band [1.4176, 2.6811]  97.8% of steps in band  -> consistent
+  ANIS magnetometer UKF    1.1308  band [0.2175, 2.3681]  100.0% of steps in band  -> consistent
+  ANIS DVL UKF            1.7308  band [1.8207, 2.1876]  95.6% of steps in band  -> INCONSISTENT
+  ANEES position EKF      4.2239  band [1.2976, 2.8520]  77.5% of steps in band  -> INCONSISTENT
+  ANEES position UKF      0.9915  band [1.4879, 2.5867]  98.5% of steps in band  -> INCONSISTENT
+  ANEES position ERTS     5.8035  band [0.0506, 7.3778]  69.6% of steps in band  -> consistent
+  ANEES position URTSS    1.4242  band [0.0506, 7.3778]  92.5% of steps in band  -> consistent
+
+accuracy:
+  RMSE position EKF     8.4864 m
+  RMSE position UKF     4.9023 m
+  RMSE position ERTS    5.6400 m
+  RMSE position URTSS   2.3049 m
+  RMSE heading  EKF     13.650 deg
+  RMSE heading  UKF      6.886 deg
+  RMSE heading  ERTS     6.976 deg
+  RMSE heading  URTSS    2.693 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.633e-06  0 of 30000 steps below zero
+  UKF     min  6.633e-06  0 of 30000 steps below zero
+  ERTS    min  3.665e-06  0 of 30000 steps below zero
+  URTSS   min  3.668e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
+URTSS trace(P) <= UKF trace(P) at every step: True
+
+wrote results/INS2D/ukf/heading_stress/figures/ins_1_sensor_fixes.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_2_filter_vs_smoother.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_3_confidence_interval.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_4_nis.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_5_nees.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_6_variance.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_7_bias.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_2_filter_vs_smoother.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_3_confidence_interval.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_4_nis.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_5_nees.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_6_variance.png
+wrote results/INS2D/ukf/heading_stress/figures/ukf_ins_7_bias.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_8_ekf_vs_ukf.png
+wrote results/INS2D/ukf/heading_stress/figures/ins_9_sigma_point_health.png

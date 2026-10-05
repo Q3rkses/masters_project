@@ -9,6 +9,7 @@
 
 #include "filters/bayesian_filter.hpp"
 #include "models/models.hpp"
+#include "transforms/unscented_transform.hpp"
 #include <Eigen/Dense>
 
 class UnscentedKalmanFilter final : public BayesianFilter {
@@ -17,8 +18,11 @@ public:
    * @brief Constructor for the Unscented Kalman Filter class.
    * @param filter_config all configuration parameters that are
    * used by the constructor.
+   * @param transform_config the parameters of the unscented transform,
+   * alpha, beta, kappa and the state dimension
    */
-  explicit UnscentedKalmanFilter(const FilterConfig &filter_config);
+  UnscentedKalmanFilter(const FilterConfig &filter_config,
+                        const TransformConfig &transform_config);
 
   /**
    * @brief The prediction step in an Unscented Kalman Filter
@@ -54,6 +58,7 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
+  UnscentedTransform unscented_transform_;
 };
 
 #endif

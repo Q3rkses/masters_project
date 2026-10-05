@@ -1,6 +1,6 @@
 # 2-D strapdown INS, GNSS outage
 
-[Back to the overview](../../../README.md) | [Previous: dead reckoning](../dead_reckoning/README.md)
+[Back to the overview](../../../README.md) | [Previous: dead reckoning](../dead_reckoning/README.md) | [Next: UKF and URTSS](../ukf/README.md)
 
 A single long GNSS outage in the middle of an otherwise GNSS-aided run,
 rather than a constant sensor mix for the whole run like the other three

@@ -13,6 +13,7 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 /**
  * @brief One sample of a path at a given arc length: where it is, which way
@@ -141,5 +142,22 @@ Path make_circle(double radius);
  */
 Path make_straight_into_turn(double straight_length, double turn_radius,
                              double turn_sweep);
+
+/**
+ * @brief A path together with how it is traversed.
+ */
+struct Trajectory {
+  Path path;
+  bool is_closed; // loop around the path instead of stopping at its end
+};
+
+/**
+ * @brief Picks the trajectory named by the "trajectory" key and builds it
+ * from its own set of keys; all three shapes' keys are expected to be present
+ * in the config, whichever one is actually picked
+ * @param config the parsed yaml config
+ * @return the path and whether it is closed
+ */
+Trajectory build_trajectory(const YAML::Node &config);
 
 #endif

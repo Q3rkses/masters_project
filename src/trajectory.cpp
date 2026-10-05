@@ -170,3 +170,25 @@ Path make_straight_into_turn(double straight_length, double turn_radius,
 
   return path;
 }
+
+Trajectory build_trajectory(const YAML::Node &config) {
+  const std::string trajectory = config["trajectory"].as<std::string>();
+
+  if (trajectory == "rounded_rectangle") {
+    return {make_rounded_rectangle(config["rectangle_width"].as<double>(),
+                                   config["rectangle_height"].as<double>(),
+                                   config["rectangle_corner_radius"].as<double>()),
+           /*is_closed=*/true};
+  }
+  if (trajectory == "circle") {
+    return {make_circle(config["circle_radius"].as<double>()), /*is_closed=*/true};
+  }
+  if (trajectory == "straight_into_turn") {
+    const double turn_sweep = config["turn_sweep_deg"].as<double>() * M_PI / 180.0;
+    return {make_straight_into_turn(config["straight_length"].as<double>(),
+                                    config["turn_radius"].as<double>(), turn_sweep),
+           /*is_closed=*/false};
+  }
+
+  throw std::runtime_error("unknown trajectory: " + trajectory);
+}

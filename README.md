@@ -71,6 +71,7 @@ Each experiment lives in `results/<name>/` with its own `README.md`, `data/` and
 | [2-D strapdown INS, multi-sensor fusion](results/INS2D/multi_sensor_fusion/README.md) | GNSS + magnetometer + DVL fused sequentially, all 3 trajectories | 30000 steps, consistent on all 3 trajectories |
 | [2-D strapdown INS, dead reckoning](results/INS2D/dead_reckoning/README.md) | GNSS disabled entirely, magnetometer + DVL only, all 3 trajectories | 30000 steps, position-consistent; DVL NIS mildly off |
 | [2-D strapdown INS, GNSS outage](results/INS2D/gnss_outage/README.md) | GNSS denied for the middle 70% of the run, matched and mistuned IMU noise | 30000 steps, consistent except magnetometer |
+| [2-D strapdown INS, UKF and URTSS](results/INS2D/ukf/README.md) | the unscented filter and smoother against the EKF and ERTS, on the outage run and a heading stress run | 30000 steps, identical on the outage run, UKF RMSE 4.90 against 8.49 m on the stress run |
 
 ## Repository layout
 

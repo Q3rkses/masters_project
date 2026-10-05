@@ -10,6 +10,7 @@
 
 #include "models/models.hpp"
 #include "smoothers/bayesian_smoother.hpp"
+#include "transforms/unscented_transform.hpp"
 #include <Eigen/Dense>
 
 class URTSSmoother final : public BayesianSmoother {
@@ -18,8 +19,11 @@ public:
    * @brief Constructor for the URTS smoother class.
    * @param smoother_config all configuration parameters that are
    * used by the constructor
+   * @param transform_config the parameters of the unscented transform,
+   * alpha, beta, kappa and the state dimension
    */
-  explicit URTSSmoother(const SmootherConfig &smoother_config);
+  URTSSmoother(const SmootherConfig &smoother_config,
+               const TransformConfig &transform_config);
 
   /**
    * @brief the backwards recursion equation based on Algorithm
@@ -27,7 +31,8 @@ public:
    * @param filtered_current, x_updated and P_updated at timestep k as
    * produced by the forward filter pass
    * @param predicted_next, x_predicted and P_predicted at timestep k+1
-   * @param input, which is the input at time k
+   * @param input, the input the forward pass used when it predicted
+   * timestep k+1 from timestep k
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */
@@ -38,6 +43,7 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
+  UnscentedTransform unscented_transform_;
 };
 
 #endif

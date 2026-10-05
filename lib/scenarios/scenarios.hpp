@@ -25,7 +25,9 @@ void run_random_walk(const YAML::Node &config,
 /**
  * @brief Simulates a trajectory through a 2D strapdown INS model, runs the
  * EKF forward pass (with GNSS arriving at random intervals) and the ERTS
- * backward pass, and writes truth.csv, filter.csv and smoother.csv.
+ * backward pass, then the UKF and URTSS on the same data. Writes truth.csv,
+ * filter.csv, smoother.csv, ukf_filter.csv and ukf_smoother.csv, plus a
+ * set of fix files per filter, the UKF's prefixed with ukf_.
  * @param config the parsed yaml config
  * @param output_dir where the csv files are written
  */

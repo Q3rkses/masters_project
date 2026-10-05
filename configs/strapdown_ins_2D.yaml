@@ -17,6 +17,10 @@ filter_gyro_noise_variance: 5e-5
 filter_accelerometer_noise_variance: [5e-2, 5e-2]
 filter_gyro_white_noise_intensity: 5e-4
 filter_accelerometer_white_noise_intensity: [5e-4, 5e-4]
+# unscented transform parameters for the UKF and URTSS
+ukf_alpha: 1.0 # spread of the sigma points around the mean
+ukf_beta: 2.0 # prior knowledge of the distribution, 2 is optimal for gaussians
+ukf_kappa: 0.0 # secondary scaling
 # initial condition of the ASV: [x, y, psi, u, v, b_ax, b_ay, b_g]
 x0: [0, 0, 0, 2.0, 0, 0, 0, 0] # start at origin with heading +x
 p0_diagonal: [0.4, 0.4, 0.04, 0.04, 0.04, 0.004, 0.004, 0.0004]
