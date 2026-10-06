@@ -20,8 +20,8 @@ scenario's own sensor periods:
 | sensor       | period            | fixes per run (typical) |
 | ------------ | ----------------- | ----------------------- |
 | GNSS         | uniform(10, 20)s  | ~20                     |
-| Magnetometer | uniform(0.25, 1)s | ~370                    |
-| DVL          | uniform(0.2, 1)s  | ~390                    |
+| Magnetometer | uniform(0.25, 1)s | ~480                    |
+| DVL          | uniform(0.2, 1)s  | ~490                    |
 
 GNSS period is longer here than in the GNSS-only scenario (10-20s instead
 of 1-3s) since it no longer has to carry the whole run on its own.
@@ -45,15 +45,15 @@ To regenerate the data, copy
 ![Filter vs smoother](rounded_rectangle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](rounded_rectangle/figures/ins_4_nis.png)
 
-|                         | value  | band             | verdict    |
-| ----------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS               | 2.2257 | [1.3804, 2.7327] | consistent |
-| ANIS magnetometer       | 0.9395 | [0.8856, 1.1213] | consistent |
-| ANIS DVL                | 1.8305 | [1.8238, 2.1842] | consistent |
-| ANEES position filter   | 1.7704 | [1.1147, 3.1397] | consistent |
-| ANEES position smoother | 1.3790 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.9977 | [1.1494, 3.0823] | consistent   |
+| ANIS magnetometer       | 0.8981 | [0.8823, 1.1250] | consistent   |
+| ANIS DVL                | 1.8918 | [1.8152, 2.1936] | consistent   |
+| ANEES position filter   | 2.5121 | [0.9895, 3.3601] | consistent   |
+| ANEES position smoother | 2.3270 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.59m, smoother 0.34m.
+RMSE: filter 0.68m, smoother 0.46m.
 
 ### circle
 
@@ -61,15 +61,15 @@ RMSE: filter 0.59m, smoother 0.34m.
 ![Filter vs smoother](circle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](circle/figures/ins_4_nis.png)
 
-|                         | value  | band             | verdict    |
-| ----------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS               | 2.3925 | [1.4113, 2.6898] | consistent |
-| ANIS magnetometer       | 0.9374 | [0.8854, 1.1214] | consistent |
-| ANIS DVL                | 1.8331 | [1.8247, 2.1832] | consistent |
-| ANEES position filter   | 2.3835 | [1.0410, 3.2669] | consistent |
-| ANEES position smoother | 1.3655 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.8193 | [0.9278, 3.4770] | consistent   |
+| ANIS magnetometer       | 0.8999 | [0.8823, 1.1250] | consistent   |
+| ANIS DVL                | 1.8897 | [1.8165, 2.1922] | consistent   |
+| ANEES position filter   | 2.2638 | [1.1404, 3.0971] | consistent   |
+| ANEES position smoother | 2.4637 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.66m, smoother 0.33m.
+RMSE: filter 0.66m, smoother 0.47m.
 
 ### straight_into_turn
 
@@ -77,30 +77,30 @@ RMSE: filter 0.66m, smoother 0.33m.
 ![Filter vs smoother](straight_into_turn/figures/ins_2_filter_vs_smoother.png)
 ![NIS](straight_into_turn/figures/ins_4_nis.png)
 
-|                         | value  | band             | verdict    |
-| ----------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS               | 2.4072 | [1.5068, 2.5619] | consistent |
-| ANIS magnetometer       | 0.9366 | [0.8856, 1.1212] | consistent |
-| ANIS DVL                | 1.8335 | [1.8253, 2.1825] | consistent |
-| ANEES position filter   | 1.4363 | [1.2652, 2.9003] | consistent |
-| ANEES position smoother | 0.8816 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.7876 | [1.3568, 2.7661] | consistent   |
+| ANIS magnetometer       | 0.9010 | [0.8826, 1.1246] | consistent   |
+| ANIS DVL                | 1.8984 | [1.8164, 2.1923] | consistent   |
+| ANEES position filter   | 1.8771 | [1.0419, 3.2654] | consistent   |
+| ANEES position smoother | 1.6521 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.52m, smoother 0.26m.
+RMSE: filter 0.57m, smoother 0.40m.
 
-The sharp-turn inconsistency seen in the [GNSS-only
-scenario](../only_gnss/README.md#straight_into_turn) is gone here: with
-magnetometer correcting heading every fraction of a second, the filter
-never has to dead-reckon through a turn on the IMU model alone.
+Magnetometer ANIS (0.90 on all three) sits close to the lower edge of its
+band (about 0.88), the same slight underconfidence about the magnetometer's
+`R` seen in the [dead reckoning](../dead_reckoning/README.md) and
+[outage](../gnss_outage/README.md) scenarios.
 
 ## Takeaways and limits
 
 - All three sensors, all three trajectories: every consistency check
-  passes. Adding magnetometer and DVL doesn't just lower RMSE, it fixes the
-  one inconsistent case from the GNSS-only scenario.
-- RMSE is actually a bit higher here than in GNSS-only on the gentle
-  trajectories (0.59-0.66m vs 0.68-0.69m filter) despite the extra sensors.
-  GNSS fires far less often here (~20 fixes vs ~150), so the net effect on
-  accuracy is a tradeoff, not a strict win. Consistency is the clearer win.
+  passes, as it does for GNSS only.
+- Filter RMSE is 0.57-0.68m against 0.68-0.70m for GNSS only, with ~19 GNSS
+  fixes instead of ~149. Magnetometer and DVL carry the accuracy that the
+  dense GNSS fixes carried. The smoother is worse than in GNSS only
+  (0.40-0.47m against 0.21-0.22m), likely because it has far fewer
+  absolute position fixes to anchor on.
 - Single seed per trajectory, matched IMU model, no deliberate mismatch
   test yet.
 

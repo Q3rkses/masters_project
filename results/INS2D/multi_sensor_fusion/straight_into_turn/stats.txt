@@ -1,19 +1,28 @@
-30000 timesteps, 20 GNSS fixes
+30000 timesteps, 19 GNSS fixes
 
 consistency (time-averaged):
-  ANIS GNSS               2.4072  band [1.5068, 2.5619]  85.0% of steps in band  -> consistent
-  ANIS magnetometer       0.9366  band [0.8856, 1.1212]  94.8% of steps in band  -> consistent
-  ANIS DVL                1.8335  band [1.8253, 2.1825]  94.0% of steps in band  -> consistent
-  ANEES position filter    1.4363  band [1.2652, 2.9003]  96.2% of steps in band  -> consistent
-  ANEES position smoother    0.8816  band [0.0506, 7.3778]  95.2% of steps in band  -> consistent
+  ANIS GNSS EKF           1.7876  band [1.3568, 2.7661]  100.0% of steps in band  -> consistent
+  ANIS magnetometer EKF    0.9010  band [0.8826, 1.1246]  96.0% of steps in band  -> consistent
+  ANIS DVL EKF            1.8984  band [1.8164, 2.1923]  95.7% of steps in band  -> consistent
+  ANEES position EKF      1.8771  band [1.0419, 3.2654]  93.0% of steps in band  -> consistent
+  ANEES position ERTS     1.6521  band [0.0506, 7.3778]  95.2% of steps in band  -> consistent
 
 accuracy:
-  RMSE position filter    0.5223 m
-  RMSE position smoother  0.2622 m
+  RMSE position EKF     0.5735 m
+  RMSE position ERTS    0.3982 m
+  RMSE heading  EKF      1.281 deg
+  RMSE heading  ERTS     0.909 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.592e-06  0 of 30000 steps below zero
+  ERTS    min  3.633e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
 
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_1_sensor_fixes.png
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_2_filter_vs_smoother.png
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_3_confidence_interval.png
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_4_nis.png
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_5_nees.png
+wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_6_variance.png
 wrote results/INS2D/multi_sensor_fusion/straight_into_turn/figures/ins_7_bias.png

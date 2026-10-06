@@ -16,7 +16,7 @@ scenario here is run on all three trajectories (`rounded_rectangle`,
 
 |               |                                                  |
 | ------------- | ------------------------------------------------ |
-| **Status**    | done, consistent except one turn-heavy case      |
+| **Status**    | done, consistent on all three trajectories       |
 | **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42 |
 | **Reproduce** | see [Reproduce](#reproduce)                      |
 
@@ -72,13 +72,13 @@ python3 scripts/analyze_ins_2d.py results/INS2D/only_gnss/<trajectory>/data
 ![Filter vs smoother](rounded_rectangle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](rounded_rectangle/figures/ins_4_nis.png)
 
-|                         | value  | band             | verdict    |
-| ----------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS               | 1.9679 | [1.6991, 2.3251] | consistent |
-| ANEES position filter   | 1.8826 | [1.4533, 2.6326] | consistent |
-| ANEES position smoother | 1.7055 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.9965 | [1.6704, 2.3589] | consistent   |
+| ANEES position filter   | 1.8411 | [1.4344, 2.6582] | consistent   |
+| ANEES position smoother | 1.1497 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.69m, smoother 0.26m.
+RMSE: filter 0.70m, smoother 0.21m.
 
 ### circle
 
@@ -86,13 +86,13 @@ RMSE: filter 0.69m, smoother 0.26m.
 ![Filter vs smoother](circle/figures/ins_2_filter_vs_smoother.png)
 ![NIS](circle/figures/ins_4_nis.png)
 
-|                         | value  | band             | verdict    |
-| ----------------------- | ------ | ---------------- | ---------- |
-| ANIS GNSS               | 1.9853 | [1.6986, 2.3256] | consistent |
-| ANEES position filter   | 1.8765 | [1.4979, 2.5735] | consistent |
-| ANEES position smoother | 1.7225 | [0.0506, 7.3778] | consistent |
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.9989 | [1.7016, 2.3222] | consistent   |
+| ANEES position filter   | 1.8535 | [1.4634, 2.6191] | consistent   |
+| ANEES position smoother | 1.1266 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.68m, smoother 0.26m.
+RMSE: filter 0.68m, smoother 0.21m.
 
 ### straight_into_turn
 
@@ -102,31 +102,27 @@ RMSE: filter 0.68m, smoother 0.26m.
 
 |                         | value  | band             | verdict      |
 | ----------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS               | 3.6455 | [1.2468, 2.9283] | INCONSISTENT |
-| ANEES position filter   | 3.8392 | [1.2977, 2.8518] | INCONSISTENT |
-| ANEES position smoother | 5.2963 | [0.0506, 7.3778] | consistent   |
+| ANIS GNSS               | 2.0222 | [1.6799, 2.3476] | consistent   |
+| ANEES position filter   | 1.8096 | [1.4692, 2.6114] | consistent   |
+| ANEES position smoother | 1.2335 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 0.99m, smoother 0.45m.
+RMSE: filter 0.69m, smoother 0.22m.
 
-The only inconsistent case in this scenario. With only GNSS correcting
-position and nothing correcting heading between fixes, the EKF has to
-dead-reckon through the entire 90deg turn on the IMU model alone. The
-filter (not the smoother, which sees the whole record both ways) ends up
-overconfident through that stretch. The rectangle's and circle's turns are
-much gentler (10m and 40m radius against this track's 5m), so this looks
-like a turn-sharpness effect specific to this trajectory, not a general
-problem with the scenario.
+The sharpest turn of the three (5m radius) stays inside its bands as well,
+even though nothing but GNSS position fixes correct the filter through it.
 
 ## Takeaways and limits
 
-- GNSS alone, well-tuned, holds up fine on gentle curvature (rectangle,
-  circle) but goes inconsistent through a sharp, unaided turn
-  (straight_into_turn). Exactly the gap the other two scenarios in this
-  set are meant to cover with magnetometer and DVL aiding.
+- GNSS alone, well-tuned and with a fix every ~2s, is consistent on all
+  three trajectories, including the 5m-radius turn of straight_into_turn.
+- The smoother cuts RMSE by about 70% on every trajectory (0.68-0.70m
+  to 0.21-0.22m), the biggest relative gain of the three scenarios in this
+  set, since GNSS gives it an absolute position reference on both sides of
+  every point.
 - Single seed per trajectory, matched IMU model (see Setup), no deliberate
   mismatch test yet.
 
 ## Next
 
 [Multi-sensor fusion](../multi_sensor_fusion/README.md) adds magnetometer
-and DVL back in to see whether that sharp-turn inconsistency goes away.
+and DVL back in, with GNSS much sparser.

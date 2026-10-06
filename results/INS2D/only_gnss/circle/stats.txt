@@ -1,19 +1,28 @@
-30000 timesteps, 150 GNSS fixes
+30000 timesteps, 149 GNSS fixes
 
 consistency (time-averaged):
-  ANIS GNSS               1.9853  band [1.6986, 2.3256]  97.3% of steps in band  -> consistent
-  ANIS magnetometer    no fixes recorded, nothing to compute
-  ANIS DVL             no fixes recorded, nothing to compute
-  ANEES position filter    1.8765  band [1.4979, 2.5735]  97.2% of steps in band  -> consistent
-  ANEES position smoother    1.7225  band [0.0506, 7.3778]  99.3% of steps in band  -> consistent
+  ANIS GNSS EKF           1.9989  band [1.7016, 2.3222]  96.0% of steps in band  -> consistent
+  ANIS magnetometer EKF no fixes recorded, nothing to compute
+  ANIS DVL EKF         no fixes recorded, nothing to compute
+  ANEES position EKF      1.8535  band [1.4634, 2.6191]  96.5% of steps in band  -> consistent
+  ANEES position ERTS     1.1266  band [0.0506, 7.3778]  95.8% of steps in band  -> consistent
 
 accuracy:
-  RMSE position filter    0.6795 m
-  RMSE position smoother  0.2585 m
+  RMSE position EKF     0.6807 m
+  RMSE position ERTS    0.2088 m
+  RMSE heading  EKF     11.966 deg
+  RMSE heading  ERTS     5.489 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  7.990e-06  0 of 30000 steps below zero
+  ERTS    min  5.144e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
 
 wrote results/INS2D/only_gnss/circle/figures/ins_1_sensor_fixes.png
 wrote results/INS2D/only_gnss/circle/figures/ins_2_filter_vs_smoother.png
 wrote results/INS2D/only_gnss/circle/figures/ins_3_confidence_interval.png
 wrote results/INS2D/only_gnss/circle/figures/ins_4_nis.png
 wrote results/INS2D/only_gnss/circle/figures/ins_5_nees.png
+wrote results/INS2D/only_gnss/circle/figures/ins_6_variance.png
 wrote results/INS2D/only_gnss/circle/figures/ins_7_bias.png

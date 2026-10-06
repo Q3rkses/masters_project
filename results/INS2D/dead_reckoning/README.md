@@ -10,7 +10,7 @@ aided only by heading and body-frame velocity corrections.
 
 |               |                                                  |
 | ------------- | ------------------------------------------------ |
-| **Status**    | done, consistent in position; DVL NIS mildly off |
+| **Status**    | done, position conservative; magnetometer NIS mildly low |
 | **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42 |
 | **Reproduce** | see [Reproduce](#reproduce)                      |
 
@@ -22,8 +22,8 @@ scenario's own sensor periods:
 | sensor       | period            | fixes per run |
 | ------------ | ----------------- | ------------- |
 | GNSS         | disabled (1e5 s)  | 0             |
-| Magnetometer | uniform(0.25, 1)s | ~370          |
-| DVL          | uniform(0.2, 1)s  | ~390          |
+| Magnetometer | uniform(0.25, 1)s | ~470          |
+| DVL          | uniform(0.2, 1)s  | ~500          |
 
 ## Reproduce
 
@@ -46,12 +46,12 @@ To regenerate the data, copy
 
 |                         | value  | band             | verdict      |
 | ----------------------- | ------ | ---------------- | ------------ |
-| ANIS magnetometer       | 0.9637 | [0.8809, 1.1265] | consistent   |
-| ANIS DVL                | 1.6756 | [1.8195, 2.1889] | INCONSISTENT |
-| ANEES position filter   | 1.0967 | [0.3612, 5.0133] | consistent   |
-| ANEES position smoother | 1.0877 | [0.0506, 7.3778] | consistent   |
+| ANIS magnetometer       | 0.8112 | [0.8761, 1.1320] | INCONSISTENT |
+| ANIS DVL                | 1.8901 | [1.8256, 2.1823] | consistent   |
+| ANEES position filter   | 0.3330 | [0.9036, 3.5245] | INCONSISTENT |
+| ANEES position smoother | 0.3169 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 1.53m, smoother 1.52m. (GNSS: no fixes recorded.)
+RMSE: filter 0.84m, smoother 0.82m. (GNSS: no fixes recorded.)
 
 ### circle
 
@@ -61,12 +61,12 @@ RMSE: filter 1.53m, smoother 1.52m. (GNSS: no fixes recorded.)
 
 |                         | value  | band             | verdict      |
 | ----------------------- | ------ | ---------------- | ------------ |
-| ANIS magnetometer       | 0.9633 | [0.8808, 1.1267] | consistent   |
-| ANIS DVL                | 1.6747 | [1.8181, 2.1905] | INCONSISTENT |
-| ANEES position filter   | 1.2811 | [0.2822, 5.3640] | consistent   |
-| ANEES position smoother | 1.2734 | [0.0506, 7.3778] | consistent   |
+| ANIS magnetometer       | 0.8110 | [0.8760, 1.1321] | INCONSISTENT |
+| ANIS DVL                | 1.8863 | [1.8259, 2.1820] | consistent   |
+| ANEES position filter   | 0.4903 | [0.8266, 3.6828] | INCONSISTENT |
+| ANEES position smoother | 0.4778 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 1.63m, smoother 1.62m. (GNSS: no fixes recorded.)
+RMSE: filter 1.01m, smoother 1.00m. (GNSS: no fixes recorded.)
 
 ### straight_into_turn
 
@@ -76,32 +76,42 @@ RMSE: filter 1.63m, smoother 1.62m. (GNSS: no fixes recorded.)
 
 |                         | value  | band             | verdict      |
 | ----------------------- | ------ | ---------------- | ------------ |
-| ANIS magnetometer       | 0.9634 | [0.8808, 1.1266] | consistent   |
-| ANIS DVL                | 1.6713 | [1.8186, 2.1899] | INCONSISTENT |
-| ANEES position filter   | 1.8161 | [0.1875, 5.9050] | consistent   |
-| ANEES position smoother | 1.8138 | [0.0506, 7.3778] | consistent   |
+| ANIS magnetometer       | 0.8110 | [0.8763, 1.1318] | INCONSISTENT |
+| ANIS DVL                | 1.8868 | [1.8254, 2.1824] | consistent   |
+| ANEES position filter   | 0.3579 | [0.4590, 4.6535] | INCONSISTENT |
+| ANEES position smoother | 0.3446 | [0.0506, 7.3778] | consistent   |
 
-RMSE: filter 2.14m, smoother 2.13m. (GNSS: no fixes recorded.)
+RMSE: filter 0.76m, smoother 0.75m. (GNSS: no fixes recorded.)
 
 ## Consistency, read carefully
 
-Large RMSE (1.5-2.1m, by far the worst of the three scenarios) is the
-expected signature of dead reckoning, not a sign of a broken filter
-there is nothing here to correct an accumulating position error against.
-What actually matters for consistency is whether the filter's own `P`
-honestly reflects that growing error, and `ANEES position filter` says yes
-on all three trajectories (comfortably inside its band every time): the
-filter knows it's unsure, by the right amount.
+RMSE of 0.76-1.01m, the largest of the three scenarios, is the expected
+signature of dead reckoning, not a sign of a broken filter: there is
+nothing here to correct an accumulating position error against. What
+matters for consistency is whether the filter's own `P` reflects that
+error, and here it overstates it. `ANEES position filter` is 0.33-0.49 on
+all three trajectories, below its band (the expected value is 2), so the
+filter's position covariance is about 4 to 6 times larger than the actual
+error warrants. It is conservative, not overconfident.
+
+Magnetometer ANIS is 0.81 on all three, just under its band (which starts
+around 0.876): `S` is about 20% larger than the innovations need. DVL ANIS
+is consistent on all three (1.89, bands start around 1.83).
 
 ## Takeaways and limits
 
-- Position/heading accuracy degrades with trajectory complexity even
-  though nothing else does: RMSE climbs from 1.53m (rectangle) to 1.63m
-  (circle) to 2.14m (straight_into_turn, the sharpest turn of the three).
-  The filter's own uncertainty estimate (ANEES) stays consistent
-  throughout regardless, which is the real point of this scenario.
-- The DVL-underconfidence finding is consistent across all three
-  trajectories, which is some evidence it's a property of the sensor
-  tuning rather than a one-off.
+- RMSE is 0.84m (rectangle), 1.01m (circle) and 0.76m (straight_into_turn).
+  The worst case is the circle, which turns continuously, and the best is
+  the mostly straight track, so error seems to grow with how much the
+  vehicle turns, not with how sharp the turn is. Not tested.
+- The smoother barely helps (0.84 to 0.82m, 1.01 to 1.00m, 0.76 to
+  0.75m): with no absolute position anywhere in the run there is nothing
+  for it to carry backwards.
+- The filter is conservative in position and slightly underconfident
+  about the magnetometer on all three trajectories. The same magnetometer
+  result shows up in the outage and (marginally) multi-sensor scenarios,
+  so it looks like a property of the magnetometer's `R`, not of one
+  scenario. The conservative position covariance is not explained by
+  either sensor's NIS, and is not isolated here.
 - Single seed per trajectory, matched IMU model, no deliberate mismatch
   test yet.

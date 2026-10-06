@@ -30,8 +30,8 @@ trajectory only (`rounded_rectangle`), with:
 | sensor       | period            | denied window | fixes per run |
 | ------------ | ------------------ | -------------- | -------------- |
 | GNSS         | uniform(1, 3)s      | 45-255s        | 45             |
-| Magnetometer | uniform(0.25, 1)s   | never          | ~370           |
-| DVL          | uniform(0.2, 1)s    | never          | ~390           |
+| Magnetometer | uniform(0.25, 1)s   | never          | ~470           |
+| DVL          | uniform(0.2, 1)s    | never          | ~490           |
 
 `matched`: `filter_gyro_noise_variance` 5e-5, `filter_accelerometer_noise_variance`
 [5e-2, 5e-2], same as true.
@@ -109,10 +109,11 @@ RMSE: filter 1.01m, smoother 0.70m.
 
 Magnetometer ANIS is the one surprise, mildly inconsistent in both runs,
 and just under its band both times (0.857 and 0.849 against bands starting
-around 0.87). Same direction as the DVL finding in the [dead reckoning
-scenario](../dead_reckoning/README.md#consistency-read-carefully), the
-filter is a touch underconfident about a sensor's `R`, not overconfident.
-Worth a look together with that finding in a future retuning pass.
+around 0.87). The [dead reckoning
+scenario](../dead_reckoning/README.md#consistency-read-carefully) gives the
+same result (0.81 on all three trajectories), so the filter is a touch
+underconfident about the magnetometer's `R`, not overconfident. Worth a
+look in a future retuning pass.
 
 ## Takeaways and limits
 

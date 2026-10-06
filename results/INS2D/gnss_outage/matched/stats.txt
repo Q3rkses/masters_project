@@ -1,17 +1,23 @@
 30000 timesteps, 45 GNSS fixes
 
 consistency (time-averaged):
-  ANIS GNSS               1.9989  band [1.4349, 2.6574]  100.0% of steps in band  -> consistent
-  ANIS magnetometer       0.8573  band [0.8682, 1.1410]  95.7% of steps in band  -> INCONSISTENT
-  ANIS DVL                1.9935  band [1.8296, 2.1779]  94.5% of steps in band  -> consistent
-  ANEES position filter    1.4470  band [1.2959, 2.8544]  97.1% of steps in band  -> consistent
-  ANEES position smoother    1.5674  band [0.0506, 7.3778]  96.5% of steps in band  -> consistent
+  ANIS GNSS EKF           1.9989  band [1.4349, 2.6574]  100.0% of steps in band  -> consistent
+  ANIS magnetometer EKF    0.8573  band [0.8682, 1.1410]  95.7% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF            1.9935  band [1.8296, 2.1779]  94.5% of steps in band  -> consistent
+  ANEES position EKF      1.4470  band [1.2959, 2.8544]  97.1% of steps in band  -> consistent
+  ANEES position ERTS     1.5674  band [0.0506, 7.3778]  96.5% of steps in band  -> consistent
 
 accuracy:
-  RMSE position filter    0.9988 m
-  RMSE position smoother  0.7055 m
+  RMSE position EKF     0.9988 m
+  RMSE position ERTS    0.7055 m
+  RMSE heading  EKF      1.308 deg
+  RMSE heading  ERTS     0.794 deg
 
-smoother trace(P) <= filter trace(P) at every step: True
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.593e-06  0 of 30000 steps below zero
+  ERTS    min  3.633e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
 
 wrote results/INS2D/gnss_outage/matched/figures/ins_1_sensor_fixes.png
 wrote results/INS2D/gnss_outage/matched/figures/ins_2_filter_vs_smoother.png

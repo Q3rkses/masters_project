@@ -1,19 +1,28 @@
 30000 timesteps, 0 GNSS fixes
 
 consistency (time-averaged):
-  ANIS GNSS            no fixes recorded, nothing to compute
-  ANIS magnetometer       0.9637  band [0.8809, 1.1265]  95.4% of steps in band  -> consistent
-  ANIS DVL                1.6756  band [1.8195, 2.1889]  95.5% of steps in band  -> INCONSISTENT
-  ANEES position filter    1.0967  band [0.3612, 5.0133]  95.9% of steps in band  -> consistent
-  ANEES position smoother    1.0877  band [0.0506, 7.3778]  97.8% of steps in band  -> consistent
+  ANIS GNSS EKF        no fixes recorded, nothing to compute
+  ANIS magnetometer EKF    0.8112  band [0.8761, 1.1320]  96.6% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF            1.8901  band [1.8256, 2.1823]  94.2% of steps in band  -> consistent
+  ANEES position EKF      0.3330  band [0.9036, 3.5245]  87.4% of steps in band  -> INCONSISTENT
+  ANEES position ERTS     0.3169  band [0.0506, 7.3778]  88.2% of steps in band  -> consistent
 
 accuracy:
-  RMSE position filter    1.5280 m
-  RMSE position smoother  1.5173 m
+  RMSE position EKF     0.8375 m
+  RMSE position ERTS    0.8180 m
+  RMSE heading  EKF      1.410 deg
+  RMSE heading  ERTS     0.949 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.593e-06  0 of 30000 steps below zero
+  ERTS    min  3.633e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
 
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_1_sensor_fixes.png
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_2_filter_vs_smoother.png
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_3_confidence_interval.png
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_4_nis.png
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_5_nees.png
+wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_6_variance.png
 wrote results/INS2D/dead_reckoning/rounded_rectangle/figures/ins_7_bias.png

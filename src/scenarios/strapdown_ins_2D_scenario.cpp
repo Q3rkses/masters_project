@@ -356,9 +356,9 @@ void run_strapdown_ins_2d(const YAML::Node &config,
 
   // 6. UKF forward pass and URTSS backward pass on the same data
   const TransformConfig transform_config{
-      .alpha = config["ukf_alpha"].as<double>(),
-      .beta = config["ukf_beta"].as<double>(),
-      .kappa = config["ukf_kappa"].as<double>(),
+      .alpha = config["ukf_alpha"].as<double>(1.0),
+      .beta = config["ukf_beta"].as<double>(2.0),
+      .kappa = config["ukf_kappa"].as<double>(0.0),
       .dimension = static_cast<int>(x0.size())};
   UnscentedKalmanFilter ukf(filter_config, transform_config);
   ForwardPass ukf_pass =

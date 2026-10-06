@@ -1,19 +1,28 @@
-30000 timesteps, 20 GNSS fixes
+30000 timesteps, 19 GNSS fixes
 
 consistency (time-averaged):
-  ANIS GNSS               2.3925  band [1.4113, 2.6898]  100.0% of steps in band  -> consistent
-  ANIS magnetometer       0.9374  band [0.8854, 1.1214]  95.2% of steps in band  -> consistent
-  ANIS DVL                1.8331  band [1.8247, 2.1832]  94.4% of steps in band  -> consistent
-  ANEES position filter    2.3835  band [1.0410, 3.2669]  95.4% of steps in band  -> consistent
-  ANEES position smoother    1.3655  band [0.0506, 7.3778]  91.3% of steps in band  -> consistent
+  ANIS GNSS EKF           1.8193  band [0.9278, 3.4770]  100.0% of steps in band  -> consistent
+  ANIS magnetometer EKF    0.8999  band [0.8823, 1.1250]  96.6% of steps in band  -> consistent
+  ANIS DVL EKF            1.8897  band [1.8165, 2.1922]  96.7% of steps in band  -> consistent
+  ANEES position EKF      2.2638  band [1.1404, 3.0971]  95.0% of steps in band  -> consistent
+  ANEES position ERTS     2.4637  band [0.0506, 7.3778]  97.3% of steps in band  -> consistent
 
 accuracy:
-  RMSE position filter    0.6597 m
-  RMSE position smoother  0.3295 m
+  RMSE position EKF     0.6577 m
+  RMSE position ERTS    0.4663 m
+  RMSE heading  EKF      1.272 deg
+  RMSE heading  ERTS     0.890 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.592e-06  0 of 30000 steps below zero
+  ERTS    min  3.633e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
 
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_1_sensor_fixes.png
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_2_filter_vs_smoother.png
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_3_confidence_interval.png
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_4_nis.png
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_5_nees.png
+wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_6_variance.png
 wrote results/INS2D/multi_sensor_fusion/circle/figures/ins_7_bias.png
