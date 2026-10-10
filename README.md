@@ -13,8 +13,7 @@ A place to store code that will be used in my masters pre-project. This Repo wil
 
 Other interesting tests to perform when writing about results and theory:
 
-- [ ] Mis-tune `q` or `r` in the filter while leaving the simulator alone, to show an inconsistent filter for contrast
-- [ ] Monte Carlo over seeds for proper consistency bands
+- [x] Mis-tune `q` or `r` in the filter while leaving the simulator alone, to show an inconsistent filter for contrast
 - [ ] Standard forward-backward smoother, to compare against the RTS smoother
 
 ### Phase 2: sophistication
@@ -22,14 +21,16 @@ Other interesting tests to perform when writing about results and theory:
 - [x] Extend the current filter and smoother to be able to handle nonlinearities
 - [x] Add and experiment with EKF and ERTSS
 - [x] Add a 2D strapdown inertial navigation model to test how the filters deal with real nonlinearities.
-- [ ] Add and experiment with UKF and URTSS
-- [ ] Run experiments and document consistency, accuracy and other factors that might be of interest
+- [x] Add and experiment with UKF and URTSS
+- [ ] Add and experiment with the IEKF and IERTSS
+- [x] Run experiments and document consistency, accuracy and other factors that might be of interest
+
 
 Other interesting tests to perform when writing about results and theory:
 
-- [ ] Introduce model mismatch between the filter and the simulator, to show an inconsistent filter for contrast
+- [x] Introduce model mismatch between the filter and the simulator, to show an inconsistent filter for contrast
 - [ ] Monte Carlo over seeds for proper consistency bands
-- [ ] Reason about why we can expect or should not expect differences in performance between an Unscented, an Extended or an Iterative variant of a filter/smoother.
+- [x] Reason about why we can expect or should not expect differences in performance between an Unscented, an Extended or an Iterative variant of a filter/smoother.
 
 ### Phase 3: towards realistic scenarios
 
