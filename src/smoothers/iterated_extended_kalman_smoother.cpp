@@ -27,7 +27,7 @@ SmootherUpdate IteratedExtendedKalmanSmoother::backward_recursion(
   Eigen::MatrixXd W = predicted_next.P_predicted.ldlt().solve(FP).transpose();
 
   // assemble the smoother equations from Algorithm 13.1
-  // remember to use the proper compostion operation, rather than
+  // remember to use the proper composition operation, rather than
   // the default + or - operator when dealing with states
   Eigen::VectorXd delta = motion_model_->composition_minus(
       smoothed_previous.x_smoothed, predicted_next.x_predicted);

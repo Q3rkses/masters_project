@@ -7,7 +7,8 @@
 ExtendedKalmanFilter::ExtendedKalmanFilter(const FilterConfig &filter_config)
     : motion_model_(filter_config.motion_model) {
   if (!motion_model_) {
-    throw std::invalid_argument("ExtendedKalmanFilter: the filter config needs a motion model");
+    throw std::invalid_argument(
+        "ExtendedKalmanFilter: the filter config needs a motion model");
   }
 };
 
@@ -28,7 +29,8 @@ FilterUpdate ExtendedKalmanFilter::update(
     const Eigen::MatrixXd &P_predicted, const Input &input,
     const std::shared_ptr<const MeasurementModel> &measurement_model) {
   if (!measurement_model) {
-    throw std::invalid_argument("ExtendedKalmanFilter::update: measurement model is null");
+    throw std::invalid_argument(
+        "ExtendedKalmanFilter::update: measurement model is null");
   }
 
   Eigen::MatrixXd H = measurement_model->H(x_predicted, input);
@@ -36,8 +38,7 @@ FilterUpdate ExtendedKalmanFilter::update(
 
   Eigen::VectorXd z_predicted = measurement_model->h(x_predicted, input);
 
-  // remember to use the proper compostion operation, rather than
-  // the default + or - operator when dealing with states / measurements
+  // use the proper composition operation, rather than regular +, - operations
   Eigen::VectorXd innovation =
       measurement_model->composition_minus(z_current, z_predicted);
 
@@ -48,8 +49,7 @@ FilterUpdate ExtendedKalmanFilter::update(
   // invering because it is cheaper and more stable
   Eigen::MatrixXd W = S.ldlt().solve(PHt.transpose()).transpose();
 
-  // remember to use the proper compostion operation, rather than
-  // the default + or - operator when dealing with states / measurements
+  // use the proper composition operation, rather than regular +, - operations
   Eigen::VectorXd x_updated =
       motion_model_->composition_plus(x_predicted, W * innovation);
 

@@ -56,6 +56,25 @@ public:
       override;
 
 private:
+  /**
+   * @brief The MAP cost of the update, which the LM method minimizes.
+   * @param x, the state to evaluate the cost at
+   * @param x_predicted, the mean of the current prediction
+   * @param P_predicted_ldlt, factorisation of P_predicted, computed once
+   * before the iteration
+   * @param z_current, the current measurement
+   * @param R_ldlt, factorisation of R, computed once before the iteration
+   * @param input, which is the input in the current timestep
+   * @param measurement_model, the model of the sensor that produced
+   * z_current
+   * @return the scalar cost
+   */
+  double cost(const Eigen::VectorXd &x, const Eigen::VectorXd &x_predicted,
+              const Eigen::LDLT<Eigen::MatrixXd> &P_predicted_ldlt,
+              const Eigen::VectorXd &z_current,
+              const Eigen::LDLT<Eigen::MatrixXd> &R_ldlt, const Input &input,
+              const MeasurementModel &measurement_model) const;
+
   std::shared_ptr<const MotionModel> motion_model_;
   const LevenbergMarquardtConfig &lm_config;
 };

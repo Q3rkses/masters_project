@@ -39,7 +39,6 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
-  const LevenbergMarquardtConfig &lm_config;
 };
 
 #endif

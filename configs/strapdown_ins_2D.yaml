@@ -22,13 +22,13 @@ ukf_alpha: 1.0 # spread of the sigma points around the mean
 ukf_beta: 2.0 # prior knowledge of the distribution, 2 is optimal for gaussians
 ukf_kappa: 0.0 # secondary scaling
 #Levenberg Marquardt config parameters for iterated methods, IteratedEKF, IteratedEKS
-double lambda_initial: 1e-2 # initial damping
-double lambda_min: 1e-12 # floor: below this the step is pure Gauss-Newton
-double lambda_max: 1e12 # ceiling: give up on this iterate if exceeded
-int max_iter: 50 # accepted iterations
-int max_rejections: 30 # per iterate
-double step_tolerance: 1e-8 # stop when |Δ|_{P_{k|k}} < step_tol
-double cost_relative_tolerance: 1e-12 # or relative cost decrease below this
+lambda_initial: 1e-2 # initial damping
+lambda_min: 1e-12 # floor: below this the step is pure Gauss-Newton
+lambda_max: 1e12 # ceiling: give up on this iterate if exceeded
+max_iter: 50 # accepted iterations
+max_rejections: 30 # per iterate
+step_tolerance: 1e-8 # stop when |Δ|_{P_{k|k}} < step_tol
+cost_relative_tolerance: 1e-12 # or relative cost decrease below this
 # initial condition of the ASV: [x, y, psi, u, v, b_ax, b_ay, b_g]
 x0: [0, 0, 0, 2.0, 0, 0, 0, 0] # start at origin with heading +x
 p0_diagonal: [0.4, 0.4, 0.04, 0.04, 0.04, 0.004, 0.004, 0.0004]

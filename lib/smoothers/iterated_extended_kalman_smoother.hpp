@@ -25,7 +25,7 @@ public:
 
   /**
    * @brief the backwards recursion equation based on Algorithm
-   * 13.5 from Bayesian Smoothing and Filtering (Sarkka, p.274)
+   * 13.5 from Bayesian Filtering and Smoothing (Sarkka, p.274)
    * @param filtered_current, x_updated and P_updated at timestep k as
    * produced by the forward filter pass
    * @param predicted_next, x_predicted and P_predicted at timestep k+1

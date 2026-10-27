@@ -17,6 +17,7 @@ add_library(kalman_lib
   src/models/measurement_models.cpp
   src/filters/kalman_filter.cpp
   src/filters/extended_kalman_filter.cpp
+  src/filters/iterated_extended_kalman_filter.cpp
   src/filters/unscented_kalman_filter.cpp
   src/smoothers/rauch_tung_striebel_smoother.cpp
   src/smoothers/extended_rauch_tung_striebel_smoother.cpp
