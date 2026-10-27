@@ -22,8 +22,7 @@ public:
 
   /**
    * @brief The prediction step in an Extended Kalman Filter
-   * based on algorithm 1 in Fundamentals of Sensorfusion (Brekke, p.56)
-   * utilizes the Joseph form for better numerical stability of P
+   * based on algorithm 2 in Fundamentals of Sensorfusion (Brekke, p.83)
    * @param x_current, the density of the current state
    * @param P_current, the covariance of the current state
    * @param input, which is the input in the current timestep
@@ -37,7 +36,7 @@ public:
 
   /**
    * @brief The update step in an Extended Kalman Filter
-   * based on algorithm 1 in Fundamentals of Sensorfusion (Brekke, p.56)
+   * based on algorithm 2 in Fundamentals of Sensorfusion (Brekke, p.83)
    * utilizes the Joseph form for better numerical stability of P
    * @param x_predicted, the mean of the current prediction
    * @param P_predicted, the covariance of the current prediciton
