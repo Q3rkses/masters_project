@@ -8,18 +8,8 @@
 #define ITERATED_EXTENDED_KALMAN_FILTER_HPP
 
 #include "filters/bayesian_filter.hpp"
-#include "models/models.hpp"
+#include "models/nonlinear_models.hpp"
 #include <Eigen/Dense>
-
-struct LevenbergMarquardtConfig {
-  double lambda_initial;    // initial damping factor
-  double lambda_min;        // floor: below this the step is pure Gauss-Newton
-  double lambda_max;        // ceiling: give up on this iterate if exceeded
-  int max_iter;             // maximum accepted iterations
-  int max_rejections;       // maximum rejections per iterate
-  double step_tol;          // step tolerance below which we terminate
-  double cost_relative_tol; // relative cost tolerance below which we terminate
-};
 
 class IteratedExtendedKalmanFilter final : public BayesianFilter {
 public:
@@ -67,6 +57,7 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
+  const LevenbergMarquardtConfig &lm_config;
 };
 
 #endif

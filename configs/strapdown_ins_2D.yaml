@@ -21,7 +21,7 @@ filter_accelerometer_white_noise_intensity: [5e-4, 5e-4]
 ukf_alpha: 1.0 # spread of the sigma points around the mean
 ukf_beta: 2.0 # prior knowledge of the distribution, 2 is optimal for gaussians
 ukf_kappa: 0.0 # secondary scaling
-#ItEKF Levenberg Marquardt config parameters
+#Levenberg Marquardt config parameters for iterated methods, IteratedEKF, IteratedEKS
 double lambda_initial: 1e-2 # initial damping
 double lambda_min: 1e-12 # floor: below this the step is pure Gauss-Newton
 double lambda_max: 1e12 # ceiling: give up on this iterate if exceeded

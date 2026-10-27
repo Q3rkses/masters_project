@@ -10,7 +10,20 @@
 #include <Eigen/Dense>
 
 /**
- * All values must be non-negative
+ * Configuration values for the LM method
+ */
+struct LevenbergMarquardtConfig {
+  double lambda_initial;
+  double lambda_min;
+  double lambda_max;
+  int max_iter;
+  int max_rejections;
+  double step_tol;
+  double cost_relative_tol;
+};
+
+/**
+ * Configuration values for the 2D INS case
  */
 struct INS2DConfig {
   double dt;

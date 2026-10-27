@@ -8,8 +8,8 @@
 #ifndef EXTENDED_RAUCH_TUNG_STRIEBEL_SMOOTHER_HPP
 #define EXTENDED_RAUCH_TUNG_STRIEBEL_SMOOTHER_HPP
 
+#include "models/nonlinear_models.hpp"
 #include "smoothers/bayesian_smoother.hpp"
-#include "models/models.hpp"
 #include <Eigen/Dense>
 
 class ERTSSmoother final : public BayesianSmoother {
@@ -39,6 +39,7 @@ public:
 
 private:
   std::shared_ptr<const MotionModel> motion_model_;
+  const LevenbergMarquardtConfig &lm_config;
 };
 
 #endif
