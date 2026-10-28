@@ -1,0 +1,44 @@
+30000 timesteps, 45 GNSS fixes
+
+consistency (time-averaged):
+  ANIS GNSS EKF           1.8012  band [1.4325, 2.6608]  97.8% of steps in band  -> consistent
+  ANIS magnetometer EKF    0.8593  band [0.8682, 1.1410]  95.7% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF            1.9876  band [1.8297, 2.1778]  94.3% of steps in band  -> consistent
+  ANIS GNSS UKF           1.8013  band [1.4323, 2.6610]  97.8% of steps in band  -> consistent
+  ANIS magnetometer UKF    0.8593  band [0.8682, 1.1410]  95.7% of steps in band  -> INCONSISTENT
+  ANIS DVL UKF            1.9872  band [1.8297, 2.1778]  94.3% of steps in band  -> consistent
+  ANIS GNSS IEKF          1.7990  band [1.4320, 2.6614]  97.8% of steps in band  -> consistent
+  ANIS magnetometer IEKF    0.8595  band [0.8681, 1.1410]  96.0% of steps in band  -> INCONSISTENT
+  ANIS DVL IEKF           1.9878  band [1.8296, 2.1779]  94.3% of steps in band  -> consistent
+  ANEES position EKF      2.3378  band [1.1958, 3.0076]  96.6% of steps in band  -> consistent
+  ANEES position UKF      2.3414  band [1.1952, 3.0086]  96.6% of steps in band  -> consistent
+  ANEES position IEKF     2.2828  band [1.2012, 2.9992]  96.6% of steps in band  -> consistent
+  ANEES position ERTS     1.7506  band [0.0506, 7.3778]  92.3% of steps in band  -> consistent
+  ANEES position URTSS    1.7479  band [0.0506, 7.3778]  92.3% of steps in band  -> consistent
+  ANEES position ERTS (IEKF)    1.7560  band [0.0506, 7.3778]  92.5% of steps in band  -> consistent
+
+accuracy:
+  RMSE position EKF     1.4191 m
+  RMSE position UKF     1.4210 m
+  RMSE position IEKF    1.3955 m
+  RMSE position ERTS    0.6844 m
+  RMSE position URTSS   0.6838 m
+  RMSE position ERTS (IEKF)0.6852 m
+  RMSE heading  EKF      1.355 deg
+  RMSE heading  UKF      1.355 deg
+  RMSE heading  IEKF     1.356 deg
+  RMSE heading  ERTS     0.844 deg
+  RMSE heading  URTSS    0.844 deg
+  RMSE heading  ERTS (IEKF) 0.845 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  6.592e-06  0 of 30000 steps below zero
+  UKF     min  6.592e-06  0 of 30000 steps below zero
+  IEKF    min  6.592e-06  0 of 30000 steps below zero
+  ERTS    min  3.633e-06  0 of 30000 steps below zero
+  URTSS   min  3.633e-06  0 of 30000 steps below zero
+  ERTS (IEKF)min  3.633e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
+URTSS trace(P) <= UKF trace(P) at every step: True
+ERTS (IEKF) trace(P) <= IEKF trace(P) at every step: True

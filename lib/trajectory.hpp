@@ -133,6 +133,18 @@ Path make_rounded_rectangle(double width, double height, double corner_radius);
 Path make_circle(double radius);
 
 /**
+ * @brief A figure-eight: two equal circles joined by two straights that
+ * cross at the origin (the circles' internal tangents), traced starting at
+ * the crossing heading +x. It turns right around one circle and left around
+ * the other, with a straight between each turn, so a lap exercises both turn
+ * directions and goes through the same point twice.
+ * @param radius radius of both circles
+ * @param center_distance distance between the two circle centers, must be
+ * more than twice the radius
+ */
+Path make_figure_eight(double radius, double center_distance);
+
+/**
  * @brief A straight run, followed by a turn.
  * @param straight_length length of the initial straight, starting at the
  * origin heading along +x
@@ -153,8 +165,8 @@ struct Trajectory {
 
 /**
  * @brief Picks the trajectory named by the "trajectory" key and builds it
- * from its own set of keys; all three shapes' keys are expected to be present
- * in the config, whichever one is actually picked
+ * from its own set of keys; only the keys of the picked shape need to be
+ * present in the config
  * @param config the parsed yaml config
  * @return the path and whether it is closed
  */

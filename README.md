@@ -68,11 +68,12 @@ Each experiment lives in `results/<name>/` with its own `README.md`, `data/` and
 | --------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
 | [1-D random walk](results/1D/README.md) | filter and smoother on the simplest matched model | 1000 steps, RMSE 0.365 to 0.274, all three consistent |
 | [2-D random walk](results/2D/README.md) | the same with vectors, and covariance ellipses    | 200 steps, RMSE 0.545 to 0.388, all three consistent  |
-| [2-D strapdown INS, GNSS only](results/INS2D/only_gnss/README.md) | nonlinear model, GNSS the only aiding sensor, all 3 trajectories | 30000 steps, consistent on all 3 trajectories |
-| [2-D strapdown INS, multi-sensor fusion](results/INS2D/multi_sensor_fusion/README.md) | GNSS + magnetometer + DVL fused sequentially, all 3 trajectories | 30000 steps, consistent on all 3 trajectories |
-| [2-D strapdown INS, dead reckoning](results/INS2D/dead_reckoning/README.md) | GNSS disabled entirely, magnetometer + DVL only, all 3 trajectories | 30000 steps, position conservative (ANEES below band), magnetometer NIS mildly low |
-| [2-D strapdown INS, GNSS outage](results/INS2D/gnss_outage/README.md) | GNSS denied for the middle 70% of the run, matched and mistuned IMU noise | 30000 steps, consistent except magnetometer |
-| [2-D strapdown INS, UKF and URTSS](results/INS2D/ukf/README.md) | the unscented filter and smoother against the EKF and ERTS, on the outage run and a heading stress run | 30000 steps, identical on the outage run, UKF RMSE 4.90 against 8.49 m on the stress run |
+| [2-D strapdown INS, GNSS only](results/INS2D/only_gnss/README.md) | nonlinear model, GNSS the only aiding sensor, all 4 trajectories | 30000 steps, consistent on all 4 trajectories |
+| [2-D strapdown INS, multi-sensor fusion](results/INS2D/multi_sensor_fusion/README.md) | GNSS + magnetometer + DVL fused sequentially, all 4 trajectories | 30000 steps, consistent on all 4 trajectories |
+| [2-D strapdown INS, dead reckoning](results/INS2D/dead_reckoning/README.md) | GNSS disabled entirely, magnetometer + DVL only, all 4 trajectories | 30000 steps, position conservative (ANEES below band), magnetometer NIS mildly low |
+| [2-D strapdown INS, GNSS outage](results/INS2D/gnss_outage/README.md) | GNSS denied for the middle 70% of the run, matched and mistuned IMU noise, on the rounded rectangle and the figure-eight | 30000 steps, consistent except magnetometer |
+| [2-D strapdown INS, UKF and URTSS](results/INS2D/ukf/README.md) | the unscented filter and smoother against the EKF and ERTS, on the outage run and a heading stress run, each on the rounded rectangle and the figure-eight | 30000 steps, identical on the outage run, UKF RMSE 4.90 against 8.49 m on the stress run |
+| [2-D strapdown INS, IEKF](results/INS2D/iekf/README.md) | the iterated EKF with Levenberg-Marquardt against the EKF and UKF, on the figure-eight with multi-sensor fusion and with a GNSS outage | 30000 steps, consistent, within about 6 cm of the EKF, no clear accuracy difference |
 
 ## Repository layout
 

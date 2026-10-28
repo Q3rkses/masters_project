@@ -1,6 +1,7 @@
 #include "scenarios/scenarios.hpp"
 
 #include "filters/extended_kalman_filter.hpp"
+#include "filters/iterated_extended_kalman_filter.hpp"
 #include "filters/unscented_kalman_filter.hpp"
 #include "models/linear_models.hpp"
 #include "models/measurement_models.hpp"
@@ -48,6 +49,22 @@ INS2DConfig read_ins_config(const YAML::Node &config, const std::string &prefix 
   ins.accelerometer_random_walk_variance = Eigen::Vector2d::Zero();
   return ins;
 } //clang-format on
+
+// The LM keys fall back to the defaults, so configs from before the IEKF
+// existed still run.
+LevenbergMarquardtConfig read_lm_config(const YAML::Node &config) {
+  return LevenbergMarquardtConfig{
+      .lambda_initial = config["lambda_initial"].as<double>(1e-2),
+      .lambda_min = config["lambda_min"].as<double>(1e-12),
+      .lambda_max = config["lambda_max"].as<double>(1e12),
+      .lambda_factor = config["lambda_factor"].as<double>(10.0),
+      .max_iter = config["max_iter"].as<int>(50),
+      .max_rejections = config["max_rejections"].as<int>(30),
+      .step_tolerance = config["step_tolerance"].as<double>(1e-8),
+      .cost_relative_tolerance =
+          config["cost_relative_tolerance"].as<double>(1e-12),
+  };
+}
 
 // what one sensor reported and how the filter saw it, one entry per fix,
 // this is what the write_fix_csv of the measurement models take
@@ -393,6 +410,23 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   };
   write_fix_files(ekf_pass, "");
   write_fix_files(ukf_pass, "ukf_");
+
+  // 8. The IEKF forward pass and the standard ERTS backward pass over it, on
+  // the same data, only for configs that ask for it with run_iekf. The
+  // smoother is not iterated, only the filter is. Written with the same
+  // names as the UKF's, prefixed iekf_
+  if (config["run_iekf"].as<bool>(false)) {
+    const LevenbergMarquardtConfig lm_config = read_lm_config(config);
+    IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
+    ForwardPass iekf_pass =
+        run_forward_pass(iekf, filter_config, inputs, gnss, magnetometer, dvl);
+    SmootherResult iekf_erts_result =
+        run_backward_pass(erts, smoother_config, iekf_pass.result, inputs);
+
+    iekf_pass.result.to_csv((output_dir / "iekf_filter.csv").string());
+    iekf_erts_result.to_csv((output_dir / "iekf_smoother.csv").string());
+    write_fix_files(iekf_pass, "iekf_");
+  }
 
   std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
 }

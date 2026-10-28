@@ -108,6 +108,9 @@ FilterUpdate IteratedExtendedKalmanFilter::update(
     double candidate_cost = cost(x_candidate, x_predicted, P_predicted_LDLT,
                                  z_current, R_LDLT, input, *measurement_model);
 
+    // the step in the P_predicted norm
+    double step_norm = std::sqrt(delta.dot(P_predicted_LDLT.solve(delta)));
+
     // accept step if cost went down, and trust the linear model more
     if (candidate_cost < current_cost) {
       double relative_decrease = (current_cost - candidate_cost) / current_cost;
@@ -117,14 +120,17 @@ FilterUpdate IteratedExtendedKalmanFilter::update(
       rejections = 0;
 
       // check if we have converged
-      if (std::sqrt(delta.dot(P_predicted_LDLT.solve(delta))) <
-              lm_config.step_tolerance ||
+      if (step_norm < lm_config.step_tolerance ||
           relative_decrease < lm_config.cost_relative_tolerance) {
         break;
       }
     }
     // reject step if cost went up, stay put and trust the linear model less
     else {
+      // a step this small that does not help is the minimum, not a bad step
+      if (step_norm < lm_config.step_tolerance) {
+        break;
+      }
       lambda *= lm_config.lambda_factor;
       rejections++;
       if (lambda > lm_config.lambda_max ||

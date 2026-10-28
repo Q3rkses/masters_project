@@ -8,7 +8,7 @@ magnetometer and DVL all active and fused sequentially within a timestep.
 
 |               |                                                  |
 | ------------- | ------------------------------------------------ |
-| **Status**    | done, consistent on all three trajectories       |
+| **Status**    | done, consistent on all four trajectories        |
 | **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42 |
 | **Reproduce** | see [Reproduce](#reproduce)                      |
 
@@ -87,14 +87,32 @@ RMSE: filter 0.66m, smoother 0.47m.
 
 RMSE: filter 0.57m, smoother 0.40m.
 
-Magnetometer ANIS (0.90 on all three) sits close to the lower edge of its
+### figure_eight
+
+![Sensor fixes](figure_eight/figures/ins_1_sensor_fixes.png)
+![Filter vs smoother](figure_eight/figures/ins_2_filter_vs_smoother.png)
+![NIS](figure_eight/figures/ins_4_nis.png)
+
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 2.1052 | [1.0870, 3.1867] | consistent   |
+| ANIS magnetometer       | 0.8980 | [0.8823, 1.1250] | consistent   |
+| ANIS DVL                | 1.8979 | [1.8170, 2.1917] | consistent   |
+| ANEES position filter   | 2.3119 | [1.1053, 3.1556] | consistent   |
+| ANEES position smoother | 1.8170 | [0.0506, 7.3778] | consistent   |
+
+RMSE: filter 0.66m, smoother 0.40m, with 19 GNSS fixes, 476 magnetometer
+fixes and 487 DVL fixes. This run's data is also the base of the
+[IEKF experiment](../iekf/README.md).
+
+Magnetometer ANIS (0.90 on all four) sits close to the lower edge of its
 band (about 0.88), the same slight underconfidence about the magnetometer's
 `R` seen in the [dead reckoning](../dead_reckoning/README.md) and
 [outage](../gnss_outage/README.md) scenarios.
 
 ## Takeaways and limits
 
-- All three sensors, all three trajectories: every consistency check
+- All three sensors, all four trajectories: every consistency check
   passes, as it does for GNSS only.
 - Filter RMSE is 0.57-0.68m against 0.68-0.70m for GNSS only, with ~19 GNSS
   fixes instead of ~149. Magnetometer and DVL carry the accuracy that the

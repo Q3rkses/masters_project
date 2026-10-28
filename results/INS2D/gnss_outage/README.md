@@ -24,8 +24,9 @@ constantly available.
 
 ## Setup
 
-Same shared parameters as [GNSS only](../only_gnss/README.md#setup), one
-trajectory only (`rounded_rectangle`), with:
+Same shared parameters as [GNSS only](../only_gnss/README.md#setup), on two
+trajectories (`rounded_rectangle` in `matched` and `mistuned`, `figure_eight`
+in `figure_eight_matched` and `figure_eight_mistuned`), with:
 
 | sensor       | period            | denied window | fixes per run |
 | ------------ | ------------------ | -------------- | -------------- |
@@ -37,15 +38,18 @@ trajectory only (`rounded_rectangle`), with:
 [5e-2, 5e-2], same as true.
 `mistuned`: `filter_gyro_noise_variance` 8e-5, `filter_accelerometer_noise_variance`
 [9e-2, 9e-2], true stays the same as `matched`.
+`figure_eight_matched` and `figure_eight_mistuned`: the same two settings on the
+figure-eight path (see [GNSS only](../only_gnss/README.md#setup) for its
+geometry), with the same sensors and the same denied window.
 
 ## Reproduce
 
 ```bash
-python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/<matched|mistuned>/data
+python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/<matched|mistuned|figure_eight_matched|figure_eight_mistuned>/data
 ```
 
 To regenerate the data, copy
-`results/INS2D/gnss_outage/<matched|mistuned>/config.yaml` over
+`results/INS2D/gnss_outage/<matched|mistuned|figure_eight_matched|figure_eight_mistuned>/config.yaml` over
 `configs/strapdown_ins_2D.yaml`, then follow the same steps as
 [GNSS only's reproduce section](../only_gnss/README.md#reproduce).
 
@@ -115,6 +119,59 @@ same result (0.81 on all three trajectories), so the filter is a touch
 underconfident about the magnetometer's `R`, not overconfident. Worth a
 look in a future retuning pass.
 
+### Figure-eight
+
+The same outage and the same two settings on the figure-eight path.
+
+![Filter vs smoother variance, figure-eight matched](figure_eight_matched/figures/ins_6_variance.png)
+
+The variance has the same shape as on the rounded rectangle: the filter's
+grows through the outage, here by about a factor of 40 (from about 0.1 to
+4.5), and snaps back down at 255 s when GNSS resumes. The smoother peaks at
+about 1 in the middle and stays below the filter at every timestep (checked
+for both runs).
+
+![Sensor bias, figure-eight matched](figure_eight_matched/figures/ins_7_bias.png)
+
+Both accelerometer biases are tracked closely through the whole run, outage
+included. The gyro bias is the weak one again: the EKF swings between about
+-0.006 and 0.010 rad/s in the first 1000 steps and then follows the true
+level only loosely, and the ERTS estimate is nearly flat around 0.002-0.0035
+and does not follow the rise of the true bias to about 0.007 near step 19000.
+
+**figure_eight_matched**
+
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.8012 | [1.4325, 2.6608] | consistent   |
+| ANIS magnetometer       | 0.8593 | [0.8682, 1.1410] | INCONSISTENT |
+| ANIS DVL                | 1.9876 | [1.8297, 2.1778] | consistent   |
+| ANEES position filter   | 2.3378 | [1.1958, 3.0076] | consistent   |
+| ANEES position smoother | 1.7506 | [0.0506, 7.3778] | consistent   |
+
+RMSE: filter 1.42m, smoother 0.68m.
+
+**figure_eight_mistuned**
+
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.7956 | [1.4384, 2.6527] | consistent   |
+| ANIS magnetometer       | 0.8495 | [0.8669, 1.1425] | INCONSISTENT |
+| ANIS DVL                | 1.9217 | [1.8275, 2.1801] | consistent   |
+| ANEES position filter   | 2.3365 | [1.1938, 3.0108] | consistent   |
+| ANEES position smoother | 1.7878 | [0.0506, 7.3778] | consistent   |
+
+RMSE: filter 1.43m, smoother 0.70m.
+
+The consistency story is the same as on the rounded rectangle: consistent
+everywhere except the magnetometer ANIS, just under its band in both runs
+(0.859 and 0.850 against lower edges of 0.868 and 0.867). The filter's RMSE is
+higher than on the rounded rectangle (1.42-1.43m against 1.00-1.01m), while
+the smoother's is about the same (0.68-0.70m against 0.70-0.71m). The
+[dead reckoning](../dead_reckoning/README.md#consistency-read-carefully)
+page saw the error grow with how much the vehicle turns, and the figure-eight
+turns for about 60% of its length, which fits but was not tested here.
+
 ## Takeaways and limits
 
 - The variance plot is the clearest illustration in this whole results set
@@ -126,5 +183,5 @@ look in a future retuning pass.
   in the same places and inconsistent in the same place (magnetometer).
   Either the mismatch is too small to matter at this outage length, or its
   effect is swamped by the outage itself.
-- Single seed, one trajectory. The outage window (45-255s) and GNSS rate
-  were chosen by hand, not swept.
+- Single seed, two trajectories (rounded rectangle and figure-eight). The
+  outage window (45-255s) and GNSS rate were chosen by hand, not swept.

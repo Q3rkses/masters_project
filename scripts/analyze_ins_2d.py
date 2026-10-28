@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Plot the 2D strapdown INS filter and smoother results and check their
 consistency. The EKF/ERTS results (filter.csv, smoother.csv, *_fixes.csv) are
-always expected, the UKF/URTSS ones (ukf_*.csv) get the same set of figures,
-prefixed ukf_, when they exist in the same directory, plus a few figures that
-compare the two variants.
+always expected, the UKF/URTSS ones (ukf_*.csv) and the IEKF ones (iekf_*.csv,
+the smoother being the plain ERTS run over the IEKF's output) get the same set
+of figures, prefixed ukf_ and iekf_, when they exist in the same directory,
+plus a few figures that compare the variants.
 
 State is [x, y, psi, u, v, b_ax, b_ay, b_gyro]. Each sensor (GNSS,
 magnetometer, DVL) arrives at irregular intervals, not every timestep, and
@@ -31,6 +32,11 @@ MAGNETOMETER = "#8e44ad"
 DVL = "#16a085"
 UKF = "#2e9e5b"
 URTSS = "#b8860b"
+IEKF = "#7f5539"
+IERTS = "#d98c5f"  # the ERTS run over the IEKF's output
+
+# the file prefix of each variant's csv files, the EKF's have none
+FILE_PREFIX = {"UKF": "ukf_", "IEKF": "iekf_"}
 
 STATE_DIM = 8
 MEASUREMENT_DIM = 2  # GNSS position only
@@ -43,7 +49,7 @@ CONFIDENCE = 0.95
 ELLIPSES = 6  # confidence ellipses drawn along each estimated trajectory
 AVERAGING_WINDOW = 150  # raw per-step NEES is noise; the running mean is readable
 
-# one estimator (EKF, ERTS, UKF or URTSS) as the figures draw it
+# one estimator (EKF, ERTS, UKF, URTSS, IEKF or ERTS on the IEKF) as the figures draw it
 Estimator = namedtuple("Estimator", "name color x P")
 
 
@@ -374,13 +380,13 @@ def variance_figure(k, estimators):
 
 
 def ekf_vs_ukf_figure(k, pairs):
-    """8. How far apart the EKF and the UKF are, and the ERTS and the URTSS,
-    over time. Where the two linearise differently (turns, the end of a GNSS
+    """8. How far apart the EKF and the other variants are, and the ERTS and
+    the smoothers of the other variants, over time. Where the two linearise differently (turns, the end of a GNSS
     outage) they separate, so this shows where the nonlinearity matters.
-    pairs: [(EKF-like, UKF-like)] as Estimators, log scale on the differences
+    pairs: [(EKF-like, other variant)] as Estimators, log scale on the differences
     since they are orders of magnitude below the errors themselves."""
     specs = (("position difference [m]", True), ("heading difference [rad]", True),
-             ("position trace(P) ratio, UKF-like / EKF-like", False))
+             ("position trace(P) ratio, variant / EKF-like", False))
     figure, axes = plt.subplots(3, 1, figsize=(11, 9), sharex=True)
     trace = lambda P: np.trace(P[:, :2, :2], axis1=1, axis2=2)
     for axis, (label, log) in zip(axes, specs):
@@ -402,7 +408,7 @@ def ekf_vs_ukf_figure(k, pairs):
                      linewidth=1, label=name)
         axes[2].plot(k, trace(other.P) / trace(reference.P), color=other.color,
                      linewidth=1, label=name)
-    axes[0].set_title("EKF vs UKF", loc="left")
+    axes[0].set_title("Variants against the EKF and ERTS", loc="left")
     axes[-1].set_xlabel("timestep")
     finish(axes[0])
     return figure
@@ -472,6 +478,14 @@ def main():
                                  matrices(ukf_filtered, "P_updated", STATE_DIM)))
         smoothers.append(Estimator("URTSS", URTSS, vectors(ukf_smoothed, "x_smoothed", STATE_DIM),
                                    matrices(ukf_smoothed, "P_smoothed", STATE_DIM)))
+    # the IEKF's smoother is the standard ERTS run over the IEKF's output
+    if (data_dir / "iekf_filter.csv").exists() and (data_dir / "iekf_smoother.csv").exists():
+        iekf_filtered = load(data_dir / "iekf_filter.csv")
+        iekf_smoothed = load(data_dir / "iekf_smoother.csv")
+        filters.append(Estimator("IEKF", IEKF, vectors(iekf_filtered, "x_updated", STATE_DIM),
+                                 matrices(iekf_filtered, "P_updated", STATE_DIM)))
+        smoothers.append(Estimator("ERTS (IEKF)", IERTS, vectors(iekf_smoothed, "x_smoothed", STATE_DIM),
+                                   matrices(iekf_smoothed, "P_smoothed", STATE_DIM)))
     estimators = filters + smoothers
 
     def nis_of(fixes):
@@ -485,9 +499,10 @@ def main():
 
     # NIS per filter, each filter has its own innovations and S
     nis_by_filter = {"EKF": nis_of((gnss_fixes, magnetometer_fixes, dvl_fixes))}
-    ukf_fixes = load_filter_data(data_dir, "ukf_")
-    if len(filters) > 1 and ukf_fixes is not None:
-        nis_by_filter["UKF"] = nis_of(ukf_fixes)
+    for filter_ in filters[1:]:
+        variant_fixes = load_filter_data(data_dir, FILE_PREFIX[filter_.name])
+        if variant_fixes is not None:
+            nis_by_filter[filter_.name] = nis_of(variant_fixes)
 
     def position_nees(estimator):
         return masked_quadratic_form(x_true[:, POSITION] - estimator.x[:, POSITION],
@@ -532,7 +547,7 @@ def main():
     figures = {"ins_1_sensor_fixes.png": sensor_fixes_figure(
         x_true, z_fix, magnetometer_position, magnetometer_heading,
         dvl_position, dvl_velocity_body, dvl_heading)}
-    variants = [("ukf_" if filter_.name == "UKF" else "", filter_, smoother)
+    variants = [(FILE_PREFIX.get(filter_.name, ""), filter_, smoother)
                 for filter_, smoother in zip(filters, smoothers)]
     for prefix, filter_, smoother in variants:
         pair = [filter_, smoother]
@@ -554,7 +569,8 @@ def main():
     # figures that put the two variants against each other
     if len(filters) > 1:
         figures["ins_8_ekf_vs_ukf.png"] = ekf_vs_ukf_figure(
-            k, [tuple(filters), tuple(smoothers)])
+            k, [(filters[0], f) for f in filters[1:]] +
+               [(smoothers[0], s) for s in smoothers[1:]])
         figures["ins_9_sigma_point_health.png"] = sigma_point_health_figure(k, estimators)
 
     print()

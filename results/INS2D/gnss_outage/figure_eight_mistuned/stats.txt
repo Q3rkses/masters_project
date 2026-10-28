@@ -1,0 +1,32 @@
+30000 timesteps, 45 GNSS fixes
+
+consistency (time-averaged):
+  ANIS GNSS EKF           1.7956  band [1.4384, 2.6527]  97.8% of steps in band  -> consistent
+  ANIS magnetometer EKF    0.8495  band [0.8669, 1.1425]  94.0% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF            1.9217  band [1.8275, 2.1801]  94.9% of steps in band  -> consistent
+  ANIS GNSS UKF           1.7958  band [1.4382, 2.6530]  97.8% of steps in band  -> consistent
+  ANIS magnetometer UKF    0.8495  band [0.8669, 1.1425]  94.0% of steps in band  -> INCONSISTENT
+  ANIS DVL UKF            1.9213  band [1.8275, 2.1801]  94.9% of steps in band  -> consistent
+  ANEES position EKF      2.3365  band [1.1938, 3.0108]  96.7% of steps in band  -> consistent
+  ANEES position UKF      2.3433  band [1.1928, 3.0123]  96.7% of steps in band  -> consistent
+  ANEES position ERTS     1.7878  band [0.0506, 7.3778]  92.2% of steps in band  -> consistent
+  ANEES position URTSS    1.7835  band [0.0506, 7.3778]  92.2% of steps in band  -> consistent
+
+accuracy:
+  RMSE position EKF     1.4281 m
+  RMSE position UKF     1.4313 m
+  RMSE position ERTS    0.7023 m
+  RMSE position URTSS   0.7014 m
+  RMSE heading  EKF      1.332 deg
+  RMSE heading  UKF      1.332 deg
+  RMSE heading  ERTS     0.847 deg
+  RMSE heading  URTSS    0.847 deg
+
+sigma point health (smallest eigenvalue of the full P):
+  EKF     min  8.460e-06  0 of 30000 steps below zero
+  UKF     min  8.460e-06  0 of 30000 steps below zero
+  ERTS    min  4.511e-06  0 of 30000 steps below zero
+  URTSS   min  4.511e-06  0 of 30000 steps below zero
+
+ERTS trace(P) <= EKF trace(P) at every step: True
+URTSS trace(P) <= UKF trace(P) at every step: True

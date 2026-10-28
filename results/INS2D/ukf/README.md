@@ -1,17 +1,18 @@
 # 2-D strapdown INS, UKF and URTSS
 
-[Back to the overview](../../../README.md) | [Previous: GNSS outage](../gnss_outage/README.md)
+[Back to the overview](../../../README.md) | [Previous: GNSS outage](../gnss_outage/README.md) | [Next: IEKF](../iekf/README.md)
 
 The unscented filter and smoother on the same 2-D strapdown INS setup as the
 EKF and ERTS scenarios, run on the same simulated data and the same sensor
 fixes, so every difference below comes from the estimator and not from the
 data. Two runs: the [GNSS outage](../gnss_outage/README.md) scenario, and a
-heading stress run built to make the linearisation hurt.
+heading stress run built to make the linearisation hurt. Each is run on the
+rounded rectangle and on the figure-eight.
 
 |               |                                                                                             |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | **Status**    | done, UKF and EKF indistinguishable on the outage run, UKF clearly better on the stress run |
-| **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42, both runs                                 |
+| **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42, all four runs                                 |
 | **Reproduce** | see [Reproduce](#reproduce)                                                                 |
 
 ## Setup
@@ -23,6 +24,8 @@ transform parameters, not tuned: `alpha` 1.0, `beta` 2.0, `kappa` 0.0.
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `outage`         | identical to [`gnss_outage/matched`](../gnss_outage/README.md), GNSS denied 45-255s, magnetometer every 0.25-1s                             |
 | `heading_stress` | `outage` with the filter's heading prior 1.5 rad (86 degrees) off the truth, heading variance 1.5^2, and the magnetometer only every 30-60s |
+| `figure_eight_outage` | `outage` on the figure-eight path (see [GNSS only](../only_gnss/README.md#setup)), identical to [`gnss_outage/figure_eight_matched`](../gnss_outage/README.md) |
+| `figure_eight_heading_stress` | `heading_stress` on the figure-eight path, same wrong heading prior and sparse magnetometer |
 
 The stress run changes the filter's belief, never the truth: `x0` and
 `p0_diagonal` only seed the filter prior, the truth comes from the
@@ -38,11 +41,11 @@ opened side by side. EKF figures keep their old names, UKF ones are prefixed
 ## Reproduce
 
 ```bash
-python3 scripts/analyze_ins_2d.py results/INS2D/ukf/<outage|heading_stress>/data
+python3 scripts/analyze_ins_2d.py results/INS2D/ukf/<outage|heading_stress|figure_eight_outage|figure_eight_heading_stress>/data
 ```
 
 To regenerate the data, copy
-`results/INS2D/ukf/<outage|heading_stress>/config.yaml` over
+`results/INS2D/ukf/<outage|heading_stress|figure_eight_outage|figure_eight_heading_stress>/config.yaml` over
 `configs/strapdown_ins_2D.yaml`, then follow the same steps as
 [GNSS only's reproduce section](../only_gnss/README.md#reproduce). One run
 writes both the EKF/ERTS and the UKF/URTSS files.
@@ -222,6 +225,107 @@ mean says little about how the whole distribution moves. The unscented
 transform pushes sigma points spread across the heading uncertainty through
 the real functions, so it sees the curvature. When the heading is known to a
 few degrees the two coincide, which is what the outage run shows.
+
+## Results: figure-eight runs
+
+The same two runs on the figure-eight path, which turns both left and right.
+Filter beliefs, sensors and the denied window are unchanged, only the path is
+different.
+
+### Outage run on the figure-eight
+
+| UKF and URTSS                                                              | NIS (UKF)                                                  |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| ![UKF and URTSS](figure_eight_outage/figures/ukf_ins_2_filter_vs_smoother.png) | ![NIS UKF](figure_eight_outage/figures/ukf_ins_4_nis.png) |
+
+| value (verdict)         | EKF / ERTS            | UKF / URTSS           |
+| ----------------------- | --------------------- | --------------------- |
+| ANIS GNSS               | 1.8012 (consistent)   | 1.8013 (consistent)   |
+| ANIS magnetometer       | 0.8593 (INCONSISTENT) | 0.8593 (INCONSISTENT) |
+| ANIS DVL                | 1.9876 (consistent)   | 1.9872 (consistent)   |
+| ANEES position filter   | 2.3378 (consistent)   | 2.3414 (consistent)   |
+| ANEES position smoother | 1.7506 (consistent)   | 1.7479 (consistent)   |
+
+|                        | EKF    | UKF    | ERTS   | URTSS  |
+| ---------------------- | ------ | ------ | ------ | ------ |
+| RMSE position [m]      | 1.4191 | 1.4210 | 0.6844 | 0.6838 |
+| RMSE heading [deg]     | 1.355  | 1.355  | 0.844  | 0.844  |
+| max position error [m] | 2.63   | 2.64   | 1.55   | 1.55   |
+
+![EKF vs UKF](figure_eight_outage/figures/ins_8_ekf_vs_ukf.png)
+
+Same result as on the rounded rectangle: the two filters are 3.5 mm apart in
+median and at most 8 mm and 0.02 degrees apart, the URTSS is 2 mm from the
+ERTS in median (at most 6 mm), and the position `trace(P)` ratio stays
+between 1.0000 and 1.0004. The consistency verdicts are identical, including
+the magnetometer ANIS just under its band. On this path too the model is too
+mildly nonlinear for the filter choice to matter.
+
+### Heading stress run on the figure-eight
+
+| EKF and ERTS                                                                  | UKF and URTSS                                                                      |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ![EKF and ERTS](figure_eight_heading_stress/figures/ins_2_filter_vs_smoother.png) | ![UKF and URTSS](figure_eight_heading_stress/figures/ukf_ins_2_filter_vs_smoother.png) |
+| ![EKF error](figure_eight_heading_stress/figures/ins_3_confidence_interval.png)   | ![UKF error](figure_eight_heading_stress/figures/ukf_ins_3_confidence_interval.png)    |
+| ![EKF NEES](figure_eight_heading_stress/figures/ins_5_nees.png)                   | ![UKF NEES](figure_eight_heading_stress/figures/ukf_ins_5_nees.png)                    |
+
+|                           | EKF   | UKF   | ERTS  | URTSS |
+| ------------------------- | ----- | ----- | ----- | ----- |
+| RMSE position [m]         | 8.57  | 5.36  | 6.02  | 3.28  |
+| RMSE heading [deg]        | 14.07 | 7.03  | 7.27  | 2.78  |
+| median position error [m] | 4.85  | 2.12  | 1.34  | 1.84  |
+| 95th percentile [m]       | 21.27 | 11.51 | 15.37 | 6.73  |
+| max position error [m]    | 23.07 | 13.02 | 16.30 | 6.97  |
+
+|                              | EKF     | UKF     | ERTS    | URTSS   |
+| ---------------------------- | ------- | ------- | ------- | ------- |
+| RMSE accel bias x [m/s^2]    | 0.0408  | 0.0226  | 0.0121  | 0.0105  |
+| RMSE accel bias y [m/s^2]    | 0.0260  | 0.0237  | 0.0157  | 0.0146  |
+| RMSE gyro bias [rad/s]       | 0.01510 | 0.00268 | 0.00359 | 0.00165 |
+| peak gyro bias error [rad/s] | 0.0781  | 0.0127  | 0.0104  | 0.0042  |
+
+| value (verdict)         | EKF / ERTS                  | UKF / URTSS                |
+| ----------------------- | --------------------------- | -------------------------- |
+| ANIS GNSS               | 5.2337 (INCONSISTENT, high) | 2.0960 (consistent)        |
+| ANIS magnetometer       | 2.5148 (INCONSISTENT, high) | 1.2417 (consistent)        |
+| ANIS DVL                | 2.3328 (consistent)         | 1.7391 (INCONSISTENT, low) |
+| ANEES position filter   | 4.4048 (INCONSISTENT, high) | 1.2375 (INCONSISTENT, low) |
+| ANEES position smoother | 5.8867 (consistent)         | 1.7880 (consistent)        |
+
+![EKF vs UKF](figure_eight_heading_stress/figures/ins_8_ekf_vs_ukf.png)
+
+The result has the same direction as on the rounded rectangle, with the
+differences in numbers:
+
+- **The UKF is better than the EKF in the tail and on RMSE**: 5.36 against
+  8.57 m (4.90 against 8.49 m on the rounded rectangle), and the 95th
+  percentile of the error is about half (11.5 against 21.3 m). Unlike on the
+  rounded rectangle, the UKF also wins on the median here (2.12 against 4.85 m,
+  where that run had 3.5 against 3.4 m).
+- **The URTSS is the best of the four** on RMSE (3.28 m) and on every row of the
+  accuracy table except the median, where the ERTS is lower (1.34 against
+  1.84 m). It is not as good as on the rounded rectangle (2.30 m). The ERTS is
+  again worse than the UKF filter on RMSE (6.02 against 5.36 m).
+- **The wrong heading still leaks into the biases.** The EKF's peak gyro bias
+  error is 0.0781 rad/s against 0.0127 for the UKF, the same values as on the
+  rounded rectangle, which is expected since the first stretch of both paths
+  is the same straight at the same heading.
+- **The two filters still fail in opposite directions.** The EKF is
+  overconfident (position ANEES 4.40 against a band topping out at 2.94, true
+  position inside its own 95% ellipse for 75% of the steps), and the UKF is
+  conservative (1.24 against a band starting at 1.31, 100% inside). The
+  smoother ANEES rows say "consistent" only because their band is wide for the
+  same autocorrelation reason as above, the ellipse coverage is 74% for the
+  ERTS and 99% for the URTSS (ellipse coverage counted on every 10th step).
+- **The filters are far apart.** The UKF and EKF positions are 4.9 m apart in
+  median and up to 19.5 m, up to 60 degrees apart in heading, and the UKF's
+  position `trace(P)` runs from 2% below to 29% above the EKF's. The URTSS and
+  ERTS are 0.9 m apart in median, up to 9.4 m.
+
+Same limits as the rounded rectangle run: one seed, and a hand-picked stress.
+The new information is that the direction holds on a path that turns both
+ways, and the size of the gap (8.57 against 5.36 m) is similar to before
+(8.49 against 4.90 m).
 
 ## Notes and limits
 

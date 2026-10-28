@@ -11,19 +11,20 @@ same trick used for GNSS in the
 [dead reckoning scenario](../dead_reckoning/README.md).
 
 Unlike the earlier (now removed) one-trajectory-per-folder results, every
-scenario here is run on all three trajectories (`rounded_rectangle`,
-`circle`, `straight_into_turn`) and reported together in this one README.
+scenario here is run on four trajectories (`rounded_rectangle`,
+`circle`, `straight_into_turn`, `figure_eight`) and reported together in this
+one README.
 
 |               |                                                  |
 | ------------- | ------------------------------------------------ |
-| **Status**    | done, consistent on all three trajectories       |
+| **Status**    | done, consistent on all four trajectories        |
 | **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42 |
 | **Reproduce** | see [Reproduce](#reproduce)                      |
 
 ## Setup
 
 Shared across all three scenarios in this set (this one, multi-sensor
-fusion, and dead reckoning) and all three trajectories within each:
+fusion, and dead reckoning) and all four trajectories within each:
 
 | parameter                       | value                     | meaning                                                      |
 | ------------------------------- | ------------------------- | ------------------------------------------------------------ |
@@ -45,8 +46,10 @@ This scenario's own sensor periods:
 Trajectories: `rounded_rectangle` (80x50m, 10m corner radius, looped),
 `circle` (40m radius, looped), `straight_into_turn` (296m straight, 90deg
 turn of 5m radius, then another 296m straight, not looped, length chosen so
-the whole shape completes right around the end of the run). All three start
-at the origin heading +x, at a constant 2 m/s.
+the whole shape completes right around the end of the run), and
+`figure_eight` (two 20m-radius circles with centres 70m apart, joined by
+two crossing straights, looped; a lap is 289m, turning right around one circle
+and left around the other, starting at the crossing). All four start at the origin heading +x, at a constant 2 m/s.
 
 ## Reproduce
 
@@ -111,10 +114,31 @@ RMSE: filter 0.69m, smoother 0.22m.
 The sharpest turn of the three (5m radius) stays inside its bands as well,
 even though nothing but GNSS position fixes correct the filter through it.
 
+### figure_eight
+
+![Sensor fixes](figure_eight/figures/ins_1_sensor_fixes.png)
+![Filter vs smoother](figure_eight/figures/ins_2_filter_vs_smoother.png)
+![NIS](figure_eight/figures/ins_4_nis.png)
+
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS GNSS               | 1.9727 | [1.6925, 2.3328] | consistent   |
+| ANEES position filter   | 1.8741 | [1.4457, 2.6429] | consistent   |
+| ANEES position smoother | 1.0864 | [0.0506, 7.3778] | consistent   |
+
+RMSE: filter 0.69m, smoother 0.21m.
+
+The figure-eight is the one path here that turns both left and right, and
+it is consistent like the other three. Heading is the weak state with GNSS
+alone: the filter's heading RMSE is 10.6 deg (smoother 5.2 deg), against 5.7
+deg on the rounded rectangle, 12.0 on the circle and 26.1 on
+straight_into_turn for the filter. Position, which is what the tables above
+check, is not affected.
+
 ## Takeaways and limits
 
 - GNSS alone, well-tuned and with a fix every ~2s, is consistent on all
-  three trajectories, including the 5m-radius turn of straight_into_turn.
+  four trajectories, including the 5m-radius turn of straight_into_turn.
 - The smoother cuts RMSE by about 70% on every trajectory (0.68-0.70m
   to 0.21-0.22m), the biggest relative gain of the three scenarios in this
   set, since GNSS gives it an absolute position reference on both sides of

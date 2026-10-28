@@ -137,6 +137,56 @@ Path make_circle(double radius) {
   return path;
 }
 
+Path make_figure_eight(double radius, double center_distance) {
+  const double half_distance = center_distance / 2.0;
+  if (half_distance <= radius) {
+    throw std::invalid_argument(
+        "make_figure_eight: center_distance must be more than twice the "
+        "radius, otherwise the circles overlap and have no internal tangents");
+  }
+
+  // The two internal tangents of two equal circles cross at the midpoint of
+  // their centers, at +-alpha to the line through the centers, and touch each
+  // circle a distance tangent_length from that crossing.
+  const double alpha = std::asin(radius / half_distance);
+  const double tangent_length =
+      std::sqrt(half_distance * half_distance - radius * radius);
+
+  // Everything below is built with the crossing at the origin and the
+  // centers on the x axis, then rotated by -alpha, so the path starts at the
+  // crossing (0,0) heading +x like the other trajectories.
+  const Eigen::Rotation2Dd rotate(-alpha);
+  const Eigen::Vector2d origin = Eigen::Vector2d::Zero();
+  const Eigen::Vector2d up_right =
+      tangent_length * Eigen::Vector2d(std::cos(alpha), std::sin(alpha));
+  const Eigen::Vector2d down_right =
+      tangent_length * Eigen::Vector2d(std::cos(alpha), -std::sin(alpha));
+  const Eigen::Vector2d up_left = -down_right;
+  const Eigen::Vector2d down_left = -up_right;
+
+  // both turns sweep the long way round, away from the crossing
+  const double long_sweep = M_PI + 2.0 * alpha;
+
+  Path path;
+  // first straight, from the crossing out to the right circle
+  path.add(std::make_shared<LineSegment>(origin, rotate * up_right));
+  // right circle, turning right (clockwise)
+  path.add(std::make_shared<ArcSegment>(
+      rotate * Eigen::Vector2d(half_distance, 0.0), radius,
+      M_PI / 2.0, -long_sweep));
+  // second straight, back through the crossing to the left circle
+  path.add(std::make_shared<LineSegment>(rotate * down_right,
+                                         rotate * up_left));
+  // left circle, turning left (counterclockwise)
+  path.add(std::make_shared<ArcSegment>(
+      rotate * Eigen::Vector2d(-half_distance, 0.0), radius,
+      M_PI / 2.0 - 2.0 * alpha, long_sweep));
+  // last straight, back to the crossing where the loop closes
+  path.add(std::make_shared<LineSegment>(rotate * down_left, origin));
+
+  return path;
+}
+
 Path make_straight_into_turn(double straight_length, double turn_radius,
                              double turn_sweep) {
   const Eigen::Vector2d start = Eigen::Vector2d::Zero();
@@ -182,6 +232,11 @@ Trajectory build_trajectory(const YAML::Node &config) {
   }
   if (trajectory == "circle") {
     return {make_circle(config["circle_radius"].as<double>()), /*is_closed=*/true};
+  }
+  if (trajectory == "figure_eight") {
+    return {make_figure_eight(config["figure_eight_radius"].as<double>(),
+                              config["figure_eight_center_distance"].as<double>()),
+           /*is_closed=*/true};
   }
   if (trajectory == "straight_into_turn") {
     const double turn_sweep = config["turn_sweep_deg"].as<double>() * M_PI / 180.0;

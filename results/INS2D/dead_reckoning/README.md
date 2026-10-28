@@ -83,32 +83,49 @@ RMSE: filter 1.01m, smoother 1.00m. (GNSS: no fixes recorded.)
 
 RMSE: filter 0.76m, smoother 0.75m. (GNSS: no fixes recorded.)
 
+### figure_eight
+
+![Sensor fixes](figure_eight/figures/ins_1_sensor_fixes.png)
+![Filter vs smoother](figure_eight/figures/ins_2_filter_vs_smoother.png)
+![NIS](figure_eight/figures/ins_4_nis.png)
+
+|                         | value  | band             | verdict      |
+| ----------------------- | ------ | ---------------- | ------------ |
+| ANIS magnetometer       | 0.8120 | [0.8763, 1.1317] | INCONSISTENT |
+| ANIS DVL                | 1.8878 | [1.8255, 2.1824] | consistent   |
+| ANEES position filter   | 0.5702 | [0.7157, 3.9325] | INCONSISTENT |
+| ANEES position smoother | 0.5569 | [0.0506, 7.3778] | consistent   |
+
+RMSE: filter 0.96m, smoother 0.95m. (GNSS: no fixes recorded.)
+
 ## Consistency, read carefully
 
 RMSE of 0.76-1.01m, the largest of the three scenarios, is the expected
 signature of dead reckoning, not a sign of a broken filter: there is
 nothing here to correct an accumulating position error against. What
 matters for consistency is whether the filter's own `P` reflects that
-error, and here it overstates it. `ANEES position filter` is 0.33-0.49 on
-all three trajectories, below its band (the expected value is 2), so the
-filter's position covariance is about 4 to 6 times larger than the actual
+error, and here it overstates it. `ANEES position filter` is 0.33-0.57 on
+all four trajectories, below its band (the expected value is 2), so the
+filter's position covariance is about 3.5 to 6 times larger than the actual
 error warrants. It is conservative, not overconfident.
 
-Magnetometer ANIS is 0.81 on all three, just under its band (which starts
+Magnetometer ANIS is 0.81 on all four, just under its band (which starts
 around 0.876): `S` is about 20% larger than the innovations need. DVL ANIS
-is consistent on all three (1.89, bands start around 1.83).
+is consistent on all four (1.89, bands start around 1.83).
 
 ## Takeaways and limits
 
-- RMSE is 0.84m (rectangle), 1.01m (circle) and 0.76m (straight_into_turn).
-  The worst case is the circle, which turns continuously, and the best is
-  the mostly straight track, so error seems to grow with how much the
-  vehicle turns, not with how sharp the turn is. Not tested.
+- RMSE is 0.84m (rectangle), 1.01m (circle), 0.76m (straight_into_turn) and
+  0.96m (figure_eight). The worst case is the circle, which turns
+  continuously, and the best is the mostly straight track, so error seems to
+  grow with how much the vehicle turns, not with how sharp the turn is. The
+  figure-eight, which turns for about 60% of its length, falls between the
+  rectangle and the circle, which fits this but does not test it.
 - The smoother barely helps (0.84 to 0.82m, 1.01 to 1.00m, 0.76 to
-  0.75m): with no absolute position anywhere in the run there is nothing
+  0.75m, 0.96 to 0.95m): with no absolute position anywhere in the run there is nothing
   for it to carry backwards.
 - The filter is conservative in position and slightly underconfident
-  about the magnetometer on all three trajectories. The same magnetometer
+  about the magnetometer on all four trajectories. The same magnetometer
   result shows up in the outage and (marginally) multi-sensor scenarios,
   so it looks like a property of the magnetometer's `R`, not of one
   scenario. The conservative position covariance is not explained by
