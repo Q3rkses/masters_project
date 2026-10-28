@@ -16,10 +16,11 @@ struct LevenbergMarquardtConfig {
   double lambda_initial;
   double lambda_min;
   double lambda_max;
+  double lambda_factor; // lambda is multiplied on a rejection, divided on an accept
   int max_iter;
   int max_rejections;
-  double step_tol;
-  double cost_relative_tol;
+  double step_tolerance;
+  double cost_relative_tolerance;
 };
 
 /**

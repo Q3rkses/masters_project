@@ -2,9 +2,8 @@
 #include "filters/bayesian_filter.hpp"
 #include "models/models.hpp"
 #include <Eigen/Dense>
-#include <Eigen/src/Cholesky/LDLT.h>
-#include <Eigen/src/Core/Matrix.h>
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 IteratedExtendedKalmanFilter::IteratedExtendedKalmanFilter(
@@ -14,6 +13,10 @@ IteratedExtendedKalmanFilter::IteratedExtendedKalmanFilter(
   if (!motion_model_) {
     throw std::invalid_argument(
         "IteratedExtendedKalmanFilter: the filter config needs a motion model");
+  }
+  if (lm_config.lambda_factor <= 1.0) {
+    throw std::invalid_argument(
+        "IteratedExtendedKalmanFilter: lambda_factor has to be above 1");
   }
 };
 
@@ -37,7 +40,7 @@ double IteratedExtendedKalmanFilter::cost(
     const Eigen::LDLT<Eigen::MatrixXd> &R_ldlt, const Input &input,
     const MeasurementModel &measurement_model) const {
 
-  // Cost function from Sarakka Bayesian Smoothing and Filtering chapter 7.
+  // Cost function from Sarkka, Bayesian Filtering and Smoothing, chapter 7.
   Eigen::VectorXd measurement_residual = measurement_model.composition_minus(
       z_current, measurement_model.h(x, input));
   Eigen::VectorXd model_residual =
@@ -59,95 +62,93 @@ FilterUpdate IteratedExtendedKalmanFilter::update(
   Eigen::MatrixXd H = measurement_model->H(x_predicted, input);
   Eigen::MatrixXd R = measurement_model->R(x_predicted, input);
 
-  Eigen::VectorXd z_predicted = measurement_model->h(x_predicted, input);
+  // Innovation and S are reported the way the EKF reports them, at the
+  // prediction, so the NIS stays comparable with the other filters.
+  Eigen::VectorXd innovation = measurement_model->composition_minus(
+      z_current, measurement_model->h(x_predicted, input));
+  Eigen::MatrixXd S = H * P_predicted * H.transpose() + R;
 
-  // use the proper composition operation, rather than regular +, - operations
-  Eigen::VectorXd innovation =
-      measurement_model->composition_minus(z_current, z_predicted);
+  Eigen::MatrixXd I =
+      Eigen::MatrixXd::Identity(P_predicted.rows(), P_predicted.rows());
 
-  Eigen::MatrixXd PHt = P_predicted * H.transpose();
-  Eigen::MatrixXd S = H * PHt + R;
-
-  // W = PHt * S^-1, but obtained by solving S * W^T = PHt^T rather than
-  // invering because it is cheaper and more stable
-  Eigen::MatrixXd W = S.ldlt().solve(PHt.transpose()).transpose();
-
-  // First estimate is the plain EKF update.
-  Eigen::VectorXd x_updated =
-      motion_model_->composition_plus(x_predicted, W * innovation);
-
-  // initalize lambda as initial value from config
-  double lambda = lm_config.lambda_initial;
-
-  // calculate P and R ldlt once
+  // factorise once, only the cost needs them
   Eigen::LDLT<Eigen::MatrixXd> P_predicted_LDLT = P_predicted.ldlt();
   Eigen::LDLT<Eigen::MatrixXd> R_LDLT = R.ldlt();
 
-  double initial_cost = cost(x_updated, x_predicted, P_predicted_LDLT,
+  double lambda = lm_config.lambda_initial;
+  int rejections = 0;
+
+  // the iteration starts at the prediction, as in the EKF
+  Eigen::VectorXd x_i_previous = x_predicted;
+  double current_cost = cost(x_i_previous, x_predicted, P_predicted_LDLT,
                              z_current, R_LDLT, input, *measurement_model);
 
-  // TODO(LM): the iteration. Rough shape, in this order:
-  //  1. before the loop: factorise P_predicted and R once (LDLT, for
-  //  cost()),
-  //     set lambda = lm_config.lambda_initial, evaluate the cost at
-  //     x_updated
-  //  2. per iterate: linearise H, z_predicted and the innovation at
-  //  x_updated
-  //     instead of x_predicted. The step is the (13.23) update with that
-  //     linearisation point, so it needs the term that corrects for
-  //     x_updated != x_predicted. Where to look: Sarkka (13.23), the
-  //     v_k line, and Alg. 7.9
-  //  3. damp the step with lambda. Where to look: Sarkka's Levenberg-
-  //     Marquardt discussion in Ch. 13 (IEKS), Nocedal & Wright Sec. 10.3.
-  //     Work out what damping does to the Hessian and to the gain, there is
-  //     a form that keeps your W, S structure
-  //  4. accept if cost decreased (lambda down), else reject and re-solve
-  //     from the same iterate (lambda up). Limits: lambda_min, lambda_max,
-  //     max_rejections. Nocedal & Wright Alg. 4.1 for the gain ratio
-  //  5. stop on step_tol / cost_relative_tol / max_iter, see the comments
-  //  in the yaml
-
-  Eigen::MatrixXd H_i, S_i, W_i;
-  Eigen::VectorXd innovation_i;
-
-  Eigen::VectorXd x_i_previous = x_updated;
   for (int i = 0; i < lm_config.max_iter; ++i) {
-    H_i = measurement_model->H(x_i_previous, input);
+    Eigen::MatrixXd H_i = measurement_model->H(x_i_previous, input);
     Eigen::MatrixXd R_i = measurement_model->R(x_i_previous, input);
 
-    innovation_i =
-        measurement_model->composition_minus(
-            z_current, measurement_model->h(x_i_previous, input)) -
-        H_i * motion_model_->composition_minus(x_predicted, x_i_previous);
+    // use the proper composition operation, rather than regular +, -
+    Eigen::VectorXd innovation_i = measurement_model->composition_minus(
+        z_current, measurement_model->h(x_i_previous, input));
+    Eigen::VectorXd prior_delta =
+        motion_model_->composition_minus(x_i_previous, x_predicted);
 
-    Eigen::MatrixXd PHt_i = P_predicted * H_i.transpose();
-    S_i = H_i * PHt_i + R_i;
-    W_i = S_i.ldlt().solve(PHt_i.transpose()).transpose();
+    // Levenberg-Marquardt damping of lambda * P^-1 in the hessian
+    Eigen::MatrixXd P_damped = P_predicted / (1.0 + lambda);
+    Eigen::MatrixXd PHt_i = P_damped * H_i.transpose();
+    Eigen::MatrixXd S_i = H_i * PHt_i + R_i;
+    Eigen::MatrixXd W_i = S_i.ldlt().solve(PHt_i.transpose()).transpose();
 
-    // m = m^- + K v, from the prediction, not from the previous iterate
+    // the step is taken from the current iterate, not from x_predicted
+    Eigen::VectorXd delta =
+        W_i * innovation_i - (I - W_i * H_i) * prior_delta / (1.0 + lambda);
     Eigen::VectorXd x_candidate =
-        motion_model_->composition_plus(x_predicted, W_i * innovation_i);
+        motion_model_->composition_plus(x_i_previous, delta);
 
-    // TODO(LM): steps 3-5 go here. Until then, take every step
-    x_i_previous = x_candidate;
+    double candidate_cost = cost(x_candidate, x_predicted, P_predicted_LDLT,
+                                 z_current, R_LDLT, input, *measurement_model);
+
+    // accept step if cost went down, and trust the linear model more
+    if (candidate_cost < current_cost) {
+      double relative_decrease = (current_cost - candidate_cost) / current_cost;
+      x_i_previous = x_candidate;
+      current_cost = candidate_cost;
+      lambda = std::max(lambda / lm_config.lambda_factor, lm_config.lambda_min);
+      rejections = 0;
+
+      // check if we have converged
+      if (std::sqrt(delta.dot(P_predicted_LDLT.solve(delta))) <
+              lm_config.step_tolerance ||
+          relative_decrease < lm_config.cost_relative_tolerance) {
+        break;
+      }
+    }
+    // reject step if cost went up, stay put and trust the linear model less
+    else {
+      lambda *= lm_config.lambda_factor;
+      rejections++;
+      if (lambda > lm_config.lambda_max ||
+          rejections >= lm_config.max_rejections) {
+        break;
+      }
+    }
   }
-  x_updated = x_i_previous;
 
-  // TODO(LM): H and W here must be the undamped ones evaluated at the final
-  //  x_updated, otherwise P_updated is inflated by lambda.
+  // The posterior uses the undamped gain at the final iterate, otherwise it
+  // would be inflated by lambda.
+  Eigen::VectorXd x_updated = x_i_previous;
+  Eigen::MatrixXd H_i = measurement_model->H(x_updated, input);
+  Eigen::MatrixXd R_i = measurement_model->R(x_updated, input);
+  Eigen::MatrixXd PHt_i = P_predicted * H_i.transpose();
+  Eigen::MatrixXd S_i = H_i * PHt_i + R_i;
+  Eigen::MatrixXd W_i = S_i.ldlt().solve(PHt_i.transpose()).transpose();
 
   // Joseph form: (I - WH) P (I - WH)^T + W R W^T. Algebraically equal to the
   // textbook (I - WH) P, but always positive definite
-  Eigen::MatrixXd I =
-      Eigen::MatrixXd::Identity(P_predicted.rows(), P_predicted.rows());
-  Eigen::MatrixXd IWH = I - W * H;
+  Eigen::MatrixXd IWH = I - W_i * H_i;
   Eigen::MatrixXd P_updated =
-      IWH * P_predicted * IWH.transpose() + W * R * W.transpose();
+      IWH * P_predicted * IWH.transpose() + W_i * R_i * W_i.transpose();
 
-  // TODO(consistency): this reports the EKF-style innovation and S at
-  //  x_predicted. Once iterating, decide whether to keep that or report the
-  //  converged point's, so the NIS plots compare like with like. Note the
-  //  choice in the guide.
   FilterUpdate filter_update{x_updated, innovation, S, P_updated};
   return filter_update;
 }
