@@ -56,8 +56,8 @@ $$
 
 | symbol | meaning |
 | --- | --- |
-| $x_k = \begin{bmatrix} p_k^\top & \psi_k & v_k^\top & b_{a,k}^\top & b_{g,k} \end{bmatrix}^\top$ | state: position, heading, navigation-frame velocity, accelerometer and gyro bias |
-| $u_k = \begin{bmatrix} a_k^\top & \omega_k \end{bmatrix}^\top$ | IMU reading: body-frame specific force and yaw rate |
+| $x_k$ | state: position $p_k$, heading $\psi_k$, navigation-frame velocity $v_k$, accelerometer bias $b_{a,k}$ and gyro bias $b_{g,k}$ |
+| $u_k$ | IMU reading $(a_k, \omega_k)$: body-frame specific force and yaw rate |
 | $R(\psi)$ | rotation from the body to the navigation frame |
 | $\bar x_k,\ \bar P_k$ | predicted mean and covariance |
 | $\hat x_k,\ \hat P_k$ | updated (filtered) mean and covariance |
@@ -204,7 +204,7 @@ The true path with the direction of travel, and when each sensor fired.
 
 ![True path and sensor fixes](rounded_rectangle/figures/1_scenario.png)
 
-The path with the EKF and ERTS estimates. A and B zoom in on turns, with the 95% position ellipses of both estimators: the turn where the filter's position error is largest and next to it the largest error in the opposite direction, or elsewhere on the path if it only turns one way.
+The path with the EKF and ERTS estimates, and a zoom on the turn where the filter's position error is largest, with the 95% position ellipses of both estimators.
 
 ![Path and estimates](rounded_rectangle/figures/2_path.png)
 
@@ -250,7 +250,7 @@ The true path with the direction of travel, and when each sensor fired.
 
 ![True path and sensor fixes](figure_eight/figures/1_scenario.png)
 
-The path with the EKF and ERTS estimates. A and B zoom in on turns, with the 95% position ellipses of both estimators: the turn where the filter's position error is largest and next to it the largest error in the opposite direction, or elsewhere on the path if it only turns one way.
+The path with the EKF and ERTS estimates, and a zoom on the turn where the filter's position error is largest, with the 95% position ellipses of both estimators.
 
 ![Path and estimates](figure_eight/figures/2_path.png)
 

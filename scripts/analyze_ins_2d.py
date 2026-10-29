@@ -10,7 +10,7 @@ figures to <case_dir>/figures. Each case folder gets six figures for the EKF
 and its ERTS smoother:
 
     1_scenario.png      the true path and when each sensor fired
-    2_path.png          path with both estimates and a zoom on two turns
+    2_path.png          path with both estimates and a zoom on the turn with the largest error
     3_errors.png        error with 95% bands
     4_uncertainty.png   the position spread the estimators report
     5_biases.png        true and estimated sensor biases
@@ -234,28 +234,16 @@ def find_turns(x_true, dt):
     return turns
 
 
-def choose_turns(turns, error, dt):
-    """The turn with the largest filter error, and next to it the worst turn in
-    the opposite direction, or if all turns go the same way the worst one
-    elsewhere on the path."""
+def choose_turn(turns, error, dt):
+    """The turn with the largest filter error, leaving out the first seconds
+    where the prior still dominates. None if the path has no such turn."""
     candidates = [turn for turn in turns if turn.first * dt >= START_SECONDS]
     if not candidates:
-        return []
-    worst = lambda turn: error[turn.first:turn.last + 1].max()
-    ranked = sorted(candidates, key=worst, reverse=True)
-    chosen = [ranked[0]]
-    opposite = [turn for turn in ranked if turn.direction != chosen[0].direction]
-    if opposite:
-        chosen.append(opposite[0])
-    else:
-        far = [turn for turn in ranked[1:]
-               if np.linalg.norm(turn.centre - chosen[0].centre) > 20.0]
-        if far:
-            chosen.append(far[0])
-    return chosen
+        return None
+    return max(candidates, key=lambda turn: error[turn.first:turn.last + 1].max())
 
 
-def draw_zoom(axis, label, turn, filt, smooth, x_true, dt):
+def draw_zoom(axis, turn, filt, smooth, x_true, dt):
     """One turn with a little path before and after, both estimates and their
     95% position ellipses. Returns the rectangle the zoom covers."""
     pad = int(ZOOM_PAD_SECONDS / dt)
@@ -286,18 +274,19 @@ def draw_zoom(axis, label, turn, filt, smooth, x_true, dt):
     axis.set_xlabel("x [m]")
     axis.set_ylabel("y [m]")
     kind = "left turn" if turn.direction > 0 else "right turn"
-    axis.set_title(f"{label}: {kind}, t = {lo * dt:.0f} to {hi * dt:.0f} s, 95% ellipses", loc="left")
+    axis.set_title(f"Zoom on a {kind}, t = {lo * dt:.0f} to {hi * dt:.0f} s, 95% ellipses", loc="left")
     axis.legend(loc="best", frameon=False, fontsize=8)
     style_axis(axis)
     return low, high
 
 
 def path_figure(x_true, filt, smooth, turns, dt):
-    """The path with both estimates, and a large zoom on up to two turns."""
-    figure = plt.figure(figsize=(14, 9))
-    grid = figure.add_gridspec(2, 2, width_ratios=[1.1, 1], hspace=0.25, wspace=0.12)
-    overview = figure.add_subplot(grid[:, 0])
-    zoom_axes = [figure.add_subplot(grid[0, 1]), figure.add_subplot(grid[1, 1])]
+    """The path with both estimates, and a large zoom on the turn where the
+    filter's position error is largest."""
+    figure = plt.figure(figsize=(14, 7.5))
+    grid = figure.add_gridspec(1, 2, width_ratios=[1.1, 1], wspace=0.15)
+    overview = figure.add_subplot(grid[0, 0])
+    zoom = figure.add_subplot(grid[0, 1])
 
     overview.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.8, label="truth", zorder=3)
     overview.plot(*filt.x[:, POSITION].T, color=filt.color, linewidth=1.0, label=filt.name, zorder=4)
@@ -313,31 +302,24 @@ def path_figure(x_true, filt, smooth, turns, dt):
     style_axis(overview)
 
     error = np.linalg.norm(filt.x[:, POSITION] - x_true[:, POSITION], axis=1)
-    for letter, axis, turn in zip("AB", zoom_axes, choose_turns(turns, error, dt)):
-        low, high = draw_zoom(axis, letter, turn, filt, smooth, x_true, dt)
-        overview.add_patch(Rectangle(low, *(high - low), fill=False, edgecolor=BAND,
-                                     linewidth=1.2, zorder=1))
-        overview.text(*(high + np.array([0.5, 0.5])), letter, fontsize=12, color=BAND,
-                      fontweight="bold")
-    for axis in zoom_axes:
-        if not axis.has_data():
-            axis.remove()
+    turn = choose_turn(turns, error, dt)
+    if turn is None:
+        zoom.remove()
+        return figure
+    low, high = draw_zoom(zoom, turn, filt, smooth, x_true, dt)
+    overview.add_patch(Rectangle(low, *(high - low), fill=False, edgecolor=BAND,
+                                 linewidth=1.2, zorder=1))
     return figure
 
 
-def scenario_figure(t, x_true, schedule, denied, dt):
-    """The true path alone, with its direction and the stretch flown without
-    GNSS, and when each sensor fired."""
+def scenario_figure(t, x_true, schedule, dt):
+    """The true path alone, with its direction, and when each sensor fired."""
     figure = plt.figure(figsize=(13, 9))
     grid = figure.add_gridspec(2, 1, height_ratios=[3, 1.1], hspace=0.3)
     path = figure.add_subplot(grid[0])
     timeline = figure.add_subplot(grid[1])
 
     path.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.8, label="true path", zorder=3)
-    if denied:
-        inside = (t >= denied[0]) & (t < denied[1])
-        path.plot(*x_true[inside, POSITION].T, color=DENIED, linewidth=7, alpha=0.7, zorder=2,
-                  solid_capstyle="butt", label="travelled without GNSS")
     steps = np.linspace(0, len(x_true) - 30, ARROW_COUNT).astype(int)
     for k in steps:
         path.annotate("", xy=x_true[k + 25, POSITION], xytext=x_true[k, POSITION],
@@ -356,7 +338,6 @@ def scenario_figure(t, x_true, schedule, denied, dt):
         timeline.eventplot(times, lineoffsets=row, linelengths=0.7, linewidths=0.7,
                            color=SENSOR_COLORS[name])
         timeline.text(t[-1] * 1.005, row, f"{len(times)} fixes", va="center", fontsize=8, color=BAND)
-    shade_denied(timeline, denied)
     timeline.set_yticks(range(len(schedule)))
     timeline.set_yticklabels(list(schedule))
     timeline.set_ylim(-0.6, len(schedule) - 0.4)
@@ -468,13 +449,22 @@ def variants_figure(t, x_true, filters, smoothers, denied):
     """Filters and smoothers of all variants against the EKF and ERTS."""
     figure, axes = plt.subplots(4, 1, figsize=(11, 11), sharex=True)
     position_error = lambda e: np.linalg.norm(e.x[:, POSITION] - x_true[:, POSITION], axis=1)
-    for estimator in filters:
-        axes[0].plot(t, position_error(estimator), color=estimator.color, linewidth=1, label=estimator.name)
-    for estimator in smoothers:
-        axes[1].plot(t, position_error(estimator), color=estimator.color, linewidth=1, label=estimator.name)
-    axes[2].plot(t, x_true[:, 7], color=TRUTH, linewidth=1.4, label="truth")
-    for estimator in filters:
-        axes[2].plot(t, estimator.x[:, 7], color=estimator.color, linewidth=1, label=estimator.name)
+
+    def draw(axis, group, series):
+        """The variants lie on top of the reference almost exactly, so the
+        reference is drawn wide underneath and the others dashed over it."""
+        for index, estimator in enumerate(group):
+            if index == 0:
+                axis.plot(t, series(estimator), color=estimator.color, linewidth=3.5, alpha=0.6,
+                          label=estimator.name, zorder=2)
+            else:
+                axis.plot(t, series(estimator), color=estimator.color, linewidth=1.1,
+                          linestyle="--", label=estimator.name, zorder=3)
+
+    draw(axes[0], filters, position_error)
+    draw(axes[1], smoothers, position_error)
+    axes[2].plot(t, x_true[:, 7], color=TRUTH, linewidth=1.4, label="truth", zorder=4)
+    draw(axes[2], filters, lambda e: e.x[:, 7])
     for reference, others in ((filters[0], filters[1:]), (smoothers[0], smoothers[1:])):
         for other in others:
             difference = np.linalg.norm(other.x[:, POSITION] - reference.x[:, POSITION], axis=1)
@@ -656,7 +646,7 @@ def main():
     (case_dir / "stats.txt").write_text(text)
 
     figures = {
-        "1_scenario.png": scenario_figure(t, x_true, schedule, denied, dt),
+        "1_scenario.png": scenario_figure(t, x_true, schedule, dt),
         "2_path.png": path_figure(x_true, ekf, erts, find_turns(x_true, dt), dt),
         "3_errors.png": errors_figure(t, x_true, ekf, erts, denied),
         "4_uncertainty.png": uncertainty_figure(t, ekf, erts, denied),

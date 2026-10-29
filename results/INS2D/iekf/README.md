@@ -55,8 +55,8 @@ $$
 
 | symbol | meaning |
 | --- | --- |
-| $x_k = \begin{bmatrix} p_k^\top & \psi_k & v_k^\top & b_{a,k}^\top & b_{g,k} \end{bmatrix}^\top$ | state: position, heading, navigation-frame velocity, accelerometer and gyro bias |
-| $u_k = \begin{bmatrix} a_k^\top & \omega_k \end{bmatrix}^\top$ | IMU reading: body-frame specific force and yaw rate |
+| $x_k$ | state: position $p_k$, heading $\psi_k$, navigation-frame velocity $v_k$, accelerometer bias $b_{a,k}$ and gyro bias $b_{g,k}$ |
+| $u_k$ | IMU reading $(a_k, \omega_k)$: body-frame specific force and yaw rate |
 | $R(\psi)$ | rotation from the body to the navigation frame |
 | $\bar x_k,\ \bar P_k$ | predicted mean and covariance |
 | $\hat x_k,\ \hat P_k$ | updated (filtered) mean and covariance |
@@ -239,7 +239,7 @@ the innovation and $S$, which is what the NIS is computed from.
 
 ## Results
 
-The figures per run: the true path and when each sensor fired, the path with the EKF and ERTS estimates and a zoom on two turns, the EKF/ERTS error, the IEKF/ERTS (IEKF) error, and the variants against each other.
+The figures per run: the true path and when each sensor fired, the path with the EKF and ERTS estimates and a zoom on the turn with the largest filter error, the EKF/ERTS error, the IEKF/ERTS (IEKF) error, and the variants against each other. In the variants figure the EKF-based estimates are drawn wide and the variants dashed over them, because they lie almost exactly on top of each other.
 
 ### Multi-sensor fusion
 
