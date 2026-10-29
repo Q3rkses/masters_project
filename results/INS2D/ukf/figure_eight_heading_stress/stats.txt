@@ -1,14 +1,14 @@
 30000 timesteps, dt 0.01 s, fixes: GNSS 46, magnetometer 6, DVL 497
 
-consistency (time-averaged):
-  ANIS GNSS EKF                   5.2337  band [0.9099, 3.5120]  76.1% of steps in band  -> INCONSISTENT
-  ANIS magnetometer EKF           2.5148  band [0.3210, 2.0578]  83.3% of steps in band  -> INCONSISTENT
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS EKF                   5.2337  band [0.9099, 3.5120]  76.1% of steps in band  -> overconfident
+  ANIS magnetometer EKF           2.5148  band [0.3210, 2.0578]  83.3% of steps in band  -> overconfident
   ANIS DVL EKF                    2.3328  band [1.6738, 2.3549]  94.2% of steps in band  -> consistent
   ANIS GNSS UKF                   2.0960  band [1.4654, 2.6165]  91.3% of steps in band  -> consistent
   ANIS magnetometer UKF           1.2417  band [0.2535, 2.2493]  100.0% of steps in band  -> consistent
-  ANIS DVL UKF                    1.7391  band [1.8208, 2.1875]  95.0% of steps in band  -> INCONSISTENT
-  ANEES position EKF              4.4048  band [1.2399, 2.9389]  76.8% of steps in band  -> INCONSISTENT
-  ANEES position UKF              1.2375  band [1.3106, 2.8327]  89.6% of steps in band  -> INCONSISTENT
+  ANIS DVL UKF                    1.7391  band [1.8208, 2.1875]  95.0% of steps in band  -> underconfident
+  ANEES position EKF              4.4048  band [1.2399, 2.9389]  76.8% of steps in band  -> overconfident
+  ANEES position UKF              1.2375  band [1.3106, 2.8327]  89.6% of steps in band  -> underconfident
   ANEES position ERTS             5.8867  band [0.0506, 7.3778]  75.3% of steps in band  -> consistent
   ANEES position URTSS            1.7880  band [0.0506, 7.3778]  98.6% of steps in band  -> consistent
 

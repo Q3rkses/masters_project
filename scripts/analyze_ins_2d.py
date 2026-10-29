@@ -6,17 +6,23 @@ usage: analyze_ins_2d.py <case_dir>/data
 Reads truth.csv, filter.csv, smoother.csv and the three *_fixes.csv files, and
 config.yaml from the case folder for the time step and the GNSS outage window.
 The printed statistics are also written to <case_dir>/stats.txt and the
-figures to <case_dir>/figures. Each case folder gets four figures for the EKF
+figures to <case_dir>/figures. Each case folder gets six figures for the EKF
 and its ERTS smoother:
 
-    1_scenario.png     path, estimates, fixes and when each sensor fired
-    2_errors.png       error with 95% bands and the reported position spread
-    3_biases.png       true and estimated sensor biases
-    4_consistency.png  NIS per sensor and the running NEES
+    1_scenario.png      the true path and when each sensor fired
+    2_path.png          path with both estimates and a zoom on two turns
+    3_errors.png        error with 95% bands
+    4_uncertainty.png   the position spread the estimators report
+    5_biases.png        true and estimated sensor biases
+    6_consistency.png   NIS per sensor and the running NEES
+
+A statistic that falls above its 95% interval means the errors are larger than
+the reported covariance admits, the estimator is overconfident. Below the
+interval it is underconfident, the covariance is larger than it needs to be.
 
 In the folders of the ukf and iekf experiments the UKF/URTSS and IEKF/ERTS
-results are analysed next to the EKF/ERTS. Those folders get figures 1 and 2
-and two more instead of 3 and 4, since the biases and the consistency are
+results are analysed next to the EKF/ERTS. Those folders get figures 1 to 4
+and two more instead of 5 and 6, since the biases and the consistency are
 compared in the statistics:
 
     5_variants.png        errors, gyro bias and distances of all variants
@@ -58,11 +64,15 @@ SENSOR_DIMS = {"GNSS": 2, "magnetometer": 1, "DVL": 2}
 SENSOR_COLORS = {"GNSS": GNSS, "magnetometer": MAGNETOMETER, "DVL": DVL}
 CONFIDENCE = 0.95
 AVERAGING_WINDOW = 150
-ELLIPSE_COUNT = 4
-ZOOM_SECONDS = 15.0
+ELLIPSE_COUNT = 5
 SKIP_STEPS = 100  # initial transient left out when choosing axis limits
+TURN_FRACTION = 0.5  # a turn is where the yaw rate is above this share of the largest one
+ZOOM_PAD_SECONDS = 3.0  # path shown before and after a turn in a zoom
+START_SECONDS = 10.0  # turns before this are left out of the zoom choice, the prior still dominates
+ARROW_COUNT = 10  # direction arrows drawn along the true path
 
 Estimator = namedtuple("Estimator", "name color x P")
+Turn = namedtuple("Turn", "first last direction centre")  # direction: +1 left, -1 right
 
 VARIANT_FOLDERS = {"ukf": "UKF", "iekf": "IEKF"}
 
@@ -144,7 +154,8 @@ def time_averaged(values, dof):
         "high": high,
         "inside": np.mean((valid >= step_low) & (valid <= step_high)),
         "dropped": len(values) - len(valid),
-        "verdict": "consistent" if low <= average <= high else "INCONSISTENT",
+        "verdict": ("underconfident" if average < low
+                    else "overconfident" if average > high else "consistent"),
     }
 
 
@@ -190,71 +201,155 @@ def sensor_times(fixes, dt):
     return fixes["timestep"].astype(int) * dt
 
 
-def trajectory_figure(t, x_true, filt, smooth, gnss, schedule, denied, dt):
-    """Path with GNSS fixes and both estimates, a zoom on the worst filter
-    error, and when each sensor fired."""
-    figure = plt.figure(figsize=(13, 9))
-    grid = figure.add_gridspec(2, 2, height_ratios=[3, 1.1], width_ratios=[1.25, 1],
-                               hspace=0.3, wspace=0.18)
-    overview = figure.add_subplot(grid[0, 0])
-    zoom = figure.add_subplot(grid[0, 1])
-    timeline = figure.add_subplot(grid[1, :])
+def fit_equal_axes(axis, curves, margin=3.0):
+    """Equal axis scaling with the limits just around the curves, so the plot
+    box takes the shape of the path instead of leaving empty bands."""
+    points = np.vstack(curves)
+    low, high = points.min(axis=0) - margin, points.max(axis=0) + margin
+    axis.set_xlim(low[0], high[0])
+    axis.set_ylim(low[1], high[1])
+    axis.set_aspect("equal", adjustable="box")
+    axis.set_anchor("N")
 
-    error = np.linalg.norm(filt.x[:, POSITION] - x_true[:, POSITION], axis=1)
-    half = int(ZOOM_SECONDS / dt / 2)
-    centre = int(np.argmax(error[2 * half:-half])) + 2 * half
-    lo, hi = centre - half, centre + half
 
-    gnss_position = vectors(gnss, "z", 2)
-    gnss_steps = gnss["timestep"].astype(int)
+def find_turns(x_true, dt):
+    """The stretches of the true path where the vehicle is turning, from the
+    yaw rate of the true heading. A turn is where the rate is above
+    TURN_FRACTION of its largest value."""
+    rate = angle_diff(x_true[1:, HEADING], x_true[:-1, HEADING]) / dt
+    rate = np.append(rate, rate[-1])
+    turning = np.abs(rate) > TURN_FRACTION * np.abs(rate).max()
+    turns, first = [], None
+    for k in range(len(turning) + 1):
+        inside = k < len(turning) and turning[k]
+        if inside and first is None:
+            first = k
+        elif not inside and first is not None:
+            last = k - 1
+            if (last - first) * dt >= 0.5:
+                direction = int(np.sign(rate[first:last + 1].mean()))
+                turns.append(Turn(first, last, direction,
+                                  x_true[first:last + 1, POSITION].mean(axis=0)))
+            first = None
+    return turns
 
-    overview.set_aspect("equal", adjustable="datalim")
-    zoom.set_aspect("equal", adjustable="box")
-    for axis in (overview, zoom):
-        axis.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.6, label="truth", zorder=3)
-        style_axis(axis)
-        axis.set_xlabel("x [m]")
-        axis.set_ylabel("y [m]")
-    if denied:
-        inside = (t >= denied[0]) & (t < denied[1])
-        overview.plot(*x_true[inside, POSITION].T, color=DENIED, linewidth=5, alpha=0.7,
-                      zorder=2, solid_capstyle="butt", label="GNSS denied")
-    overview.scatter(*gnss_position.T, s=14, color=GNSS, marker="x", zorder=5,
-                     label=f"GNSS fix ({len(gnss_steps)})")
-    overview.plot(*filt.x[:, POSITION].T, color=filt.color, linewidth=0.9, label=filt.name, zorder=4)
-    overview.plot(*smooth.x[:, POSITION].T, color=smooth.color, linewidth=0.9, label=smooth.name, zorder=4)
-    overview.scatter(*x_true[0, POSITION], s=45, color=TRUTH, zorder=6)
-    overview.annotate("", xy=x_true[200, POSITION], xytext=x_true[0, POSITION],
-                      arrowprops=dict(arrowstyle="-|>", color=TRUTH, lw=1.5), zorder=6)
-    overview.set_title("Path and estimates", loc="left")
-    overview.legend(loc="best", frameon=False, fontsize=8)
 
-    ellipses = []
+def choose_turns(turns, error, dt):
+    """The turn with the largest filter error, and next to it the worst turn in
+    the opposite direction, or if all turns go the same way the worst one
+    elsewhere on the path."""
+    candidates = [turn for turn in turns if turn.first * dt >= START_SECONDS]
+    if not candidates:
+        return []
+    worst = lambda turn: error[turn.first:turn.last + 1].max()
+    ranked = sorted(candidates, key=worst, reverse=True)
+    chosen = [ranked[0]]
+    opposite = [turn for turn in ranked if turn.direction != chosen[0].direction]
+    if opposite:
+        chosen.append(opposite[0])
+    else:
+        far = [turn for turn in ranked[1:]
+               if np.linalg.norm(turn.centre - chosen[0].centre) > 20.0]
+        if far:
+            chosen.append(far[0])
+    return chosen
+
+
+def draw_zoom(axis, label, turn, filt, smooth, x_true, dt):
+    """One turn with a little path before and after, both estimates and their
+    95% position ellipses. Returns the rectangle the zoom covers."""
+    pad = int(ZOOM_PAD_SECONDS / dt)
+    lo, hi = max(turn.first - pad, 0), min(turn.last + pad, len(x_true) - 1) + 1
     extent = [x_true[lo:hi, POSITION]]
+    ellipses = []
     for estimator in (filt, smooth):
         for k in np.linspace(lo, hi - 1, ELLIPSE_COUNT).astype(int):
             width, height, angle = ellipse_shape(estimator.P[k, :2, :2])
             ellipses.append((estimator, k, width, height, angle))
             reach = max(width, height) / 2
             extent.append(estimator.x[k, :2] + np.array([[reach, reach], [-reach, -reach]]))
+        extent.append(estimator.x[lo:hi, POSITION])
     corners = np.vstack(extent)
     low, high = corners.min(axis=0) - 1.0, corners.max(axis=0) + 1.0
-    overview.add_patch(Rectangle(low, *(high - low), fill=False, edgecolor=BAND,
-                                 linewidth=1.2, zorder=1))
 
-    zoom.plot(*filt.x[lo:hi, POSITION].T, color=filt.color, linewidth=1.3, label=filt.name, zorder=4)
-    zoom.plot(*smooth.x[lo:hi, POSITION].T, color=smooth.color, linewidth=1.3, label=smooth.name, zorder=4)
+    axis.plot(*x_true[lo:hi, POSITION].T, color=TRUTH, linewidth=1.8, label="truth", zorder=3)
+    for estimator in (filt, smooth):
+        axis.plot(*estimator.x[lo:hi, POSITION].T, color=estimator.color, linewidth=1.4,
+                  label=estimator.name, zorder=4)
     for estimator, k, width, height, angle in ellipses:
-        zoom.add_patch(Ellipse(estimator.x[k, :2], width, height, angle=angle,
+        axis.add_patch(Ellipse(estimator.x[k, :2], width, height, angle=angle,
                                facecolor=estimator.color, edgecolor=estimator.color,
                                alpha=0.2, linewidth=1, zorder=2))
-    in_window = (gnss_steps >= lo) & (gnss_steps < hi)
-    if in_window.any():
-        zoom.scatter(*gnss_position[in_window].T, s=40, color=GNSS, marker="x", zorder=5, label="GNSS fix")
-    zoom.set_xlim(low[0], high[0])
-    zoom.set_ylim(low[1], high[1])
-    zoom.set_title(f"Zoom, t = {lo * dt:.0f} to {hi * dt:.0f} s, with 95% ellipses", loc="left")
-    zoom.legend(loc="best", frameon=False, fontsize=8)
+    axis.set_aspect("equal", adjustable="box")
+    axis.set_xlim(low[0], high[0])
+    axis.set_ylim(low[1], high[1])
+    axis.set_xlabel("x [m]")
+    axis.set_ylabel("y [m]")
+    kind = "left turn" if turn.direction > 0 else "right turn"
+    axis.set_title(f"{label}: {kind}, t = {lo * dt:.0f} to {hi * dt:.0f} s, 95% ellipses", loc="left")
+    axis.legend(loc="best", frameon=False, fontsize=8)
+    style_axis(axis)
+    return low, high
+
+
+def path_figure(x_true, filt, smooth, turns, dt):
+    """The path with both estimates, and a large zoom on up to two turns."""
+    figure = plt.figure(figsize=(14, 9))
+    grid = figure.add_gridspec(2, 2, width_ratios=[1.1, 1], hspace=0.25, wspace=0.12)
+    overview = figure.add_subplot(grid[:, 0])
+    zoom_axes = [figure.add_subplot(grid[0, 1]), figure.add_subplot(grid[1, 1])]
+
+    overview.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.8, label="truth", zorder=3)
+    overview.plot(*filt.x[:, POSITION].T, color=filt.color, linewidth=1.0, label=filt.name, zorder=4)
+    overview.plot(*smooth.x[:, POSITION].T, color=smooth.color, linewidth=1.0, label=smooth.name, zorder=4)
+    fit_equal_axes(overview, [x_true[:, POSITION], filt.x[SKIP_STEPS:, POSITION], smooth.x[SKIP_STEPS:, POSITION]])
+    overview.scatter(*x_true[0, POSITION], s=45, color=TRUTH, zorder=6)
+    overview.annotate("", xy=x_true[200, POSITION], xytext=x_true[0, POSITION],
+                      arrowprops=dict(arrowstyle="-|>", color=TRUTH, lw=1.5), zorder=6)
+    overview.set_xlabel("x [m]")
+    overview.set_ylabel("y [m]")
+    overview.set_title("Path and estimates", loc="left")
+    overview.legend(loc="best", frameon=False, fontsize=9)
+    style_axis(overview)
+
+    error = np.linalg.norm(filt.x[:, POSITION] - x_true[:, POSITION], axis=1)
+    for letter, axis, turn in zip("AB", zoom_axes, choose_turns(turns, error, dt)):
+        low, high = draw_zoom(axis, letter, turn, filt, smooth, x_true, dt)
+        overview.add_patch(Rectangle(low, *(high - low), fill=False, edgecolor=BAND,
+                                     linewidth=1.2, zorder=1))
+        overview.text(*(high + np.array([0.5, 0.5])), letter, fontsize=12, color=BAND,
+                      fontweight="bold")
+    for axis in zoom_axes:
+        if not axis.has_data():
+            axis.remove()
+    return figure
+
+
+def scenario_figure(t, x_true, schedule, denied, dt):
+    """The true path alone, with its direction and the stretch flown without
+    GNSS, and when each sensor fired."""
+    figure = plt.figure(figsize=(13, 9))
+    grid = figure.add_gridspec(2, 1, height_ratios=[3, 1.1], hspace=0.3)
+    path = figure.add_subplot(grid[0])
+    timeline = figure.add_subplot(grid[1])
+
+    path.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.8, label="true path", zorder=3)
+    if denied:
+        inside = (t >= denied[0]) & (t < denied[1])
+        path.plot(*x_true[inside, POSITION].T, color=DENIED, linewidth=7, alpha=0.7, zorder=2,
+                  solid_capstyle="butt", label="travelled without GNSS")
+    steps = np.linspace(0, len(x_true) - 30, ARROW_COUNT).astype(int)
+    for k in steps:
+        path.annotate("", xy=x_true[k + 25, POSITION], xytext=x_true[k, POSITION],
+                      arrowprops=dict(arrowstyle="-|>", color=TRUTH, lw=1.2, mutation_scale=14),
+                      zorder=5)
+    path.scatter(*x_true[0, POSITION], s=55, color=TRUTH, zorder=6, label="start")
+    fit_equal_axes(path, [x_true[:, POSITION]])
+    path.set_xlabel("x [m]")
+    path.set_ylabel("y [m]")
+    path.set_title("True path", loc="left")
+    path.legend(loc="best", frameon=False, fontsize=9)
+    style_axis(path)
 
     for row, (name, due) in enumerate(schedule.items()):
         times = np.flatnonzero(due) * dt
@@ -274,12 +369,11 @@ def trajectory_figure(t, x_true, filt, smooth, gnss, schedule, denied, dt):
 
 
 def errors_figure(t, x_true, filt, smooth, denied):
-    """Error against truth with each estimator's own 95% band, and the
-    position spread the estimators report."""
+    """Error against truth with each estimator's own 95% band."""
     scale = norm.ppf(0.5 + CONFIDENCE / 2)
     rows = (("x error [m]", 0, 1.0), ("y error [m]", 1, 1.0),
             ("heading error [deg]", HEADING, 180 / np.pi))
-    figure, axes = plt.subplots(4, 1, figsize=(11, 11), sharex=True)
+    figure, axes = plt.subplots(3, 1, figsize=(11, 8.5), sharex=True)
     for axis, (label, i, unit) in zip(axes, rows):
         curves = []
         for estimator in (filt, smooth):
@@ -294,17 +388,26 @@ def errors_figure(t, x_true, filt, smooth, denied):
         limit(axis, curves)
         axis.set_ylabel(label)
         style_axis(axis)
-    spread = axes[3]
-    for estimator in (filt, smooth):
-        spread.plot(t, np.sqrt(np.trace(estimator.P[:, :2, :2], axis1=1, axis2=2)),
-                    color=estimator.color, linewidth=1.3, label=estimator.name)
-    shade_denied(spread, denied)
-    spread.set_yscale("log")
-    spread.set_ylabel(r"$\sqrt{\mathrm{tr}\,P_{xy}}$ [m]")
-    spread.set_xlabel("time [s]")
-    style_axis(spread)
+    axes[-1].set_xlabel("time [s]")
     axes[0].set_title("Error with 95% confidence band, shaded where GNSS is denied", loc="left")
     axes[0].legend(loc="upper right", frameon=False, ncol=2, fontsize=9)
+    figure.tight_layout()
+    return figure
+
+
+def uncertainty_figure(t, filt, smooth, denied):
+    """The position spread the estimators report about themselves."""
+    figure, axis = plt.subplots(figsize=(11, 4.5))
+    for estimator in (filt, smooth):
+        axis.plot(t, np.sqrt(np.trace(estimator.P[:, :2, :2], axis1=1, axis2=2)),
+                  color=estimator.color, linewidth=1.4, label=estimator.name)
+    shade_denied(axis, denied)
+    axis.set_yscale("log")
+    axis.set_ylabel(r"$\sqrt{\mathrm{tr}\,P_{xy}}$ [m]")
+    axis.set_xlabel("time [s]")
+    axis.set_title("Reported position spread, shaded where GNSS is denied", loc="left")
+    axis.legend(loc="upper right", frameon=False, ncol=2, fontsize=9)
+    style_axis(axis)
     figure.tight_layout()
     return figure
 
@@ -477,7 +580,7 @@ def main():
     report(out, f"{len(k)} timesteps, dt {dt} s, fixes: GNSS {fix_counts['GNSS']}, "
                 f"magnetometer {fix_counts['magnetometer']}, DVL {fix_counts['DVL']}")
     report(out)
-    report(out, "consistency (time-averaged):")
+    report(out, "consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):")
     for name, by_sensor in nis_by_filter.items():
         for sensor, values in by_sensor.items():
             result = time_averaged(values, SENSOR_DIMS[sensor])
@@ -553,11 +656,13 @@ def main():
     (case_dir / "stats.txt").write_text(text)
 
     figures = {
-        "1_scenario.png": trajectory_figure(t, x_true, ekf, erts, gnss, schedule, denied, dt),
-        "2_errors.png": errors_figure(t, x_true, ekf, erts, denied),
+        "1_scenario.png": scenario_figure(t, x_true, schedule, denied, dt),
+        "2_path.png": path_figure(x_true, ekf, erts, find_turns(x_true, dt), dt),
+        "3_errors.png": errors_figure(t, x_true, ekf, erts, denied),
+        "4_uncertainty.png": uncertainty_figure(t, ekf, erts, denied),
     }
     if not with_variants:
-        figures["3_biases.png"] = biases_figure(t, x_true, [ekf, erts], denied)
+        figures["5_biases.png"] = biases_figure(t, x_true, [ekf, erts], denied)
     nis = {}
     for sensor, table in zip(SENSOR_DIMS, fixes):
         if len(table["timestep"]):
@@ -572,7 +677,7 @@ def main():
         result = time_averaged(nees_values[estimator.name], 2)
         summaries[estimator.name] = f"ANEES {result['average']:.3f} ({result['verdict']})"
     if not with_variants:
-        figures["4_consistency.png"] = consistency_figure(
+        figures["6_consistency.png"] = consistency_figure(
             t, nis, [(ekf.name, ekf.color, nees_values["EKF"]), (erts.name, erts.color, nees_values["ERTS"])],
             summaries)
     if len(filters) > 1:
