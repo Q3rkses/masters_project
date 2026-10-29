@@ -1,48 +1,35 @@
 #include "sensors.hpp"
 #include "simulation.hpp"
 
-SensorSchedule build_sensor_schedule(const YAML::Node &config,
-                                     std::mt19937_64 &rng, const int timesteps,
-                                     const double dt) {
-  const double gnss_period_min = config["gnss_period_min"].as<double>();
-  const double gnss_period_max = config["gnss_period_max"].as<double>();
-  // a time window with no GNSS at all, e.g. to simulate an outage in the
-  // middle of a run; defaults to never denied if not set in the config
-  const double gnss_denied_start = config["gnss_denied_start"].as<double>(1e9);
-  const double gnss_denied_end = config["gnss_denied_end"].as<double>(1e9);
-  double next_gnss_time = sample_uniform(rng, gnss_period_min, gnss_period_max);
+std::vector<std::vector<bool>>
+build_sensor_schedules(const YAML::Node &config, std::mt19937_64 &rng,
+                       const std::vector<std::string> &names,
+                       const int timesteps, const double dt) {
+  const int count = names.size();
+  std::vector<double> period_min(count), period_max(count);
+  std::vector<double> denied_start(count), denied_end(count);
+  std::vector<double> next_time(count);
 
-  const double magnetometer_period_min =
-      config["magnetometer_period_min"].as<double>();
-  const double magnetometer_period_max =
-      config["magnetometer_period_max"].as<double>();
-  double next_magnetometer_time =
-      sample_uniform(rng, magnetometer_period_min, magnetometer_period_max);
+  for (int i = 0; i < count; i++) {
+    period_min[i] = config[names[i] + "_period_min"].as<double>();
+    period_max[i] = config[names[i] + "_period_max"].as<double>();
+    // a sensor that is never denied has its window far outside the run
+    denied_start[i] = config[names[i] + "_denied_start"].as<double>(1e9);
+    denied_end[i] = config[names[i] + "_denied_end"].as<double>(1e9);
+    next_time[i] = sample_uniform(rng, period_min[i], period_max[i]);
+  }
 
-  const double dvl_period_min = config["dvl_period_min"].as<double>();
-  const double dvl_period_max = config["dvl_period_max"].as<double>();
-  double next_dvl_time = sample_uniform(rng, dvl_period_min, dvl_period_max);
-
-  SensorSchedule schedule{std::vector<bool>(timesteps, false),
-                          std::vector<bool>(timesteps, false),
-                          std::vector<bool>(timesteps, false)};
+  std::vector<std::vector<bool>> schedules(
+      count, std::vector<bool>(timesteps, false));
   for (int k = 0; k < timesteps; k++) {
     const double t = k * dt;
-
-    const bool gnss_denied = t >= gnss_denied_start && t < gnss_denied_end;
-    if (t >= next_gnss_time && !gnss_denied) {
-      schedule.gnss[k] = true;
-      next_gnss_time = t + sample_uniform(rng, gnss_period_min, gnss_period_max);
-    }
-    if (t >= next_magnetometer_time) {
-      schedule.magnetometer[k] = true;
-      next_magnetometer_time =
-          t + sample_uniform(rng, magnetometer_period_min, magnetometer_period_max);
-    }
-    if (t >= next_dvl_time) {
-      schedule.dvl[k] = true;
-      next_dvl_time = t + sample_uniform(rng, dvl_period_min, dvl_period_max);
+    for (int i = 0; i < count; i++) {
+      const bool denied = t >= denied_start[i] && t < denied_end[i];
+      if (t >= next_time[i] && !denied) {
+        schedules[i][k] = true;
+        next_time[i] = t + sample_uniform(rng, period_min[i], period_max[i]);
+      }
     }
   }
-  return schedule;
+  return schedules;
 }

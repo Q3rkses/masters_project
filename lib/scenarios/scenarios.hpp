@@ -1,8 +1,8 @@
 /**
  * @file scenarios.hpp
- * @brief File that is meant to offload scenario building from main,
- * such that the only functionality of main is to run.
- * config file and hands the parsed config to the matching runner.
+ * @brief The scenarios main can run. Each one simulates its own data from a
+ * parsed config and runs the filters and smoothers over it, so main only
+ * picks the scenario named in the config.
  */
 
 #ifndef SCENARIOS_HPP
@@ -12,10 +12,11 @@
 #include <yaml-cpp/yaml.h>
 
 /**
- * @brief Simulates, runs the a filter and smoother on a dim-dimensional random
- * walk that is observed directly, and writes truth.csv, filter.csv and
- * smoother.csv. Expected keys: seed, timesteps, dim, q, r, x0 (list of length
- * dim), p0.
+ * @brief Simulates a dim-dimensional random walk that is observed directly,
+ * runs a Kalman filter and an RTS smoother on it, and writes truth.csv,
+ * filter.csv, smoother.csv and measurement_fixes.csv, which holds the
+ * measurement at every step with its innovation and S. Expected keys: seed,
+ * timesteps, dim, q, r, x0 (list of length dim), p0.
  * @param config the parsed yaml config
  * @param output_dir where the csv files are written
  */
@@ -23,11 +24,12 @@ void run_random_walk(const YAML::Node &config,
                      const std::filesystem::path &output_dir);
 
 /**
- * @brief Simulates a trajectory through a 2D strapdown INS model, runs the
- * EKF forward pass (with GNSS arriving at random intervals) and the ERTS
- * backward pass, then the UKF and URTSS on the same data. Writes truth.csv,
- * filter.csv, smoother.csv, ukf_filter.csv and ukf_smoother.csv, plus a
- * set of fix files per filter, the UKF's prefixed with ukf_.
+ * @brief Simulates a trajectory through a 2D strapdown INS model with GNSS,
+ * magnetometer and DVL fixes arriving at random intervals, runs the EKF and
+ * ERTS and then the UKF and URTSS on the same data, and the IEKF with the
+ * ERTS if the config sets run_iekf. Writes truth.csv, filter.csv and
+ * smoother.csv, the same files prefixed ukf_ (and iekf_), and one fix file
+ * per sensor and filter, e.g. gnss_fixes.csv.
  * @param config the parsed yaml config
  * @param output_dir where the csv files are written
  */

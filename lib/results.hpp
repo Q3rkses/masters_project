@@ -87,47 +87,31 @@ private:
   SmootherConfig smoother_config_; // F, Q used to produce this result
 };
 
-struct TruthRecord {
-  Eigen::VectorXd x_true; // the simulated state, unobservable to the filter
-  Eigen::VectorXd z;      // the noisy measurement handed to the filter
-  Eigen::VectorXd u;      // the true input to the system
-};
-
 /**
- * @brief Records the ground truth and the measurements generated from it.
- * Needed downstream for NEES, which the filter cannot compute about itself.
+ * @brief Records the ground truth state. Needed downstream for NEES, which
+ * the filter cannot compute about itself. The measurements generated from the
+ * truth belong to the sensors, they are written with each sensor's fixes.
  */
 class TruthResult {
 public:
   /**
-   * @brief records one timestep's true state and measurement. Must be called
-   * once per timestep, in order, for to_csv() to line up with the filter and
-   * smoother files on the timestep column.
+   * @brief records one timestep's true state. Must be called once per
+   * timestep, in order, for to_csv() to line up with the filter and smoother
+   * files on the timestep column.
+   * @param x_true, the true value of the state, unobservable to the filter
    */
-  void add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z);
-
-  /**
-   * @brief records one timestep's true state and measurement. Must be called
-   * once per timestep, in order, for to_csv() to line up with the filter and
-   * smoother files on the timestep column.
-   * @param x_true, the true value of the state
-   * @param z, the value of the measurement
-   * @param u, the true value of the input
-   */
-  void add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z,
-           const Eigen::VectorXd &u);
+  void add(const Eigen::VectorXd &x_true);
 
   /**
    * @brief exports all recorded truth data to a csv file. One row per
-   * timestep, with columns (state dim n, measurement dim m):
+   * timestep, with columns (state dim n):
    * timestep,
-   * x_true_0..x_true_{n-1},
-   * z_0..z_{m-1}
+   * x_true_0..x_true_{n-1}
    * @param path where to write the csv file
    */
   void to_csv(const std::string &path) const;
 
 private:
-  std::vector<TruthRecord> records_; // one entry per timestep
+  std::vector<Eigen::VectorXd> x_true_; // one entry per timestep
 };
 #endif

@@ -1,9 +1,9 @@
 #include "scenarios/scenarios.hpp"
 
+#include "estimation.hpp"
 #include "filters/extended_kalman_filter.hpp"
 #include "filters/iterated_extended_kalman_filter.hpp"
 #include "filters/unscented_kalman_filter.hpp"
-#include "models/linear_models.hpp"
 #include "models/measurement_models.hpp"
 #include "models/nonlinear_models.hpp"
 #include "results.hpp"
@@ -19,8 +19,8 @@
 #include <iostream>
 #include <memory>
 #include <random>
-#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 Eigen::VectorXd read_vector(const YAML::Node &node) {
@@ -48,10 +48,10 @@ INS2DConfig read_ins_config(const YAML::Node &config, const std::string &prefix 
   ins.gyro_random_walk_variance = 0.0;
   ins.accelerometer_random_walk_variance = Eigen::Vector2d::Zero();
   return ins;
-} //clang-format on
+}
 
-// The LM keys fall back to the defaults, so configs from before the IEKF
-// existed still run.
+// A config only has to list the Levenberg-Marquardt parameters it wants to
+// change, the rest fall back to these defaults.
 LevenbergMarquardtConfig read_lm_config(const YAML::Node &config) {
   return LevenbergMarquardtConfig{
       .lambda_initial = config["lambda_initial"].as<double>(1e-2),
@@ -61,180 +61,60 @@ LevenbergMarquardtConfig read_lm_config(const YAML::Node &config) {
       .max_iter = config["max_iter"].as<int>(50),
       .max_rejections = config["max_rejections"].as<int>(30),
       .step_tolerance = config["step_tolerance"].as<double>(1e-8),
-      .cost_relative_tolerance =
-          config["cost_relative_tolerance"].as<double>(1e-12),
+      .cost_relative_tolerance = config["cost_relative_tolerance"].as<double>(1e-12),
   };
-}
+} //clang-format on
 
-// what one sensor reported and how the filter saw it, one entry per fix,
-// this is what the write_fix_csv of the measurement models take
-struct FixLog {
-  std::vector<int> steps;
-  std::vector<Eigen::VectorXd> z;
-  std::vector<Eigen::VectorXd> innovations;
-  std::vector<Eigen::MatrixXd> S;
+// The motion model is a 2D strapdown INS, x_k = f(x_{k-1}, u_k) + w_k with
+// w_k ~ N(0, Q). GNSS and the magnetometer observe the state linearly,
+// z_k = H x_k + v_k with v_k ~ N(0, R). The DVL reports velocity in the body
+// frame, so it needs the rotation matrix and is the one nonlinear sensor,
+// z_k = h(x_k) + v_k with v_k ~ N(0, R). The order of the sensors decides the
+// order their noise and schedules are drawn in.
+std::vector<Sensor> build_sensors(const YAML::Node &config) {
+  std::vector<Sensor> sensors;
 
-  void add(const int k, const Eigen::VectorXd &measurement,
-           const FilterUpdate &update) {
-    steps.push_back(k);
-    z.push_back(measurement);
-    innovations.push_back(update.innovation);
-    S.push_back(update.S);
-  }
-};
-
-struct ForwardPass {
-  FilterResult result;
-  FixLog gnss_fixes;
-  FixLog magnetometer_fixes;
-  FixLog dvl_fixes;
-};
-
-// Forward pass of any filter. Predict once per step, then each due sensor
-// updates in turn, building on whatever the previous one this step already
-// did. Innovations and S of every sensor go to its own fix log, filter.csv
-// only gets the state.
-ForwardPass run_forward_pass(BayesianFilter &filter,
-                             const FilterConfig &filter_config,
-                             const std::vector<Input> &inputs,
-                             const Sensor &gnss, const Sensor &magnetometer,
-                             const Sensor &dvl) {
-  ForwardPass pass{FilterResult(filter_config), {}, {}, {}};
-  Eigen::VectorXd x = filter_config.x_prior;
-  Eigen::MatrixXd P = filter_config.P_prior;
-
-  const int timesteps = inputs.size();
-  for (int k = 0; k < timesteps; k++) {
-    FilterPredict prediction = filter.predict(x, P, inputs[k]);
-    x = prediction.x_predicted;
-    P = prediction.P_predicted;
-
-    if (gnss.due[k]) {
-      FilterUpdate gnss_update =
-          filter.update(x, gnss.measurements[k], P, inputs[k], gnss.model);
-      pass.gnss_fixes.add(k, gnss.measurements[k], gnss_update);
-      x = gnss_update.x_updated;
-      P = gnss_update.P_updated;
-    }
-
-    if (magnetometer.due[k]) {
-      FilterUpdate magnetometer_update = filter.update(
-          x, magnetometer.measurements[k], P, inputs[k], magnetometer.model);
-      pass.magnetometer_fixes.add(k, magnetometer.measurements[k],
-                                  magnetometer_update);
-      x = magnetometer_update.x_updated;
-      P = magnetometer_update.P_updated;
-    }
-
-    if (dvl.due[k]) {
-      FilterUpdate dvl_update =
-          filter.update(x, dvl.measurements[k], P, inputs[k], dvl.model);
-      pass.dvl_fixes.add(k, dvl.measurements[k], dvl_update);
-      x = dvl_update.x_updated;
-      P = dvl_update.P_updated;
-    }
-
-    // filter.csv gets the state after every sensor that fired this step,
-    // innovation and S are left empty
-    pass.result.add(prediction,
-                    FilterUpdate{.x_updated = x, .P_updated = P});
-  }
-  return pass;
-}
-
-// Backward pass of any smoother over a recorded forward pass. The forward
-// pass predicts step k with inputs[k], so the transition from step k to
-// step k + 1 used inputs[k + 1]
-SmootherResult run_backward_pass(BayesianSmoother &smoother,
-                                 const SmootherConfig &smoother_config,
-                                 const FilterResult &filter_result,
-                                 const std::vector<Input> &inputs) {
-  const std::vector<FilterPredict> &predictions = filter_result.predictions();
-  const std::vector<FilterUpdate> &updates = filter_result.updates();
-
-  const int timesteps = inputs.size();
-  std::vector<SmootherUpdate> smoothed(timesteps);
-  smoothed[timesteps - 1] = SmootherUpdate{updates[timesteps - 1].x_updated,
-                                           updates[timesteps - 1].P_updated};
-  for (int k = timesteps - 2; k >= 0; k--) {
-    smoothed[k] = smoother.backward_recursion(updates[k], predictions[k + 1],
-                                              smoothed[k + 1], inputs[k + 1]);
-  }
-
-  SmootherResult smoother_result(smoother_config);
-  for (const SmootherUpdate &smoothed_step : smoothed) {
-    smoother_result.add(smoothed_step);
-  }
-  return smoother_result;
-}
-
-void run_strapdown_ins_2d(const YAML::Node &config,
-                          const std::filesystem::path &output_dir) {
-  std::mt19937_64 rng(config["seed"].as<std::uint64_t>());
-  const int timesteps = config["timesteps"].as<int>();
-
-  // The motion model we are utilizing is a 2d strapdown INS model
-  // x_k = f(x_{k-1}, u_k) + w_k, w_k ~ N(0,Q)
-  // 
-  // The measurement model can be kept linear, and depending on H
-  // we can determine what quantities we observe, e.g with GNSS
-  // H will be 2x8 matrix [I_(2x2), 0_(2x6)]
-  //
-  // z_k = Hx_k + v_k, v_k ~ N(0, R)
-  //
-  // Only the DVL measurement model is nonlinear as it will report
-  // NAV frame through a rotation matrix.
-  // measurements in the body frame which need to be transformed to the
-  //
-  //z_k = h(x_k) + v_k, v_k ~ N(0, R) 
-  
-  // 1. models
-  // the filter's own belief about IMU noise seperate from ground truth model noise
-  auto motion_model =
-      std::make_shared<StrapdownINS2D>(read_ins_config(config, "filter_"));
-
-  // GNSS model
   const double gnss_r = config["gnss_noise_variance"].as<double>();
-  GNSSConfig gnss_config{.position_noise = gnss_r * Eigen::MatrixXd::Identity(2, 2)};
-  auto gnss_measurement_model =
-      std::make_shared<GNSSMeasurementModel>(gnss_config);
+  const Eigen::MatrixXd gnss_R = gnss_r * Eigen::MatrixXd::Identity(2, 2);
+  sensors.push_back(
+      Sensor{"gnss",
+             std::make_shared<GNSSMeasurementModel>(GNSSConfig{.position_noise = gnss_R}),
+             gnss_R, {}, {}});
 
-  // GNSS dual antenna (gnss + heading) model
+  // the magnetometer reports heading directly
+  const double heading_variance = config["magnetometer_noise_variance"].as<double>();
+  sensors.push_back(
+      Sensor{"magnetometer",
+             std::make_shared<MagnetometerMeasurementModel>(
+                 MagnetometerConfig{.heading_noise_variance = heading_variance}),
+             Eigen::MatrixXd::Constant(1, 1, heading_variance), {}, {}});
 
-  Eigen::MatrixXd gnss_and_heading_H = Eigen::MatrixXd::Zero(3, 8);
-  gnss_and_heading_H.block<3, 3>(0, 0).setIdentity(); // position and heading
-  Eigen::VectorXd gnss_and_heading_r = read_vector(config["gnss_and_heading_noise_variance"]);
-  ModelConfig gnss_and_heading_measurement_config{
-      .H = gnss_and_heading_H,
-      .R = Eigen::MatrixXd(gnss_and_heading_r.asDiagonal())};
-  auto gnss_and_heading_measurement_model =
-      std::make_shared<LinearMeasurementModel>(gnss_and_heading_measurement_config);
-
-  // Magnetometer model, reports heading directly
-  MagnetometerConfig magnetometer_config{
-      .heading_noise_variance =
-          config["magnetometer_noise_variance"].as<double>()};
-  auto magnetometer_measurement_model =
-      std::make_shared<MagnetometerMeasurementModel>(magnetometer_config);
-
-  // DVL model, reports body-frame velocity
+  // the DVL reports body-frame velocity
   const Eigen::VectorXd dvl_r = read_vector(config["dvl_noise_variance"]);
   const Eigen::MatrixXd dvl_R = Eigen::MatrixXd(dvl_r.asDiagonal());
-  DVLConfig dvl_config{.velocity_noise = dvl_R};
-  auto dvl_measurement_model =
-      std::make_shared<DVLMeasurementModel>(dvl_config);
+  sensors.push_back(
+      Sensor{"dvl",
+             std::make_shared<DVLMeasurementModel>(DVLConfig{.velocity_noise = dvl_R}),
+             dvl_R, {}, {}});
 
-  // 2. prior and configs
-  INS2DConfig ins_config = read_ins_config(config);
+  return sensors;
+}
 
-  const Eigen::VectorXd x0 = read_vector(config["x0"]);
-  const Eigen::MatrixXd p0 =
-      Eigen::MatrixXd(read_vector(config["p0_diagonal"]).asDiagonal());
-  FilterConfig filter_config{
-      .x_prior = x0, .P_prior = p0, .motion_model = motion_model};
-  SmootherConfig smoother_config{
-      .x_prior = x0, .P_prior = p0, .motion_model = motion_model};
+// The true states and the IMU readings that drive the motion model.
+struct SimulatedData {
+  TruthResult truth_result;
+  std::vector<Input> inputs;
+};
 
+// Moves along the configured path at constant speed and simulates the IMU
+// biases and noise and the sensor noise around it. The measurement of every
+// sensor is stored in the sensor, for every step whether or not the sensor
+// fires there. The order the random series are drawn in decides the data a
+// seed gives: the IMU series first, then the noise of each sensor in order.
+SimulatedData simulate_truth_and_imu(const YAML::Node &config,
+                                     std::mt19937_64 &rng, const int timesteps,
+                                     const INS2DConfig &ins_config,
+                                     std::vector<Sensor> &sensors) {
   SimulationConfig accelerometer_gauss_markov_config{
       .rng = rng,
       .covariance = Eigen::MatrixXd(ins_config.accelerometer_noise_variance.asDiagonal()),
@@ -261,27 +141,12 @@ void run_strapdown_ins_2d(const YAML::Node &config,
   GaussMarkov gyro_gauss_markov{gyro_gauss_markov_config, ins_config.dt};
   GaussMarkov accelerometer_gauss_markov{accelerometer_gauss_markov_config, ins_config.dt};
 
-  // 3. simulate truth and IMU, and keep the inputs for the filter and smoother
   const Trajectory trajectory = build_trajectory(config);
   const double path_speed = config["path_speed"].as<double>();
 
   GaussianWhiteNoise accelerometer_white_noise(
       accelerometer_white_measurement_noise_config);
   GaussianWhiteNoise gyro_white_noise(gyro_white_measurement_noise_config);
-  SimulationConfig gnss_noise_config{.rng = rng,
-                                     .covariance = gnss_config.position_noise,
-                                     .mean = Eigen::VectorXd::Zero(2)};
-  GaussianWhiteNoise gnss_noise(gnss_noise_config);
-  SimulationConfig magnetometer_noise_config{
-      .rng = rng,
-      .covariance = Eigen::MatrixXd::Constant(
-          1, 1, config["magnetometer_noise_variance"].as<double>()),
-      .mean = Eigen::VectorXd::Zero(1)};
-  GaussianWhiteNoise magnetometer_noise(magnetometer_noise_config);
-  SimulationConfig dvl_noise_config{
-      .rng = rng, .covariance = dvl_R, .mean = Eigen::VectorXd::Zero(2)};
-  GaussianWhiteNoise dvl_noise(dvl_noise_config);
-
   // each of these is simulated for the whole run up front, one entry per k
   const std::vector<Eigen::VectorXd> accelerometer_bias_series =
       accelerometer_gauss_markov.simulate(timesteps);
@@ -291,22 +156,23 @@ void run_strapdown_ins_2d(const YAML::Node &config,
       accelerometer_white_noise.simulate(timesteps);
   const std::vector<Eigen::VectorXd> gyro_white_series =
       gyro_white_noise.simulate(timesteps);
-  const std::vector<Eigen::VectorXd> gnss_noise_series =
-      gnss_noise.simulate(timesteps);
-  const std::vector<Eigen::VectorXd> magnetometer_noise_series =
-      magnetometer_noise.simulate(timesteps);
-  const std::vector<Eigen::VectorXd> dvl_noise_series =
-      dvl_noise.simulate(timesteps);
+  std::vector<std::vector<Eigen::VectorXd>> sensor_noise_series;
+  for (const Sensor &sensor : sensors) {
+    SimulationConfig sensor_noise_config{
+        .rng = rng,
+        .covariance = sensor.noise_covariance,
+        .mean = Eigen::VectorXd::Zero(sensor.noise_covariance.rows())};
+    GaussianWhiteNoise sensor_noise(sensor_noise_config);
+    sensor_noise_series.push_back(sensor_noise.simulate(timesteps));
+  }
 
   TruthResult truth_result;
   std::vector<Input> inputs;
-  std::vector<Eigen::VectorXd> measurements;
-  std::vector<Eigen::VectorXd> magnetometer_measurements;
-  std::vector<Eigen::VectorXd> dvl_measurements;
   inputs.reserve(timesteps);
-  measurements.reserve(timesteps);
-  magnetometer_measurements.reserve(timesteps);
-  dvl_measurements.reserve(timesteps);
+  for (Sensor &sensor : sensors) {
+    sensor.measurements.clear();
+    sensor.measurements.reserve(timesteps);
+  }
 
   for (int k = 0; k < timesteps; k++) {
     const double t = k * ins_config.dt;
@@ -321,11 +187,9 @@ void run_strapdown_ins_2d(const YAML::Node &config,
     const Eigen::Vector2d normal(-std::sin(psi), std::cos(psi));
     const Eigen::Vector2d velocity = path_speed * tangent;
     // constant speed -> the only acceleration is centripetal
-    const Eigen::Vector2d acceleration_nav =
-        path_speed * path_speed * sample.curvature * normal;
+    const Eigen::Vector2d acceleration_nav = path_speed * path_speed * sample.curvature * normal;
     // the IMU measures specific force in the body frame, not the nav frame
-    const Eigen::Vector2d acceleration_body =
-        rotation_matrix_z_2D(psi).transpose() * acceleration_nav;
+    const Eigen::Vector2d acceleration_body = rotation_matrix_z_2D(psi).transpose() * acceleration_nav;
 
     Eigen::VectorXd x_true(8);
     x_true << sample.position, psi, velocity, accelerometer_bias_series[k],
@@ -340,93 +204,141 @@ void run_strapdown_ins_2d(const YAML::Node &config,
     reading_vector << accelerometer_reading, gyro_reading;
     Input reading(reading_vector);
 
-    const Eigen::VectorXd z =
-        gnss_measurement_model->h(x_true, reading) + gnss_noise_series[k];
-    const Eigen::VectorXd magnetometer_z =
-        magnetometer_measurement_model->h(x_true, reading) +
-        magnetometer_noise_series[k];
-    const Eigen::VectorXd dvl_z =
-        dvl_measurement_model->h(x_true, reading) + dvl_noise_series[k];
+    for (std::size_t i = 0; i < sensors.size(); i++) {
+      sensors[i].measurements.push_back(sensors[i].model->h(x_true, reading) +
+                                        sensor_noise_series[i][k]);
+    }
 
-    truth_result.add(x_true, z);
+    truth_result.add(x_true);
     inputs.push_back(reading);
-    measurements.push_back(z);
-    magnetometer_measurements.push_back(magnetometer_z);
-    dvl_measurements.push_back(dvl_z);
   }
 
-  // 4. sensor schedule, drawn once so the EKF and the UKF see the same fixes
-  const SensorSchedule schedule =
-      build_sensor_schedule(config, rng, timesteps, ins_config.dt);
-  const Sensor gnss{gnss_measurement_model, measurements, schedule.gnss};
-  const Sensor magnetometer{magnetometer_measurement_model,
-                            magnetometer_measurements, schedule.magnetometer};
-  const Sensor dvl{dvl_measurement_model, dvl_measurements, schedule.dvl};
+  return SimulatedData{std::move(truth_result), std::move(inputs)};
+}
 
-  // 5. EKF forward pass and ERTS backward pass
+// A filter's run together with the smoother's run over it.
+struct EstimatorRun {
+  FilterRun filtered;
+  SmootherResult smoothed;
+};
+
+EstimatorRun run_estimator(BayesianFilter &filter, BayesianSmoother &smoother,
+                           const FilterConfig &filter_config,
+                           const SmootherConfig &smoother_config,
+                           const std::vector<Input> &inputs,
+                           const std::vector<Sensor> &sensors) {
+  FilterRun filtered = run_filter(filter, filter_config, inputs, sensors);
+  SmootherResult smoothed =
+      run_smoother(smoother, smoother_config, filtered.result, inputs);
+  return EstimatorRun{std::move(filtered), std::move(smoothed)};
+}
+
+// Writes <prefix>filter.csv and <prefix>smoother.csv, and the fix file of
+// each sensor. The fix files hold innovations and S, which depend on the
+// filter, so each filter gets its own set. The EKF has no prefix, the others
+// are prefixed ukf_ and iekf_.
+void write_estimator_run(const std::filesystem::path &output_dir,
+                         const std::string &prefix, const EstimatorRun &run) {
+  run.filtered.result.to_csv((output_dir / (prefix + "filter.csv")).string());
+  run.smoothed.to_csv((output_dir / (prefix + "smoother.csv")).string());
+
+  for (const SensorInnovationLog &log : run.filtered.sensor_logs) {
+    write_fix_csv(output_dir / (prefix + log.sensor + "_fixes.csv"),
+                  log.dimension, log.steps, log.z, log.innovations, log.S);
+  }
+}
+
+// Everything that is simulated: the models, the true path, the IMU readings
+// and the measurements and schedule of every sensor.
+struct StrapdownINS2DScenario {
+  FilterConfig filter_config;
+  SmootherConfig smoother_config;
+  SimulatedData simulated;
+  std::vector<Sensor> sensors;
+};
+
+StrapdownINS2DScenario build_strapdown_ins_2d(const YAML::Node &config,
+                                              std::mt19937_64 &rng,
+                                              const int timesteps) {
+  // the filter's own belief about the IMU noise is kept separate from the
+  // noise the truth is simulated with
+  auto motion_model =
+      std::make_shared<StrapdownINS2D>(read_ins_config(config, "filter_"));
+  const INS2DConfig ins_config = read_ins_config(config);
+
+  const Eigen::VectorXd x0 = read_vector(config["x0"]);
+  const Eigen::MatrixXd p0 =
+      Eigen::MatrixXd(read_vector(config["p0_diagonal"]).asDiagonal());
+
+  std::vector<Sensor> sensors = build_sensors(config);
+  SimulatedData simulated =
+      simulate_truth_and_imu(config, rng, timesteps, ins_config, sensors);
+
+  // the schedule is drawn once, so every filter sees the same fixes
+  std::vector<std::string> names;
+  for (const Sensor &sensor : sensors) {
+    names.push_back(sensor.name);
+  }
+  const std::vector<std::vector<bool>> schedules =
+      build_sensor_schedules(config, rng, names, timesteps, ins_config.dt);
+  for (std::size_t i = 0; i < sensors.size(); i++) {
+    sensors[i].due = schedules[i];
+  }
+
+  return StrapdownINS2DScenario{
+      FilterConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
+      SmootherConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
+      std::move(simulated), std::move(sensors)};
+}
+
+// Runs the EKF with the ERTS and the UKF with the URTSS over the scenario and
+// writes their results, the IEKF too for configs that set run_iekf.
+void run_strapdown_ins_2d_estimators(const YAML::Node &config,
+                                     const StrapdownINS2DScenario &scenario,
+                                     const std::filesystem::path &output_dir) {
+  const FilterConfig &filter_config = scenario.filter_config;
+  const SmootherConfig &smoother_config = scenario.smoother_config;
+  const std::vector<Input> &inputs = scenario.simulated.inputs;
+
   ExtendedKalmanFilter ekf(filter_config);
-  ForwardPass ekf_pass =
-      run_forward_pass(ekf, filter_config, inputs, gnss, magnetometer, dvl);
   ERTSSmoother erts(smoother_config);
-  SmootherResult erts_result =
-      run_backward_pass(erts, smoother_config, ekf_pass.result, inputs);
+  EstimatorRun ekf_run = run_estimator(ekf, erts, filter_config,
+                                       smoother_config, inputs, scenario.sensors);
 
-  // 6. UKF forward pass and URTSS backward pass on the same data
   const TransformConfig transform_config{
       .alpha = config["ukf_alpha"].as<double>(1.0),
       .beta = config["ukf_beta"].as<double>(2.0),
       .kappa = config["ukf_kappa"].as<double>(0.0),
-      .dimension = static_cast<int>(x0.size())};
+      .dimension = static_cast<int>(filter_config.x_prior.size())};
   UnscentedKalmanFilter ukf(filter_config, transform_config);
-  ForwardPass ukf_pass =
-      run_forward_pass(ukf, filter_config, inputs, gnss, magnetometer, dvl);
   URTSSmoother urts(smoother_config, transform_config);
-  SmootherResult urts_result =
-      run_backward_pass(urts, smoother_config, ukf_pass.result, inputs);
+  EstimatorRun ukf_run = run_estimator(ukf, urts, filter_config,
+                                       smoother_config, inputs, scenario.sensors);
 
-  // 7. write truth.csv, filter.csv, smoother.csv, ukf_filter.csv and
-  // ukf_smoother.csv to output_dir. The fix files hold innovations and S,
-  // which depend on the filter, so each filter gets its own, the UKF's
-  // prefixed with ukf_
   std::filesystem::create_directories(output_dir);
+  scenario.simulated.truth_result.to_csv((output_dir / "truth.csv").string());
+  write_estimator_run(output_dir, "", ekf_run);
+  write_estimator_run(output_dir, "ukf_", ukf_run);
 
-  truth_result.to_csv((output_dir / "truth.csv").string());
-  ekf_pass.result.to_csv((output_dir / "filter.csv").string());
-  erts_result.to_csv((output_dir / "smoother.csv").string());
-  ukf_pass.result.to_csv((output_dir / "ukf_filter.csv").string());
-  urts_result.to_csv((output_dir / "ukf_smoother.csv").string());
-
-  auto write_fix_files = [&](const ForwardPass &pass, const std::string &prefix) {
-    gnss_measurement_model->write_fix_csv(
-        output_dir / (prefix + "gnss_fixes.csv"), pass.gnss_fixes.steps,
-        pass.gnss_fixes.z, pass.gnss_fixes.innovations, pass.gnss_fixes.S);
-    magnetometer_measurement_model->write_fix_csv(
-        output_dir / (prefix + "magnetometer_fixes.csv"),
-        pass.magnetometer_fixes.steps, pass.magnetometer_fixes.z,
-        pass.magnetometer_fixes.innovations, pass.magnetometer_fixes.S);
-    dvl_measurement_model->write_fix_csv(
-        output_dir / (prefix + "dvl_fixes.csv"), pass.dvl_fixes.steps,
-        pass.dvl_fixes.z, pass.dvl_fixes.innovations, pass.dvl_fixes.S);
-  };
-  write_fix_files(ekf_pass, "");
-  write_fix_files(ukf_pass, "ukf_");
-
-  // 8. The IEKF forward pass and the standard ERTS backward pass over it, on
-  // the same data, only for configs that ask for it with run_iekf. The
-  // smoother is not iterated, only the filter is. Written with the same
-  // names as the UKF's, prefixed iekf_
+  // The IEKF's smoother is the plain ERTS over its output, only the filter
+  // iterates.
   if (config["run_iekf"].as<bool>(false)) {
     const LevenbergMarquardtConfig lm_config = read_lm_config(config);
     IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
-    ForwardPass iekf_pass =
-        run_forward_pass(iekf, filter_config, inputs, gnss, magnetometer, dvl);
-    SmootherResult iekf_erts_result =
-        run_backward_pass(erts, smoother_config, iekf_pass.result, inputs);
-
-    iekf_pass.result.to_csv((output_dir / "iekf_filter.csv").string());
-    iekf_erts_result.to_csv((output_dir / "iekf_smoother.csv").string());
-    write_fix_files(iekf_pass, "iekf_");
+    EstimatorRun iekf_run = run_estimator(iekf, erts, filter_config,
+                                          smoother_config, inputs, scenario.sensors);
+    write_estimator_run(output_dir, "iekf_", iekf_run);
   }
+}
+
+void run_strapdown_ins_2d(const YAML::Node &config,
+                          const std::filesystem::path &output_dir) {
+  std::mt19937_64 rng(config["seed"].as<std::uint64_t>());
+  const int timesteps = config["timesteps"].as<int>();
+
+  const StrapdownINS2DScenario scenario =
+      build_strapdown_ins_2d(config, rng, timesteps);
+  run_strapdown_ins_2d_estimators(config, scenario, output_dir);
 
   std::cout << "Wrote " << timesteps << " timesteps to " << output_dir << "\n";
 }

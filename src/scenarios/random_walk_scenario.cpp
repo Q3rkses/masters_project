@@ -6,6 +6,7 @@
 #include "smoothers/rauch_tung_striebel_smoother.hpp"
 #include "results.hpp"
 #include "simulation.hpp"
+#include "utilities.hpp"
 
 #include <Eigen/Dense>
 #include <iostream>
@@ -92,7 +93,7 @@ void run_random_walk(const YAML::Node &config,
   for (int k = 0; k < timesteps; k++) {
     Eigen::VectorXd x_true = x_true_initial + walk.at(k);
     Eigen::VectorXd z = model_config.H * x_true + noise.at(k);
-    truth_result.add(x_true, z);
+    truth_result.add(x_true);
     measurements.push_back(z);
   }
 
@@ -138,6 +139,16 @@ void run_random_walk(const YAML::Node &config,
   std::filesystem::create_directories(output_dir);
 
   truth_result.to_csv((output_dir / "truth.csv").string());
+  std::vector<int> steps(timesteps);
+  std::vector<Eigen::VectorXd> innovations;
+  std::vector<Eigen::MatrixXd> innovation_covariances;
+  for (int k = 0; k < timesteps; k++) {
+    steps[k] = k;
+    innovations.push_back(updates[k].innovation);
+    innovation_covariances.push_back(updates[k].S);
+  }
+  write_fix_csv(output_dir / "measurement_fixes.csv", dim, steps, measurements,
+                innovations, innovation_covariances);
   filter_result.to_csv((output_dir / "filter.csv").string());
   smoother_result.to_csv((output_dir / "smoother.csv").string());
 

@@ -5,9 +5,6 @@
 namespace {
 const int heading_index = 2;
 const auto velocity_slice = Eigen::seqN(3, 2);
-const int gnss_dim = 2;
-const int magnetometer_dim = 1;
-const int dvl_dim = 2;
 
 Eigen::MatrixXd position_H() {
   Eigen::MatrixXd H = Eigen::MatrixXd::Zero(2, 8);
@@ -22,28 +19,12 @@ GNSSMeasurementModel::GNSSMeasurementModel(const GNSSConfig &config)
           .R = config.position_noise,
       }) {}
 
-void GNSSMeasurementModel::write_fix_csv(
-    const std::filesystem::path &path, const std::vector<int> &fix_steps,
-    const std::vector<Eigen::VectorXd> &measurements,
-    const std::vector<Eigen::VectorXd> &innovations,
-    const std::vector<Eigen::MatrixXd> &S) const {
-  ::write_fix_csv(path, gnss_dim, fix_steps, measurements, innovations, S);
-}
-
 MagnetometerMeasurementModel::MagnetometerMeasurementModel(
     const MagnetometerConfig &config)
     : LinearMeasurementModel(ModelConfig{
           .H = Eigen::RowVectorXd::Unit(8, heading_index),
           .R = Eigen::MatrixXd::Constant(1, 1, config.heading_noise_variance),
       }) {}
-
-void MagnetometerMeasurementModel::write_fix_csv(
-    const std::filesystem::path &path, const std::vector<int> &fix_steps,
-    const std::vector<Eigen::VectorXd> &measurements,
-    const std::vector<Eigen::VectorXd> &innovations,
-    const std::vector<Eigen::MatrixXd> &S) const {
-  ::write_fix_csv(path, magnetometer_dim, fix_steps, measurements, innovations, S);
-}
 
 Eigen::VectorXd MagnetometerMeasurementModel::composition_plus(
     const Eigen::VectorXd &measurement, const Eigen::VectorXd &delta) const {
@@ -106,10 +87,3 @@ bool DVLMeasurementModel::is_linear() const {
   return false; // H depends on state through psi
 }
 
-void DVLMeasurementModel::write_fix_csv(
-    const std::filesystem::path &path, const std::vector<int> &fix_steps,
-    const std::vector<Eigen::VectorXd> &measurements,
-    const std::vector<Eigen::VectorXd> &innovations,
-    const std::vector<Eigen::MatrixXd> &S) const {
-  ::write_fix_csv(path, dvl_dim, fix_steps, measurements, innovations, S);
-}

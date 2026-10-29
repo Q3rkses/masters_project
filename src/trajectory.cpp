@@ -86,8 +86,7 @@ Path make_rounded_rectangle(double width, double height,
   const double quarter_turn = M_PI / 2.0;
 
   // every point below is for a rectangle centered at the origin; this shifts
-  // the whole shape so it starts at (0,0) instead, heading +x, like the
-  // other two trajectories
+  // the whole shape so it starts at (0,0) instead, heading +x
   const Eigen::Vector2d shift(half_width - r, half_height);
 
   Path path;
@@ -128,15 +127,6 @@ Path make_rounded_rectangle(double width, double height,
   return path;
 }
 
-Path make_circle(double radius) {
-  // center placed so the circle starts at (0,0) heading +x (tangent to the
-  // circle at its bottom point), like the other two trajectories
-  Path path;
-  path.add(std::make_shared<ArcSegment>(Eigen::Vector2d(0.0, radius), radius,
-                                        -M_PI / 2.0, 2.0 * M_PI));
-  return path;
-}
-
 Path make_figure_eight(double radius, double center_distance) {
   const double half_distance = center_distance / 2.0;
   if (half_distance <= radius) {
@@ -154,7 +144,7 @@ Path make_figure_eight(double radius, double center_distance) {
 
   // Everything below is built with the crossing at the origin and the
   // centers on the x axis, then rotated by -alpha, so the path starts at the
-  // crossing (0,0) heading +x like the other trajectories.
+  // crossing (0,0) heading +x.
   const Eigen::Rotation2Dd rotate(-alpha);
   const Eigen::Vector2d origin = Eigen::Vector2d::Zero();
   const Eigen::Vector2d up_right =
@@ -187,40 +177,6 @@ Path make_figure_eight(double radius, double center_distance) {
   return path;
 }
 
-Path make_straight_into_turn(double straight_length, double turn_radius,
-                             double turn_sweep) {
-  const Eigen::Vector2d start = Eigen::Vector2d::Zero();
-  const Eigen::Vector2d end(straight_length, 0.0);
-
-  Path path;
-  path.add(std::make_shared<LineSegment>(start, end));
-
-  // the turn's center sits a radius to the left (or right) of where the
-  // straight ends, perpendicular to its heading of 0
-  const double side = turn_sweep >= 0.0 ? 1.0 : -1.0;
-  const Eigen::Vector2d center = end + turn_radius * Eigen::Vector2d(0.0, side);
-  const Eigen::Vector2d center_to_end = end - center;
-  const double start_angle =
-      std::atan2(center_to_end.y(), center_to_end.x());
-
-  path.add(std::make_shared<ArcSegment>(center, turn_radius, start_angle,
-                                        turn_sweep));
-
-  // continue straight after the turn, in whatever direction it left us
-  // heading, instead of stopping right at the end of the arc
-  const double direction = turn_sweep >= 0.0 ? 1.0 : -1.0;
-  const double end_angle = start_angle + turn_sweep;
-  const double heading_after_turn = end_angle + direction * (M_PI / 2.0);
-  const Eigen::Vector2d turn_end =
-      center + turn_radius * Eigen::Vector2d(std::cos(end_angle), std::sin(end_angle));
-  const Eigen::Vector2d after_turn_direction(std::cos(heading_after_turn),
-                                             std::sin(heading_after_turn));
-  path.add(std::make_shared<LineSegment>(
-      turn_end, turn_end + straight_length * after_turn_direction));
-
-  return path;
-}
-
 Trajectory build_trajectory(const YAML::Node &config) {
   const std::string trajectory = config["trajectory"].as<std::string>();
 
@@ -230,19 +186,10 @@ Trajectory build_trajectory(const YAML::Node &config) {
                                    config["rectangle_corner_radius"].as<double>()),
            /*is_closed=*/true};
   }
-  if (trajectory == "circle") {
-    return {make_circle(config["circle_radius"].as<double>()), /*is_closed=*/true};
-  }
   if (trajectory == "figure_eight") {
     return {make_figure_eight(config["figure_eight_radius"].as<double>(),
                               config["figure_eight_center_distance"].as<double>()),
            /*is_closed=*/true};
-  }
-  if (trajectory == "straight_into_turn") {
-    const double turn_sweep = config["turn_sweep_deg"].as<double>() * M_PI / 180.0;
-    return {make_straight_into_turn(config["straight_length"].as<double>(),
-                                    config["turn_radius"].as<double>(), turn_sweep),
-           /*is_closed=*/false};
   }
 
   throw std::runtime_error("unknown trajectory: " + trajectory);

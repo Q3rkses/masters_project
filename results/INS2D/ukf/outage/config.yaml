@@ -39,16 +39,10 @@ magnetometer_period_max: 1.0 # maximum period between magnetometer fixes [s]
 dvl_noise_variance: [1e-2, 1e-2] # (m/s)^2, (m/s)^2, body-frame velocity
 dvl_period_min: 0.2 # minimum period between DVL fixes [s]
 dvl_period_max: 1.0 # maximum period between DVL fixes [s]
-# which trajectory to run: rounded_rectangle | circle | straight_into_turn
+# which trajectory to run: rounded_rectangle | figure_eight
 trajectory: rounded_rectangle
 path_speed: 2 # constant speed along the path [m/s]
 # rounded_rectangle: four straight sides with quarter-circle corners, looped
 rectangle_width: 80.0
 rectangle_height: 50.0
 rectangle_corner_radius: 10.0
-# circle: traced continuously, looped
-circle_radius: 40.0
-# straight_into_turn: straight, turn, then straight again
-straight_length: 296.0
-turn_radius: 5.0
-turn_sweep_deg: 90.0 # degrees, positive = left

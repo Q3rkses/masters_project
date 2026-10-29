@@ -2,186 +2,355 @@
 
 [Back to the overview](../../../README.md) | [Previous: dead reckoning](../dead_reckoning/README.md) | [Next: UKF and URTSS](../ukf/README.md)
 
-A single long GNSS outage in the middle of an otherwise GNSS-aided run,
-rather than a constant sensor mix for the whole run like the other three
-scenarios. GNSS pings at the same fast rate as the [GNSS-only
-scenario](../only_gnss/README.md) (uniform(1, 3)s) for the first 15% and
-last 15% of the run, and is denied entirely for the 70% in between.
-Magnetometer and DVL stay active throughout, same rates as [multi-sensor
-fusion](../multi_sensor_fusion/README.md), so the outage is dead reckoning
-aided by heading and body-frame velocity, not totally unaided.
+GNSS is the only sensor that bounds the position error, and it can disappear: underwater, under bridges, or when it is jammed. This scenario runs a full sensor set with dense GNSS and switches GNSS off for 210 s in the middle of the run. The magnetometer and the DVL keep running, so the outage is dead reckoning aided by heading and body-frame velocity, bracketed by normal operation.
 
-Run twice: once with the filter's IMU noise belief matched to the truth,
-once deliberately mistuned (1.6x gyro, 1.8x accel), to see whether the
-mismatch shows up differently during an outage than it does with GNSS
-constantly available.
+|               |                                  |
+| ------------- | -------------------------------- |
+| **Status**    | done, consistent except the magnetometer ANIS |
+| **Run**       | 30000 timesteps (300 s at $\Delta t = 0.01$ s), seed 42 |
+| **Reproduce** | see [Reproduction](#reproduction) |
 
-|               |                                                   |
-| ------------- | ------------------------------------------------- |
-| **Status**    | done, consistent except magnetometer               |
-| **Run**       | 30000 timesteps (5 minutes at dt=0.01s), seed 42   |
-| **Reproduce** | see [Reproduce](#reproduce)                        |
+## Motivation
 
-## Setup
+An outage shows what the aiding is worth and how the estimators behave when it is lost and returns:
 
-Same shared parameters as [GNSS only](../only_gnss/README.md#setup), on two
-trajectories (`rounded_rectangle` in `matched` and `mistuned`, `figure_eight`
-in `figure_eight_matched` and `figure_eight_mistuned`), with:
+- How fast does the filter's uncertainty grow during the outage, and does it match the error?
+- What does the smoother, which has GNSS on both sides of the outage, recover?
+- Does a filter whose IMU noise model is mistuned behave differently during an outage than with GNSS constantly available?
 
-| sensor       | period            | denied window | fixes per run |
-| ------------ | ------------------ | -------------- | -------------- |
-| GNSS         | uniform(1, 3)s      | 45-255s        | 45             |
-| Magnetometer | uniform(0.25, 1)s   | never          | ~470           |
-| DVL          | uniform(0.2, 1)s    | never          | ~490           |
+Each question is answered on two paths, a four-corner test and a figure-eight, and for two filter settings, one with the IMU noise parameters of the simulator (matched) and one with them deliberately wrong (mistuned).
 
-`matched`: `filter_gyro_noise_variance` 5e-5, `filter_accelerometer_noise_variance`
-[5e-2, 5e-2], same as true.
-`mistuned`: `filter_gyro_noise_variance` 8e-5, `filter_accelerometer_noise_variance`
-[9e-2, 9e-2], true stays the same as `matched`.
-`figure_eight_matched` and `figure_eight_mistuned`: the same two settings on the
-figure-eight path (see [GNSS only](../only_gnss/README.md#setup) for its
-geometry), with the same sensors and the same denied window.
+## Problem formulation
 
-## Reproduce
+### State and motion model
 
-```bash
-python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/<matched|mistuned|figure_eight_matched|figure_eight_mistuned>/data
-```
+The state collects position, heading, velocity in the navigation frame and the two sensor biases,
 
-To regenerate the data, copy
-`results/INS2D/gnss_outage/<matched|mistuned|figure_eight_matched|figure_eight_mistuned>/config.yaml` over
-`configs/strapdown_ins_2D.yaml`, then follow the same steps as
-[GNSS only's reproduce section](../only_gnss/README.md#reproduce).
+$$
+x = \begin{bmatrix} p^\top & \psi & v^\top & b_a^\top & b_g \end{bmatrix}^\top \in \mathbb{R}^{8},
+\qquad p, v \in \mathbb{R}^2 .
+$$
 
-## Results
+The IMU reading $u_k$ is corrected with the estimated biases, $\tilde a_k = a_k - b_{a,k}$ and
+$\tilde\omega_k = \omega_k - b_{g,k}$, and integrated with the heading at the middle of the step,
+$\psi_{k+\frac12} = \psi_k + \tfrac{\Delta t}{2}\tilde\omega_k$:
 
-### Variance
+$$
+\begin{aligned}
+p_{k+1} &= p_k + \Delta t\, v_k + \tfrac{\Delta t^2}{2}\, R(\psi_{k+\frac12})\,\tilde a_k, \\
+\psi_{k+1} &= \psi_k + \Delta t\, \tilde\omega_k, \\
+v_{k+1} &= v_k + \Delta t\, R(\psi_{k+\frac12})\,\tilde a_k, \\
+b_{a,k+1} &= e^{-\Delta t / T_a}\, b_{a,k}, \qquad b_{g,k+1} = e^{-\Delta t / T_g}\, b_{g,k}.
+\end{aligned}
+$$
 
-![Filter vs smoother variance, matched](matched/figures/ins_6_variance.png)
+Written as $x_k = f(x_{k-1}, u_k) + w_k$ with $w_k \sim \mathcal{N}(0, Q_k)$. The biases are first-order
+Gauss-Markov processes with time constant $T$ and stationary variance $\sigma_b^2$, driven by white noise of
+intensity $2\sigma_b^2 / T$. White accelerometer noise enters the velocity and white gyro noise the heading. With $G_k$ mapping the
+six noise sources into the state and $D$ the diagonal matrix of their intensities, the process noise is the first-order approximation
 
-Log scale, since the outage pushes the filter's variance up almost two
-orders of magnitude before GNSS returns. The shape is the clean textbook
-case: the filter's variance grows through the whole outage (bounded by
-magnetometer/DVL, not unbounded the way pure dead reckoning would be, see
-the [dead reckoning scenario](../dead_reckoning/README.md)) and snaps back
-down hard the moment GNSS resumes. The smoother, anchored by GNSS on both
-sides of the outage, peaks in the middle and stays below the filter at
-every single timestep, the same invariant checked for the random walk
-case. The mistuned run looks near-identical at this scale (image in
-`mistuned/figures/ins_6_variance.png`); a 1.6-1.8x IMU noise mismatch is
-small next to the outage's own effect on variance.
+$$
+Q_k = G_k\, D\, G_k^\top\, \Delta t .
+$$
 
-### Bias
 
-![Sensor bias, matched](matched/figures/ins_7_bias.png)
+| symbol | meaning |
+| --- | --- |
+| $x_k = \begin{bmatrix} p_k^\top & \psi_k & v_k^\top & b_{a,k}^\top & b_{g,k} \end{bmatrix}^\top$ | state: position, heading, navigation-frame velocity, accelerometer and gyro bias |
+| $u_k = \begin{bmatrix} a_k^\top & \omega_k \end{bmatrix}^\top$ | IMU reading: body-frame specific force and yaw rate |
+| $R(\psi)$ | rotation from the body to the navigation frame |
+| $\bar x_k,\ \bar P_k$ | predicted mean and covariance |
+| $\hat x_k,\ \hat P_k$ | updated (filtered) mean and covariance |
+| $\hat x^s_k,\ P^s_k$ | smoothed mean and covariance |
+| $\eta_k,\ S_k$ | innovation and innovation covariance |
+| $W_k$ | Kalman gain |
+| $\boxplus,\ \boxminus$ | addition and subtraction that wrap the heading to $(-\pi, \pi]$ |
 
-Accelerometer bias (both axes) tracks the true value closely through the
-entire run, outage included, magnetometer and DVL give the filter enough
-to keep learning it even with GNSS gone. Gyro bias is noisier and drifts
-further from truth than the other two, consistent with it being the
-hardest of the three biases to observe in this setup (see the
-[GNSS-only](../only_gnss/README.md) and [short-gap random
-walk](../../2D/README.md) scenarios for the same pattern). The mistuned
-run's bias plot looks very similar; see
-`mistuned/figures/ins_7_bias.png`.
+
+| parameter | value |
+| --- | --- |
+| time step $\Delta t$, steps, duration | 0.01 s, 30000, 300 s |
+| speed along the path | 2 m/s |
+| accelerometer bias: variance $\sigma_{b_a}^2$, time constant $T_a$ | $5\cdot10^{-2}$ (m/s²)², 1000 s, both axes |
+| gyro bias: variance $\sigma_{b_g}^2$, time constant $T_g$ | $5\cdot10^{-5}$ (rad/s)², 1000 s |
+| white noise intensity, accelerometer / gyro | $5\cdot10^{-4}$ (m/s²)²·s / $5\cdot10^{-4}$ rad²/s |
+| prior mean $\hat x_0$ | $[0,\ 0,\ 0,\ 2,\ 0,\ 0,\ 0,\ 0]^\top$ |
+| prior covariance $\hat P_0$ | $\operatorname{diag}(0.4,\ 0.4,\ 0.04,\ 0.04,\ 0.04,\ 0.004,\ 0.004,\ 0.0004)$ |
+
+
+The truth is simulated, not generated by $f$. A geometric path (below) gives position, heading and curvature at constant
+speed; the velocity is the speed along the heading, the specific force is the centripetal acceleration rotated into the body frame, and
+each IMU reading is that ideal value plus a simulated Gauss-Markov bias plus white noise. The filter is configured with the same noise
+values the simulator uses. The configuration values match; the white-noise intensity is read as a continuous-time intensity by the filter
+and drawn as a per-sample variance by the simulator, so the noise statistics differ by a factor $1/\Delta t$ in variance, and the truth starts
+exactly at the prior mean. Both push the position covariance in the conservative direction. The study guide (chapter 12) documents them.
+
+### Sensors
+
+**GNSS** observes the position directly,
+
+$$
+z^{g}_k = H_g\, x_k + \varepsilon^{g}_k, \qquad H_g = \begin{bmatrix} I_2 & 0_{2\times 6} \end{bmatrix}, \qquad \varepsilon^{g}_k \sim \mathcal{N}(0,\ 0.2\, I_2)\ \mathrm{m^2}.
+$$
+
+**Magnetometer** observes the heading,
+
+$$
+z^{m}_k = \psi_k + \varepsilon^{m}_k, \qquad \varepsilon^{m}_k \sim \mathcal{N}(0,\ 3\cdot 10^{-3})\ \mathrm{rad^2},
+$$
+
+and its innovation is wrapped, $\eta^m_k = z^m_k \boxminus h^m(\bar x_k)$.
+
+**DVL** observes the velocity in the body frame, which makes it the one nonlinear sensor,
+
+$$
+z^{d}_k = R(\psi_k)^\top v_k + \varepsilon^{d}_k, \qquad
+H_d = \begin{bmatrix} 0_{2\times 2} & \dfrac{\partial R^\top}{\partial \psi}\, v & R(\psi)^\top & 0_{2\times 3} \end{bmatrix}, \qquad
+\varepsilon^{d}_k \sim \mathcal{N}(0,\ 10^{-2}\, I_2)\ \mathrm{(m/s)^2}.
+$$
+
+
+GNSS fires at random intervals drawn uniformly from 1 to 3 s, except that none is delivered between $t = 45$ s and $t = 255$ s (so 45 fixes in total). The magnetometer (0.25 to 1 s, 470 fixes) and the DVL (0.2 to 1 s, 492 fixes) run throughout.
+
+The filter's IMU noise parameters are set in two ways, with the simulator unchanged:
+
+| setting | gyro bias variance $\sigma_{b_g}^2$ [(rad/s)²] | accelerometer bias variance $\sigma_{b_a}^2$ [(m/s²)²] | factor against the simulator |
+| --- | --- | --- | --- |
+| matched | $5\cdot10^{-5}$ | $5\cdot10^{-2}$ | 1 |
+| mistuned | $8\cdot10^{-5}$ | $9\cdot10^{-2}$ | 1.6 (gyro), 1.8 (accelerometer) |
+
+
+### Trajectories
+
+Both paths are traced at constant speed starting at the origin heading $+x$.
+
+| trajectory | geometry | length per lap | laps in 300 s |
+| --- | --- | --- | --- |
+| four-corner test (`rounded_rectangle`) | $80 \times 50$ m rectangle with corner radius 10 m, counterclockwise: left turns only | 242.8 m | 2.5 |
+| figure-eight (`figure_eight`) | two circles of radius 20 m with centres 70 m apart, joined by two straights that cross at the origin: one right and one left turn per lap | 289.2 m | 2.1 |
+
+### Estimators
+
+When several sensors fire in the same step they update in turn, each starting from the result of the previous one.
+
+**Extended Kalman filter.** Prediction and update with sensor model $h$, Jacobians $F$ and $H$, and measurement noise $R$:
+
+$$
+\bar x_k = f(\hat x_{k-1}, u_k), \qquad \bar P_k = F_k \hat P_{k-1} F_k^\top + Q_k,
+$$
+
+$$
+\eta_k = z_k \boxminus h(\bar x_k), \qquad S_k = H_k \bar P_k H_k^\top + R, \qquad W_k = \bar P_k H_k^\top S_k^{-1},
+$$
+
+$$
+\hat x_k = \bar x_k \boxplus W_k \eta_k, \qquad
+\hat P_k = (I - W_k H_k)\, \bar P_k\, (I - W_k H_k)^\top + W_k R\, W_k^\top .
+$$
+
+The covariance update is written in Joseph form, which keeps $\hat P_k$ positive semidefinite.
+
+**Extended Rauch-Tung-Striebel smoother (ERTS).** Run backward over the stored filter output, starting from
+$\hat x^s_N = \hat x_N$, with $F_k$ evaluated at the filtered state:
+
+$$
+G_k = \hat P_k F_k^\top \bar P_{k+1}^{-1}, \qquad
+\hat x^s_k = \hat x_k \boxplus G_k\,(\hat x^s_{k+1} \boxminus \bar x_{k+1}), \qquad
+P^s_k = \hat P_k + G_k\,(P^s_{k+1} - \bar P_{k+1})\,G_k^\top .
+$$
 
 ### Consistency
 
-**matched**
+A filter is consistent if the errors it makes agree with the covariance it reports. Two statistics test this, with the truth $x_k$ known from the simulation.
 
-|                         | value  | band             | verdict      |
-| ----------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS               | 1.9989 | [1.4349, 2.6574] | consistent   |
-| ANIS magnetometer       | 0.8573 | [0.8682, 1.1410] | INCONSISTENT |
-| ANIS DVL                | 1.9935 | [1.8296, 2.1779] | consistent   |
-| ANEES position filter   | 1.4470 | [1.2959, 2.8544] | consistent   |
-| ANEES position smoother | 1.5674 | [0.0506, 7.3778] | consistent   |
+$$
+\mathrm{NIS}_k = \eta_k^\top S_k^{-1} \eta_k \sim \chi^2_{m}, \qquad
+\mathrm{NEES}_k = (p_k - \hat p_k)^\top \big(\hat P^{pp}_k\big)^{-1} (p_k - \hat p_k) \sim \chi^2_{2},
+$$
 
-RMSE: filter 1.00m, smoother 0.71m.
+where $m$ is the measurement dimension (2 for GNSS and DVL, 1 for the magnetometer) and $\hat P^{pp}_k$ is the position block of the covariance.
+The NIS is evaluated at every fix of a sensor. The NEES is evaluated for the position at every step, for the filter and for the smoother.
+The time average $\bar\epsilon = \frac{1}{N}\sum_k \epsilon_k$ of either statistic with $d$ degrees of freedom is held against the interval
 
-**mistuned**
+$$
+\left[\ \frac{\chi^2_{\alpha/2}(N_{\mathrm{eff}}\, d)}{N_{\mathrm{eff}}},\ \ \frac{\chi^2_{1-\alpha/2}(N_{\mathrm{eff}}\, d)}{N_{\mathrm{eff}}}\ \right], \qquad
+N_{\mathrm{eff}} = \max\!\Big(1,\ N\,\frac{1-\rho}{1+\rho}\Big), \qquad \alpha = 0.05,
+$$
 
-|                         | value  | band             | verdict      |
-| ----------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS               | 1.9969 | [1.4434, 2.6459] | consistent   |
-| ANIS magnetometer       | 0.8487 | [0.8668, 1.1426] | INCONSISTENT |
-| ANIS DVL                | 1.9253 | [1.8274, 2.1803] | consistent   |
-| ANEES position filter   | 1.4555 | [1.3109, 2.8323] | consistent   |
-| ANEES position smoother | 1.5343 | [0.0506, 7.3778] | consistent   |
+where $\rho$ is the lag-one autocorrelation of the series. A statistic is "consistent" if its time average lies inside the interval. A value below the interval
+means the filter reports more uncertainty than its errors need (conservative), above means less (overconfident).
+The position NEES is strongly autocorrelated, so $N_{\mathrm{eff}}$ is small and the interval wide; for the smoother it is so wide that it excludes almost nothing. The
+share of steps with the true position inside the reported 95% ellipse is a second check that does not depend on it.
+All numbers are from one run with seed 42, so they carry no error bars.
 
-RMSE: filter 1.01m, smoother 0.70m.
+## Reproduction
 
-Magnetometer ANIS is the one surprise, mildly inconsistent in both runs,
-and just under its band both times (0.857 and 0.849 against bands starting
-around 0.87). The [dead reckoning
-scenario](../dead_reckoning/README.md#consistency-read-carefully) gives the
-same result (0.81 on all three trajectories), so the filter is a touch
-underconfident about the magnetometer's `R`, not overconfident. Worth a
-look in a future retuning pass.
+Build once, then simulate and analyse each case:
+
+```bash
+cmake -S . -B build && cmake --build build
+./build/kalman_filtering_and_smoothing results/INS2D/gnss_outage/matched
+python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/matched/data
+./build/kalman_filtering_and_smoothing results/INS2D/gnss_outage/mistuned
+python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/mistuned/data
+./build/kalman_filtering_and_smoothing results/INS2D/gnss_outage/figure_eight_matched
+python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/figure_eight_matched/data
+./build/kalman_filtering_and_smoothing results/INS2D/gnss_outage/figure_eight_mistuned
+python3 scripts/analyze_ins_2d.py results/INS2D/gnss_outage/figure_eight_mistuned/data
+```
+
+The executable reads `<case>/config.yaml` and writes `<case>/data`. Given a folder that holds several cases, it runs all of them, so
+`./build/kalman_filtering_and_smoothing results/INS2D/gnss_outage` simulates every case of this page in one command. The analysis reads `<case>/data`
+and writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`.
+
+`data/` holds one CSV file per quantity with one row per timestep and a shared `timestep` column. `truth.csv` has the true state `x_true_0 ... x_true_7`;
+`filter.csv` and `smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `*_fixes.csv` has, for each fix of one sensor, the raw measurement,
+the innovation and $S$, which is what the NIS is computed from.
+
+## Results
+
+### Four-corner test
+
+#### Matched filter
+
+Top left: the path with every GNSS fix and the EKF and ERTS estimates. Top right: a 15 s zoom on the largest filter error, with 95% position ellipses. Bottom: when each sensor fired.
+
+![Path and estimates](matched/figures/1_scenario.png)
+
+Error against truth with each estimator's own 95% band, and the position spread $\sqrt{\operatorname{tr}P_{xy}}$ the estimator reports. The background is shaded where GNSS is denied.
+
+![Estimation error](matched/figures/2_errors.png)
+
+True and estimated sensor biases.
+
+![Bias estimates](matched/figures/3_biases.png)
+
+NIS of every fix against its 95% interval, and the running mean of the position NEES.
+
+![Consistency](matched/figures/4_consistency.png)
+
+| statistic | value | 95% band | verdict |
+| --- | --- | --- | --- |
+| ANIS GNSS | 1.9989 | [1.4349, 2.6574] | consistent |
+| ANIS magnetometer | 0.8573 | [0.8682, 1.1410] | INCONSISTENT |
+| ANIS DVL | 1.9935 | [1.8296, 2.1779] | consistent |
+| ANEES position filter (EKF) | 1.4470 | [1.2959, 2.8544] | consistent |
+| ANEES position smoother (ERTS) | 1.5674 | [0.0506, 7.3778] | consistent |
+
+| estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE heading [°] |
+| --- | --- | --- | --- | --- | --- |
+| EKF | 0.999 | 0.987 | 1.573 | 1.945 | 1.31 |
+| ERTS | 0.706 | 0.348 | 1.453 | 1.616 | 0.79 |
+
+| estimator | RMSE $b_{a,x}$ [m/s²] | RMSE $b_{a,y}$ [m/s²] | RMSE $b_g$ [rad/s] | peak $\lvert b_g - \hat b_g \rvert$ [rad/s] |
+| --- | --- | --- | --- | --- |
+| EKF | 0.0212 | 0.0242 | 0.00186 | 0.0106 |
+| ERTS | 0.0099 | 0.0110 | 0.00133 | 0.0034 |
+
+#### Mistuned filter
+
+The error and the consistency of the mistuned filter on the same data (the [path](mistuned/figures/1_scenario.png) and the [biases](mistuned/figures/3_biases.png) are in its figures folder).
+
+![Estimation error, mistuned](mistuned/figures/2_errors.png)
+
+![Consistency, mistuned](mistuned/figures/4_consistency.png)
+
+| statistic | value | 95% band | verdict |
+| --- | --- | --- | --- |
+| ANIS GNSS | 1.9969 | [1.4434, 2.6459] | consistent |
+| ANIS magnetometer | 0.8487 | [0.8668, 1.1426] | INCONSISTENT |
+| ANIS DVL | 1.9253 | [1.8274, 2.1803] | consistent |
+| ANEES position filter (EKF) | 1.4555 | [1.3109, 2.8323] | consistent |
+| ANEES position smoother (ERTS) | 1.5343 | [0.0506, 7.3778] | consistent |
+
+| estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE heading [°] |
+| --- | --- | --- | --- | --- | --- |
+| EKF | 1.007 | 1.000 | 1.584 | 1.938 | 1.29 |
+| ERTS | 0.699 | 0.341 | 1.442 | 1.596 | 0.80 |
+
+| estimator | RMSE $b_{a,x}$ [m/s²] | RMSE $b_{a,y}$ [m/s²] | RMSE $b_g$ [rad/s] | peak $\lvert b_g - \hat b_g \rvert$ [rad/s] |
+| --- | --- | --- | --- | --- |
+| EKF | 0.0213 | 0.0238 | 0.00181 | 0.0106 |
+| ERTS | 0.0101 | 0.0106 | 0.00120 | 0.0031 |
 
 ### Figure-eight
 
-The same outage and the same two settings on the figure-eight path.
+#### Matched filter
 
-![Filter vs smoother variance, figure-eight matched](figure_eight_matched/figures/ins_6_variance.png)
+Top left: the path with every GNSS fix and the EKF and ERTS estimates. Top right: a 15 s zoom on the largest filter error, with 95% position ellipses. Bottom: when each sensor fired.
 
-The variance has the same shape as on the rounded rectangle: the filter's
-grows through the outage, here by about a factor of 40 (from about 0.1 to
-4.5), and snaps back down at 255 s when GNSS resumes. The smoother peaks at
-about 1 in the middle and stays below the filter at every timestep (checked
-for both runs).
+![Path and estimates](figure_eight_matched/figures/1_scenario.png)
 
-![Sensor bias, figure-eight matched](figure_eight_matched/figures/ins_7_bias.png)
+Error against truth with each estimator's own 95% band, and the position spread $\sqrt{\operatorname{tr}P_{xy}}$ the estimator reports. The background is shaded where GNSS is denied.
 
-Both accelerometer biases are tracked closely through the whole run, outage
-included. The gyro bias is the weak one again: the EKF swings between about
--0.006 and 0.010 rad/s in the first 1000 steps and then follows the true
-level only loosely, and the ERTS estimate is nearly flat around 0.002-0.0035
-and does not follow the rise of the true bias to about 0.007 near step 19000.
+![Estimation error](figure_eight_matched/figures/2_errors.png)
 
-**figure_eight_matched**
+True and estimated sensor biases.
 
-|                         | value  | band             | verdict      |
-| ----------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS               | 1.8012 | [1.4325, 2.6608] | consistent   |
-| ANIS magnetometer       | 0.8593 | [0.8682, 1.1410] | INCONSISTENT |
-| ANIS DVL                | 1.9876 | [1.8297, 2.1778] | consistent   |
-| ANEES position filter   | 2.3378 | [1.1958, 3.0076] | consistent   |
-| ANEES position smoother | 1.7506 | [0.0506, 7.3778] | consistent   |
+![Bias estimates](figure_eight_matched/figures/3_biases.png)
 
-RMSE: filter 1.42m, smoother 0.68m.
+NIS of every fix against its 95% interval, and the running mean of the position NEES.
 
-**figure_eight_mistuned**
+![Consistency](figure_eight_matched/figures/4_consistency.png)
 
-|                         | value  | band             | verdict      |
-| ----------------------- | ------ | ---------------- | ------------ |
-| ANIS GNSS               | 1.7956 | [1.4384, 2.6527] | consistent   |
-| ANIS magnetometer       | 0.8495 | [0.8669, 1.1425] | INCONSISTENT |
-| ANIS DVL                | 1.9217 | [1.8275, 2.1801] | consistent   |
-| ANEES position filter   | 2.3365 | [1.1938, 3.0108] | consistent   |
-| ANEES position smoother | 1.7878 | [0.0506, 7.3778] | consistent   |
+| statistic | value | 95% band | verdict |
+| --- | --- | --- | --- |
+| ANIS GNSS | 1.8012 | [1.4325, 2.6608] | consistent |
+| ANIS magnetometer | 0.8593 | [0.8682, 1.1410] | INCONSISTENT |
+| ANIS DVL | 1.9876 | [1.8297, 2.1778] | consistent |
+| ANEES position filter (EKF) | 2.3378 | [1.1958, 3.0076] | consistent |
+| ANEES position smoother (ERTS) | 1.7506 | [0.0506, 7.3778] | consistent |
 
-RMSE: filter 1.43m, smoother 0.70m.
+| estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE heading [°] |
+| --- | --- | --- | --- | --- | --- |
+| EKF | 1.419 | 1.247 | 2.380 | 2.634 | 1.36 |
+| ERTS | 0.684 | 0.394 | 1.321 | 1.548 | 0.84 |
 
-The consistency story is the same as on the rounded rectangle: consistent
-everywhere except the magnetometer ANIS, just under its band in both runs
-(0.859 and 0.850 against lower edges of 0.868 and 0.867). The filter's RMSE is
-higher than on the rounded rectangle (1.42-1.43m against 1.00-1.01m), while
-the smoother's is about the same (0.68-0.70m against 0.70-0.71m). The
-[dead reckoning](../dead_reckoning/README.md#consistency-read-carefully)
-page saw the error grow with how much the vehicle turns, and the figure-eight
-turns for about 60% of its length, which fits but was not tested here.
+| estimator | RMSE $b_{a,x}$ [m/s²] | RMSE $b_{a,y}$ [m/s²] | RMSE $b_g$ [rad/s] | peak $\lvert b_g - \hat b_g \rvert$ [rad/s] |
+| --- | --- | --- | --- | --- |
+| EKF | 0.0207 | 0.0239 | 0.00186 | 0.0106 |
+| ERTS | 0.0100 | 0.0109 | 0.00134 | 0.0034 |
 
-## Takeaways and limits
+#### Mistuned filter
 
-- The variance plot is the clearest illustration in this whole results set
-  of what the smoother buys over the filter: identical sensors, identical
-  data, and the smoother's peak uncertainty mid-outage is still below the
-  filter's uncertainty at almost every other point in the run.
-- The deliberate IMU mismatch (1.6x gyro, 1.8x accel) doesn't show up as a
-  meaningfully different consistency story here, both runs are consistent
-  in the same places and inconsistent in the same place (magnetometer).
-  Either the mismatch is too small to matter at this outage length, or its
-  effect is swamped by the outage itself.
-- Single seed, two trajectories (rounded rectangle and figure-eight). The
-  outage window (45-255s) and GNSS rate were chosen by hand, not swept.
+The error and the consistency of the mistuned filter on the same data (the [path](figure_eight_mistuned/figures/1_scenario.png) and the [biases](figure_eight_mistuned/figures/3_biases.png) are in its figures folder).
+
+![Estimation error, mistuned](figure_eight_mistuned/figures/2_errors.png)
+
+![Consistency, mistuned](figure_eight_mistuned/figures/4_consistency.png)
+
+| statistic | value | 95% band | verdict |
+| --- | --- | --- | --- |
+| ANIS GNSS | 1.7956 | [1.4384, 2.6527] | consistent |
+| ANIS magnetometer | 0.8495 | [0.8669, 1.1425] | INCONSISTENT |
+| ANIS DVL | 1.9217 | [1.8275, 2.1801] | consistent |
+| ANEES position filter (EKF) | 2.3365 | [1.1938, 3.0108] | consistent |
+| ANEES position smoother (ERTS) | 1.7878 | [0.0506, 7.3778] | consistent |
+
+| estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE heading [°] |
+| --- | --- | --- | --- | --- | --- |
+| EKF | 1.428 | 1.250 | 2.400 | 2.649 | 1.33 |
+| ERTS | 0.702 | 0.389 | 1.352 | 1.596 | 0.85 |
+
+| estimator | RMSE $b_{a,x}$ [m/s²] | RMSE $b_{a,y}$ [m/s²] | RMSE $b_g$ [rad/s] | peak $\lvert b_g - \hat b_g \rvert$ [rad/s] |
+| --- | --- | --- | --- | --- |
+| EKF | 0.0207 | 0.0236 | 0.00181 | 0.0106 |
+| ERTS | 0.0100 | 0.0107 | 0.00121 | 0.0031 |
+
+## Discussion
+
+- **The filter's uncertainty grows through the outage and is reset when GNSS returns.** On the figure-eight the reported spread $\sqrt{\operatorname{tr}P_{xy}}$ is 0.36 m shortly before the outage and 2.1 m just before GNSS returns at 255 s, then falls under 1 m at the first fix (bottom panel of the error figure). The growth is bounded by the magnetometer and the DVL, not unbounded as in pure dead reckoning.
+- **The reported covariance matches the error.** The filter's position ANEES is 1.45 (four-corner) and 2.34 (figure-eight), inside the bands, with the true position inside the 95% ellipse on 97.6% and 97.9% of the steps. The GNSS and DVL ANIS are consistent on both paths.
+- **The magnetometer ANIS is the one failure.** 0.857 and 0.859 against lower band edges of 0.868 and 0.868: the filter is slightly less certain about the heading fixes than their errors need, too small for the innovation covariance to match. The study guide (chapter 12) moved this statistic into its band by making the simulator's white-noise level match the filter's, in a test on dead reckoning only; that was not repeated here.
+- **The figure-eight has the larger filter error.** Position RMSE is 1.42 m against 1.00 m on the four-corner test for the matched filter, while the smoothers agree (0.68 m and 0.71 m). The figure-eight turns for about 60% of its length against about 26% for the four-corner test (corner arcs $2\pi\cdot 10$ m out of 242.8 m); this fits error growing with turning but was not isolated here.
+- **The smoother recovers a large part of the error.** Position RMSE falls from 1.00 to 0.71 m and from 1.42 to 0.68 m, reductions of 29% and 52%. The smoother's own uncertainty peaks mid-outage but stays below the filter's at every step in all four runs (`stats.txt`).
+- **The mistuning is hardly visible.** The 1.6 to 1.8 times larger IMU noise in the filter changes the position RMSE from 0.999 to 1.007 m and from 1.419 to 1.428 m, and every verdict is the same. Either the factor is small next to the effect of the outage itself or the aiding sensors absorb it.
+- **Biases.** Accelerometer biases are tracked through the outage (RMSE 0.021 and 0.024 m/s² on the figure-eight); the gyro bias is the weaker one, with a peak filter error of 0.0106 rad/s and a smoothed estimate that varies slowly while the true bias moves between about 0 and 0.007 rad/s.
+- **Limits.** One seed; the outage window and the GNSS rate were chosen by hand and not swept; only one mismatch factor is tried.
+
+## Related results
+
+- [GNSS only](../only_gnss/README.md) is this GNSS rate without the outage and without the other sensors.
+- [Dead reckoning](../dead_reckoning/README.md) has the same magnetometer and DVL and no GNSS for the whole run.
+- [Multi-sensor fusion](../multi_sensor_fusion/README.md) has all three sensors with sparse GNSS throughout.
+- [UKF](../ukf/README.md) and [IEKF](../iekf/README.md) rerun this data with other estimators, and the UKF page adds a run in which the filter's initial heading is wrong.

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Plot the filter and smoother results and check their consistency.
+"""Plot the filter and smoother results and check their consistency. Reads
+truth.csv, filter.csv, smoother.csv and measurement_fixes.csv from data_dir.
 
 usage: analyze_1d.py [data_dir]
 """
@@ -157,9 +158,10 @@ def main():
     truth = load(data_dir / "truth.csv")
     filtered = load(data_dir / "filter.csv")
     smoothed = load(data_dir / "smoother.csv")
+    measurements = load(data_dir / "measurement_fixes.csv")
 
     k = truth["timestep"]
-    x_true, z = truth["x_true_0"], truth["z_0"]
+    x_true, z = truth["x_true_0"], measurements["z_0"]
     x_filter, P_filter = filtered["x_updated_0"], filtered["P_updated_0_0"]
     x_smoother, P_smoother = smoothed["x_smoothed_0"], smoothed["P_smoothed_0_0"]
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Plot the 2D filter and smoother results and check their consistency.
 
-Assumes state components 0 and 1 are the x and y position.
+Assumes state components 0 and 1 are the x and y position. Reads truth.csv,
+filter.csv, smoother.csv and measurement_fixes.csv from data_dir.
 
 usage: analyze_2d.py [data_dir]
 """
@@ -196,10 +197,11 @@ def main():
     truth = load(data_dir / "truth.csv")
     filtered = load(data_dir / "filter.csv")
     smoothed = load(data_dir / "smoother.csv")
+    measurements = load(data_dir / "measurement_fixes.csv")
 
     k = truth["timestep"]
     x_true = vectors(truth, "x_true", STATE_DIM)
-    z = vectors(truth, "z", MEASUREMENT_DIM)
+    z = vectors(measurements, "z", MEASUREMENT_DIM)
     x_filter = vectors(filtered, "x_updated", STATE_DIM)
     P_filter = matrices(filtered, "P_updated", STATE_DIM)
     innovation = vectors(filtered, "innovation", MEASUREMENT_DIM)

@@ -11,36 +11,39 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <random>
+#include <string>
 #include <vector>
 #include <yaml-cpp/yaml.h>
 
-// which sensors fire at which step. Drawn once up front, so every filter
-// that runs on this data sees exactly the same fixes. Three sensors, three
-// schedules, all uniform. A step is only skipped by GNSS if it falls inside
-// the denied window
-struct SensorSchedule {
-  std::vector<bool> gnss;
-  std::vector<bool> magnetometer;
-  std::vector<bool> dvl;
+/**
+ * @brief Everything the estimation needs to know about one sensor.
+ */
+struct Sensor {
+  std::string name; // names the sensor in the config keys and the output files
+  std::shared_ptr<const MeasurementModel> model;
+  Eigen::MatrixXd noise_covariance; // covariance of the noise the data was simulated with
+  std::vector<Eigen::VectorXd> measurements; // one per step, whether or not the sensor fires there
+  std::vector<bool> due;                     // one per step, true where the sensor fires
 };
 
 /**
- * @brief Draws the schedule for all three sensors from the config
+ * @brief Draws at which steps each sensor fires. Sensor `name` reads
+ * `<name>_period_min` and `<name>_period_max` from the config, the time
+ * between two of its fixes is uniform between the two. The optional keys
+ * `<name>_denied_start` and `<name>_denied_end` give a time window with no
+ * fixes from that sensor, e.g. to simulate an outage in the middle of a run.
+ * All sensors draw from the same random engine, step by step in the order of
+ * `names`, so that order decides the schedule a seed gives.
  * @param config the parsed yaml config
  * @param rng the random engine
+ * @param names the sensors, in the order they draw
  * @param timesteps the amount of steps in the run
  * @param dt the time between two steps
- * @return one entry per step for each sensor, true if it fires
+ * @return for each sensor, one entry per step that is true if it fires
  */
-SensorSchedule build_sensor_schedule(const YAML::Node &config,
-                                     std::mt19937_64 &rng, const int timesteps,
-                                     const double dt);
-
-// everything the forward pass needs to know about one sensor
-struct Sensor {
-  std::shared_ptr<const MeasurementModel> model;
-  const std::vector<Eigen::VectorXd> &measurements;
-  const std::vector<bool> &due; // one entry per step
-};
+std::vector<std::vector<bool>>
+build_sensor_schedules(const YAML::Node &config, std::mt19937_64 &rng,
+                       const std::vector<std::string> &names,
+                       const int timesteps, const double dt);
 
 #endif

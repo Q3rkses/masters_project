@@ -46,23 +46,24 @@ To regenerate the figures and statistics from the stored data:
 python3 scripts/analyze_1d.py results/1D/data
 ```
 
-To regenerate the data as well, point `main.cpp` at `configs/random_walk_1d.yaml`, then:
+To regenerate the data as well, run the executable on this folder, whose `config.yaml` holds the configuration:
 
 ```bash
-cmake --build build && ./build/kalman_filtering_and_smoothing   # writes data/
-cp data/*.csv results/1D/data/
-python3 scripts/analyze_1d.py results/1D/data                   # writes results/1D/figures/
+cmake -S . -B build && cmake --build build
+./build/kalman_filtering_and_smoothing results/1D     # writes results/1D/data/
+python3 scripts/analyze_1d.py results/1D/data         # writes results/1D/figures/
 ```
 
 ## Data
 
-`data/` holds three CSV files with one row per timestep and a shared `timestep`
+`data/` holds four CSV files with one row per timestep and a shared `timestep`
 column, so they can be joined on it. The column layout is documented in
 `lib/results.hpp`.
 
 | file           | columns                                                                                     |
 | -------------- | ------------------------------------------------------------------------------------------- |
-| `truth.csv`    | `timestep, x_true_0, z_0`                                                                   |
+| `truth.csv`    | `timestep, x_true_0`                                                                        |
+| `measurement_fixes.csv` | `timestep, z_0, innovation_0, S_0_0`                                               |
 | `filter.csv`   | `timestep, x_predicted_0, P_predicted_0_0, x_updated_0, innovation_0, S_0_0, P_updated_0_0` |
 | `smoother.csv` | `timestep, x_smoothed_0, P_smoothed_0_0`                                                    |
 

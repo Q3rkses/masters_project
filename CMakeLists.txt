@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.8)
 project(kalman_filtering_and_smoothing)
 
+# an optimised build unless a build type is asked for
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 20)
 endif()
@@ -27,6 +32,7 @@ add_library(kalman_lib
   src/results.cpp
   src/trajectory.cpp
   src/sensors.cpp
+  src/estimation.cpp
   src/utilities.cpp
   src/scenarios/random_walk_scenario.cpp
   src/scenarios/strapdown_ins_2D_scenario.cpp

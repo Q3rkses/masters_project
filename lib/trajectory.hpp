@@ -127,12 +127,6 @@ private:
 Path make_rounded_rectangle(double width, double height, double corner_radius);
 
 /**
- * @brief A circle of the given radius, centered at the origin, traced
- * counterclockwise starting at angle 0.
- */
-Path make_circle(double radius);
-
-/**
  * @brief A figure-eight: two equal circles joined by two straights that
  * cross at the origin (the circles' internal tangents), traced starting at
  * the crossing heading +x. It turns right around one circle and left around
@@ -143,17 +137,6 @@ Path make_circle(double radius);
  * more than twice the radius
  */
 Path make_figure_eight(double radius, double center_distance);
-
-/**
- * @brief A straight run, followed by a turn.
- * @param straight_length length of the initial straight, starting at the
- * origin heading along +x
- * @param turn_radius radius of the turn that follows
- * @param turn_sweep signed angle swept by the turn, in radians; positive
- * turns left, negative turns right
- */
-Path make_straight_into_turn(double straight_length, double turn_radius,
-                             double turn_sweep);
 
 /**
  * @brief A path together with how it is traversed.

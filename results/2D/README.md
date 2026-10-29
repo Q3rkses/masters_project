@@ -47,26 +47,26 @@ To regenerate the figures and statistics from the stored data:
 python3 scripts/analyze_2d.py results/2D/data
 ```
 
-To regenerate the data as well, point `main.cpp` at `configs/random_walk_2d.yaml`, set `timesteps: 200` in it,
-then:
+To regenerate the data as well, run the executable on this folder, whose `config.yaml` holds the configuration:
 
 ```bash
-cmake --build build && ./build/kalman_filtering_and_smoothing   # writes data/
-cp data/*.csv results/2D/data/
-python3 scripts/analyze_2d.py results/2D/data                   # writes results/2D/figures/
+cmake -S . -B build && cmake --build build
+./build/kalman_filtering_and_smoothing results/2D     # writes results/2D/data/
+python3 scripts/analyze_2d.py results/2D/data         # writes results/2D/figures/
 ```
 
 The analysis assumes state components 0 and 1 are the x and y position.
 
 ## Data
 
-`data/` holds three CSV files with one row per timestep and a shared `timestep`
+`data/` holds four CSV files with one row per timestep and a shared `timestep`
 column. Matrices are flattened row-major. The column layout is documented in
 `lib/results.hpp`.
 
 | file           | columns (n = 2 state dimensions, m = 2 measurement dimensions)                                                                  |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `truth.csv`    | `timestep`, `x_true_0..1`, `z_0..1`                                                                                             |
+| `truth.csv`    | `timestep`, `x_true_0..1`                                                                                                       |
+| `measurement_fixes.csv` | `timestep`, `z_0..1`, `innovation_0..1`, `S_0_0..S_1_1`                                                                |
 | `filter.csv`   | `timestep`, `x_predicted_0..1`, `P_predicted_0_0..1_1`, `x_updated_0..1`, `innovation_0..1`, `S_0_0..1_1`, `P_updated_0_0..1_1` |
 | `smoother.csv` | `timestep`, `x_smoothed_0..1`, `P_smoothed_0_0..1_1`                                                                            |
 

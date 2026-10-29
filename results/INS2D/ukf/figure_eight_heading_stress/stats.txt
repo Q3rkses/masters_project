@@ -1,32 +1,45 @@
-30000 timesteps, 46 GNSS fixes
+30000 timesteps, dt 0.01 s, fixes: GNSS 46, magnetometer 6, DVL 497
 
 consistency (time-averaged):
-  ANIS GNSS EKF           5.2337  band [0.9099, 3.5120]  76.1% of steps in band  -> INCONSISTENT
-  ANIS magnetometer EKF    2.5148  band [0.3210, 2.0578]  83.3% of steps in band  -> INCONSISTENT
-  ANIS DVL EKF            2.3328  band [1.6738, 2.3549]  94.2% of steps in band  -> consistent
-  ANIS GNSS UKF           2.0960  band [1.4654, 2.6165]  91.3% of steps in band  -> consistent
-  ANIS magnetometer UKF    1.2417  band [0.2535, 2.2493]  100.0% of steps in band  -> consistent
-  ANIS DVL UKF            1.7391  band [1.8208, 2.1875]  95.0% of steps in band  -> INCONSISTENT
-  ANEES position EKF      4.4048  band [1.2399, 2.9389]  76.8% of steps in band  -> INCONSISTENT
-  ANEES position UKF      1.2375  band [1.3106, 2.8327]  89.6% of steps in band  -> INCONSISTENT
-  ANEES position ERTS     5.8867  band [0.0506, 7.3778]  75.3% of steps in band  -> consistent
-  ANEES position URTSS    1.7880  band [0.0506, 7.3778]  98.6% of steps in band  -> consistent
+  ANIS GNSS EKF                   5.2337  band [0.9099, 3.5120]  76.1% of steps in band  -> INCONSISTENT
+  ANIS magnetometer EKF           2.5148  band [0.3210, 2.0578]  83.3% of steps in band  -> INCONSISTENT
+  ANIS DVL EKF                    2.3328  band [1.6738, 2.3549]  94.2% of steps in band  -> consistent
+  ANIS GNSS UKF                   2.0960  band [1.4654, 2.6165]  91.3% of steps in band  -> consistent
+  ANIS magnetometer UKF           1.2417  band [0.2535, 2.2493]  100.0% of steps in band  -> consistent
+  ANIS DVL UKF                    1.7391  band [1.8208, 2.1875]  95.0% of steps in band  -> INCONSISTENT
+  ANEES position EKF              4.4048  band [1.2399, 2.9389]  76.8% of steps in band  -> INCONSISTENT
+  ANEES position UKF              1.2375  band [1.3106, 2.8327]  89.6% of steps in band  -> INCONSISTENT
+  ANEES position ERTS             5.8867  band [0.0506, 7.3778]  75.3% of steps in band  -> consistent
+  ANEES position URTSS            1.7880  band [0.0506, 7.3778]  98.6% of steps in band  -> consistent
 
-accuracy:
-  RMSE position EKF     8.5651 m
-  RMSE position UKF     5.3611 m
-  RMSE position ERTS    6.0216 m
-  RMSE position URTSS   3.2793 m
-  RMSE heading  EKF     14.073 deg
-  RMSE heading  UKF      7.032 deg
-  RMSE heading  ERTS     7.273 deg
-  RMSE heading  URTSS    2.775 deg
+accuracy (position error in m, heading error in deg):
+                 RMSE pos   median     95th      max  RMSE head
+  EKF              8.5651   4.8460  21.2741  23.0729    14.0728
+  UKF              5.3611   2.1220  11.5129  13.0219     7.0323
+  ERTS             6.0216   1.3433  15.3698  16.2952     7.2728
+  URTSS            3.2793   1.8379   6.7283   6.9680     2.7751
 
-sigma point health (smallest eigenvalue of the full P):
-  EKF     min  6.631e-06  0 of 30000 steps below zero
-  UKF     min  6.632e-06  0 of 30000 steps below zero
-  ERTS    min  3.670e-06  0 of 30000 steps below zero
-  URTSS   min  3.681e-06  0 of 30000 steps below zero
+bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
+  EKF              0.0408   0.0260    0.01510     0.0781
+  UKF              0.0226   0.0237    0.00268     0.0127
+  ERTS             0.0121   0.0157    0.00359     0.0104
+  URTSS            0.0105   0.0146    0.00165     0.0042
+
+share of steps with the true position inside the reported 95% ellipse:
+  EKF            75.2%
+  UKF            99.8%
+  ERTS           73.5%
+  URTSS          99.4%
+
+smallest eigenvalue of the full P:
+  EKF           min  6.631e-06  0 of 30000 steps below zero
+  UKF           min  6.632e-06  0 of 30000 steps below zero
+  ERTS          min  3.670e-06  0 of 30000 steps below zero
+  URTSS         min  3.681e-06  0 of 30000 steps below zero
 
 ERTS trace(P) <= EKF trace(P) at every step: True
 URTSS trace(P) <= UKF trace(P) at every step: True
+
+distance to the EKF-based estimate (position in mm, heading in deg), and the range of the position trace(P) ratio:
+  UKF vs EKF: median 4917.76 max 19541.6, heading max 60.342, ratio [0.9763, 1.2878]
+  URTSS vs ERTS: median 883.47 max 9435.6, heading max 23.362, ratio [0.9299, 1.1396]

@@ -96,39 +96,22 @@ void SmootherResult::to_csv(const std::string &path) const {
   }
 }
 
-void TruthResult::add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z) {
-  records_.push_back(TruthRecord{x_true, z});
-}
-
-void TruthResult::add(const Eigen::VectorXd &x_true, const Eigen::VectorXd &z,
-                      const Eigen::VectorXd &u) {
-  records_.push_back(TruthRecord{x_true, z, u});
+void TruthResult::add(const Eigen::VectorXd &x_true) {
+  x_true_.push_back(x_true);
 }
 
 void TruthResult::to_csv(const std::string &path) const {
   std::ofstream out(path);
 
-  int state_dim = records_.empty() ? 0 : records_[0].x_true.size();
-  int measurement_dim = records_.empty() ? 0 : records_[0].z.size();
-  int input_dim = records_.empty() ? 0 : records_[0].u.size();
+  int state_dim = x_true_.empty() ? 0 : x_true_[0].size();
 
-  if (input_dim == 0) {
-    out << "timestep";
-    write_vector_header(out, "x_true", state_dim);
-    write_vector_header(out, "z", measurement_dim);
-    out << "\n";
-  } else {
-    out << "timestep";
-    write_vector_header(out, "x_true", state_dim);
-    write_vector_header(out, "z", measurement_dim);
-    write_vector_header(out, "u", input_dim);
-    out << "\n";
-  }
+  out << "timestep";
+  write_vector_header(out, "x_true", state_dim);
+  out << "\n";
 
-  for (std::size_t k = 0; k < records_.size(); k++) {
+  for (std::size_t k = 0; k < x_true_.size(); k++) {
     out << k;
-    write_vector_values(out, records_[k].x_true);
-    write_vector_values(out, records_[k].z);
+    write_vector_values(out, x_true_[k]);
     out << "\n";
   }
 }

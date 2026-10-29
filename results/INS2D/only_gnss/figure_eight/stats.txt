@@ -1,32 +1,27 @@
-30000 timesteps, 149 GNSS fixes
+30000 timesteps, dt 0.01 s, fixes: GNSS 149, magnetometer 0, DVL 0
 
 consistency (time-averaged):
-  ANIS GNSS EKF           1.9727  band [1.6925, 2.3328]  96.6% of steps in band  -> consistent
-  ANIS magnetometer EKF no fixes recorded, nothing to compute
-  ANIS DVL EKF         no fixes recorded, nothing to compute
-  ANIS GNSS UKF           1.9865  band [1.6857, 2.3407]  96.6% of steps in band  -> consistent
-  ANIS magnetometer UKF no fixes recorded, nothing to compute
-  ANIS DVL UKF         no fixes recorded, nothing to compute
-  ANEES position EKF      1.8741  band [1.4457, 2.6429]  96.4% of steps in band  -> consistent
-  ANEES position UKF      1.8981  band [1.4443, 2.6448]  95.7% of steps in band  -> consistent
-  ANEES position ERTS     1.0864  band [0.0506, 7.3778]  99.3% of steps in band  -> consistent
-  ANEES position URTSS    1.0715  band [0.0506, 7.3778]  98.3% of steps in band  -> consistent
+  ANIS GNSS EKF                   1.9727  band [1.6925, 2.3328]  96.6% of steps in band  -> consistent
+  ANIS magnetometer EKF        no fixes
+  ANIS DVL EKF                 no fixes
+  ANEES position EKF              1.8741  band [1.4457, 2.6429]  96.4% of steps in band  -> consistent
+  ANEES position ERTS             1.0864  band [0.0506, 7.3778]  99.3% of steps in band  -> consistent
 
-accuracy:
-  RMSE position EKF     0.6940 m
-  RMSE position UKF     0.6988 m
-  RMSE position ERTS    0.2097 m
-  RMSE position URTSS   0.2083 m
-  RMSE heading  EKF     10.595 deg
-  RMSE heading  UKF     10.996 deg
-  RMSE heading  ERTS     5.194 deg
-  RMSE heading  URTSS    5.000 deg
+accuracy (position error in m, heading error in deg):
+                 RMSE pos   median     95th      max  RMSE head
+  EKF              0.6940   0.5434   1.2297   2.9299    10.5948
+  ERTS             0.2097   0.1767   0.3364   0.8512     5.1936
 
-sigma point health (smallest eigenvalue of the full P):
-  EKF     min  7.053e-06  0 of 30000 steps below zero
-  UKF     min  7.042e-06  0 of 30000 steps below zero
-  ERTS    min  4.124e-06  0 of 30000 steps below zero
-  URTSS   min  4.126e-06  0 of 30000 steps below zero
+bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
+  EKF              0.0469   0.0311    0.00346     0.0137
+  ERTS             0.0169   0.0163    0.00186     0.0045
+
+share of steps with the true position inside the reported 95% ellipse:
+  EKF            95.7%
+  ERTS          100.0%
+
+smallest eigenvalue of the full P:
+  EKF           min  7.053e-06  0 of 30000 steps below zero
+  ERTS          min  4.124e-06  0 of 30000 steps below zero
 
 ERTS trace(P) <= EKF trace(P) at every step: True
-URTSS trace(P) <= UKF trace(P) at every step: True
