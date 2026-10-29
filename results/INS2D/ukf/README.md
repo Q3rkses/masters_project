@@ -256,7 +256,7 @@ One run writes the EKF/ERTS and the UKF/URTSS files; the UKF files carry the pre
 
 ## Results
 
-The figures per run: the true path and when each sensor fired, the path with the EKF and ERTS estimates and a zoom on the turn with the largest filter error, the EKF/ERTS error, the UKF/URTSS error, and the variants against each other (position error of the filters and smoothers, gyro bias, and the distance of each variant to the EKF-based estimate). In the variants figure the EKF-based estimates are drawn wide and the variants dashed over them, because they lie almost exactly on top of each other.
+The figures per run: the true path and when each sensor fired, the path with the UKF and URTSS estimates and a zoom on the turn where the UKF position error is largest, the UKF and URTSS error with its 95% bands, and the variants against each other (position error of the filters and smoothers, gyro bias, and the distance of each variant to the EKF-based estimate). In the path figure the EKF and ERTS are drawn wide and faint underneath, so they only show where they differ from the UKF. In the variants figure the EKF-based estimates are drawn wide and the variants dashed over them, because they lie almost exactly on top of each other.
 
 ### Outage run
 
@@ -264,13 +264,11 @@ The figures per run: the true path and when each sensor fired, the path with the
 
 ![True path and sensor fixes](outage/figures/1_scenario.png)
 
-![Path and estimates](outage/figures/2_path.png)
+![UKF and URTSS path and estimates](outage/figures/2_path.png)
 
-![EKF and ERTS error](outage/figures/3_errors.png)
+![UKF and URTSS error](outage/figures/3_errors.png)
 
-![UKF and URTSS error](outage/figures/6_errors_variant.png)
-
-![Variants](outage/figures/5_variants.png)
+![Variants](outage/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS |
 | --- | --- | --- |
@@ -305,13 +303,11 @@ Share of steps with the true position inside the reported 95% ellipse: EKF 97.6%
 
 ![True path and sensor fixes](figure_eight_outage/figures/1_scenario.png)
 
-![Path and estimates](figure_eight_outage/figures/2_path.png)
+![UKF and URTSS path and estimates](figure_eight_outage/figures/2_path.png)
 
-![EKF and ERTS error](figure_eight_outage/figures/3_errors.png)
+![UKF and URTSS error](figure_eight_outage/figures/3_errors.png)
 
-![UKF and URTSS error](figure_eight_outage/figures/6_errors_variant.png)
-
-![Variants](figure_eight_outage/figures/5_variants.png)
+![Variants](figure_eight_outage/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS |
 | --- | --- | --- |
@@ -348,13 +344,11 @@ Share of steps with the true position inside the reported 95% ellipse: EKF 97.9%
 
 ![True path and sensor fixes](heading_stress/figures/1_scenario.png)
 
-![Path and estimates](heading_stress/figures/2_path.png)
+![UKF and URTSS path and estimates](heading_stress/figures/2_path.png)
 
-![EKF and ERTS error](heading_stress/figures/3_errors.png)
+![UKF and URTSS error](heading_stress/figures/3_errors.png)
 
-![UKF and URTSS error](heading_stress/figures/6_errors_variant.png)
-
-![Variants](heading_stress/figures/5_variants.png)
+![Variants](heading_stress/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS |
 | --- | --- | --- |
@@ -389,13 +383,11 @@ Share of steps with the true position inside the reported 95% ellipse: EKF 71.0%
 
 ![True path and sensor fixes](figure_eight_heading_stress/figures/1_scenario.png)
 
-![Path and estimates](figure_eight_heading_stress/figures/2_path.png)
+![UKF and URTSS path and estimates](figure_eight_heading_stress/figures/2_path.png)
 
-![EKF and ERTS error](figure_eight_heading_stress/figures/3_errors.png)
+![UKF and URTSS error](figure_eight_heading_stress/figures/3_errors.png)
 
-![UKF and URTSS error](figure_eight_heading_stress/figures/6_errors_variant.png)
-
-![Variants](figure_eight_heading_stress/figures/5_variants.png)
+![Variants](figure_eight_heading_stress/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS |
 | --- | --- | --- |

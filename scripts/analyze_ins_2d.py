@@ -20,13 +20,16 @@ A statistic that falls above its 95% interval means the errors are larger than
 the reported covariance admits, the estimator is overconfident. Below the
 interval it is underconfident, the covariance is larger than it needs to be.
 
-In the folders of the ukf and iekf experiments the UKF/URTSS and IEKF/ERTS
-results are analysed next to the EKF/ERTS. Those folders get figures 1 to 4
-and two more instead of 5 and 6, since the biases and the consistency are
-compared in the statistics:
+In the folders of the ukf and iekf experiments the UKF/URTSS or IEKF/ERTS
+results are the subject, analysed next to the EKF/ERTS. Those folders get four
+figures about the subject, with the EKF-based estimate drawn wide underneath
+in the path figure so that differences show where they exist. The biases and
+the consistency are compared in the statistics instead:
 
-    5_variants.png        errors, gyro bias and distances of all variants
-    6_errors_variant.png  error figure of the experiment's own variant
+    1_scenario.png   the true path and when each sensor fired
+    2_path.png       path with the subject's estimates and a zoom on its largest error
+    3_errors.png     the subject's error with 95% bands
+    4_variants.png   errors, gyro bias and distances of all variants
 
 State: [x, y, psi, u, v, b_ax, b_ay, b_gyro].
 """
@@ -243,9 +246,17 @@ def choose_turn(turns, error, dt):
     return max(candidates, key=lambda turn: error[turn.first:turn.last + 1].max())
 
 
-def draw_zoom(axis, turn, filt, smooth, x_true, dt):
-    """One turn with a little path before and after, both estimates and their
-    95% position ellipses. Returns the rectangle the zoom covers."""
+def draw_reference(axis, reference, lo, hi, linewidth=3.2):
+    """The EKF-based estimates drawn wide and faint underneath the subject's,
+    so they only show where the two differ."""
+    for estimator in reference:
+        axis.plot(*estimator.x[lo:hi, POSITION].T, color=estimator.color, linewidth=linewidth,
+                  alpha=0.45, label=estimator.name, zorder=2)
+
+
+def draw_zoom(axis, turn, filt, smooth, x_true, dt, reference=None):
+    """One turn with a little path before and after, the subject's estimates
+    and their 95% position ellipses. Returns the rectangle the zoom covers."""
     pad = int(ZOOM_PAD_SECONDS / dt)
     lo, hi = max(turn.first - pad, 0), min(turn.last + pad, len(x_true) - 1) + 1
     extent = [x_true[lo:hi, POSITION]]
@@ -257,10 +268,14 @@ def draw_zoom(axis, turn, filt, smooth, x_true, dt):
             reach = max(width, height) / 2
             extent.append(estimator.x[k, :2] + np.array([[reach, reach], [-reach, -reach]]))
         extent.append(estimator.x[lo:hi, POSITION])
+    for estimator in reference or ():
+        extent.append(estimator.x[lo:hi, POSITION])
     corners = np.vstack(extent)
     low, high = corners.min(axis=0) - 1.0, corners.max(axis=0) + 1.0
 
     axis.plot(*x_true[lo:hi, POSITION].T, color=TRUTH, linewidth=1.8, label="truth", zorder=3)
+    if reference:
+        draw_reference(axis, reference, lo, hi, linewidth=4.0)
     for estimator in (filt, smooth):
         axis.plot(*estimator.x[lo:hi, POSITION].T, color=estimator.color, linewidth=1.4,
                   label=estimator.name, zorder=4)
@@ -280,18 +295,22 @@ def draw_zoom(axis, turn, filt, smooth, x_true, dt):
     return low, high
 
 
-def path_figure(x_true, filt, smooth, turns, dt):
-    """The path with both estimates, and a large zoom on the turn where the
-    filter's position error is largest."""
+def path_figure(x_true, filt, smooth, turns, dt, reference=None):
+    """The path with the subject's estimates, and a large zoom on the turn
+    where the filter's position error is largest. With a reference, the
+    EKF-based estimates are drawn wide underneath."""
     figure = plt.figure(figsize=(14, 7.5))
     grid = figure.add_gridspec(1, 2, width_ratios=[1.1, 1], wspace=0.15)
     overview = figure.add_subplot(grid[0, 0])
     zoom = figure.add_subplot(grid[0, 1])
 
     overview.plot(*x_true[:, POSITION].T, color=TRUTH, linewidth=1.8, label="truth", zorder=3)
+    if reference:
+        draw_reference(overview, reference, 0, len(x_true), linewidth=3.0)
     overview.plot(*filt.x[:, POSITION].T, color=filt.color, linewidth=1.0, label=filt.name, zorder=4)
     overview.plot(*smooth.x[:, POSITION].T, color=smooth.color, linewidth=1.0, label=smooth.name, zorder=4)
-    fit_equal_axes(overview, [x_true[:, POSITION], filt.x[SKIP_STEPS:, POSITION], smooth.x[SKIP_STEPS:, POSITION]])
+    fit_equal_axes(overview, [x_true[:, POSITION], filt.x[SKIP_STEPS:, POSITION], smooth.x[SKIP_STEPS:, POSITION]]
+                   + [e.x[SKIP_STEPS:, POSITION] for e in reference or ()])
     overview.scatter(*x_true[0, POSITION], s=45, color=TRUTH, zorder=6)
     overview.annotate("", xy=x_true[200, POSITION], xytext=x_true[0, POSITION],
                       arrowprops=dict(arrowstyle="-|>", color=TRUTH, lw=1.5), zorder=6)
@@ -306,7 +325,7 @@ def path_figure(x_true, filt, smooth, turns, dt):
     if turn is None:
         zoom.remove()
         return figure
-    low, high = draw_zoom(zoom, turn, filt, smooth, x_true, dt)
+    low, high = draw_zoom(zoom, turn, filt, smooth, x_true, dt, reference)
     overview.add_patch(Rectangle(low, *(high - low), fill=False, edgecolor=BAND,
                                  linewidth=1.2, zorder=1))
     return figure
@@ -645,36 +664,37 @@ def main():
     print(text, end="")
     (case_dir / "stats.txt").write_text(text)
 
-    figures = {
-        "1_scenario.png": scenario_figure(t, x_true, schedule, dt),
-        "2_path.png": path_figure(x_true, ekf, erts, find_turns(x_true, dt), dt),
-        "3_errors.png": errors_figure(t, x_true, ekf, erts, denied),
-        "4_uncertainty.png": uncertainty_figure(t, ekf, erts, denied),
-    }
-    if not with_variants:
+    turns = find_turns(x_true, dt)
+    figures = {"1_scenario.png": scenario_figure(t, x_true, schedule, dt)}
+    if with_variants:
+        focus = VARIANT_FOLDERS[case_dir.parent.name]
+        index = [f.name for f in filters].index(focus)
+        subject_filter, subject_smoother = filters[index], smoothers[index]
+        figures["2_path.png"] = path_figure(x_true, subject_filter, subject_smoother, turns, dt,
+                                            reference=(ekf, erts))
+        figures["3_errors.png"] = errors_figure(t, x_true, subject_filter, subject_smoother, denied)
+        figures["4_variants.png"] = variants_figure(t, x_true, filters, smoothers, denied)
+    else:
+        figures["2_path.png"] = path_figure(x_true, ekf, erts, turns, dt)
+        figures["3_errors.png"] = errors_figure(t, x_true, ekf, erts, denied)
+        figures["4_uncertainty.png"] = uncertainty_figure(t, ekf, erts, denied)
         figures["5_biases.png"] = biases_figure(t, x_true, [ekf, erts], denied)
-    nis = {}
-    for sensor, table in zip(SENSOR_DIMS, fixes):
-        if len(table["timestep"]):
-            nis[sensor] = (table["timestep"].astype(int) * dt, nis_by_filter["EKF"][sensor],
-                           SENSOR_COLORS[sensor])
-    summaries = {}
-    for sensor in nis:
-        result = time_averaged(nis_by_filter["EKF"][sensor], SENSOR_DIMS[sensor])
-        summaries[sensor] = (f"ANIS {result['average']:.3f}, band [{result['low']:.3f}, "
-                             f"{result['high']:.3f}], {result['verdict']}")
-    for estimator in (ekf, erts):
-        result = time_averaged(nees_values[estimator.name], 2)
-        summaries[estimator.name] = f"ANEES {result['average']:.3f} ({result['verdict']})"
-    if not with_variants:
+        nis = {}
+        for sensor, table in zip(SENSOR_DIMS, fixes):
+            if len(table["timestep"]):
+                nis[sensor] = (table["timestep"].astype(int) * dt, nis_by_filter["EKF"][sensor],
+                               SENSOR_COLORS[sensor])
+        summaries = {}
+        for sensor in nis:
+            result = time_averaged(nis_by_filter["EKF"][sensor], SENSOR_DIMS[sensor])
+            summaries[sensor] = (f"ANIS {result['average']:.3f}, band [{result['low']:.3f}, "
+                                 f"{result['high']:.3f}], {result['verdict']}")
+        for estimator in (ekf, erts):
+            result = time_averaged(nees_values[estimator.name], 2)
+            summaries[estimator.name] = f"ANEES {result['average']:.3f} ({result['verdict']})"
         figures["6_consistency.png"] = consistency_figure(
             t, nis, [(ekf.name, ekf.color, nees_values["EKF"]), (erts.name, erts.color, nees_values["ERTS"])],
             summaries)
-    if len(filters) > 1:
-        figures["5_variants.png"] = variants_figure(t, x_true, filters, smoothers, denied)
-        focus = VARIANT_FOLDERS[case_dir.parent.name]
-        index = [f.name for f in filters].index(focus)
-        figures["6_errors_variant.png"] = errors_figure(t, x_true, filters[index], smoothers[index], denied)
 
     for name, figure in figures.items():
         figure.savefig(figures_dir / name, dpi=150)

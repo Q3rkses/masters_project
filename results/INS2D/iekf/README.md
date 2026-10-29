@@ -239,19 +239,17 @@ the innovation and $S$, which is what the NIS is computed from.
 
 ## Results
 
-The figures per run: the true path and when each sensor fired, the path with the EKF and ERTS estimates and a zoom on the turn with the largest filter error, the EKF/ERTS error, the IEKF/ERTS (IEKF) error, and the variants against each other. In the variants figure the EKF-based estimates are drawn wide and the variants dashed over them, because they lie almost exactly on top of each other.
+The figures per run: the true path and when each sensor fired, the path with the IEKF and ERTS (IEKF) estimates and a zoom on the turn where the IEKF position error is largest, the IEKF and ERTS (IEKF) error with its 95% bands, and the variants against each other. In the path figure the EKF and ERTS are drawn wide and faint underneath, so they only show where they differ from the IEKF. In the variants figure the EKF-based estimates are drawn wide and the variants dashed over them, because they lie almost exactly on top of each other.
 
 ### Multi-sensor fusion
 
 ![True path and sensor fixes](multi_sensor_fusion/figures/1_scenario.png)
 
-![Path and estimates](multi_sensor_fusion/figures/2_path.png)
+![IEKF and ERTS (IEKF) path and estimates](multi_sensor_fusion/figures/2_path.png)
 
-![EKF and ERTS error](multi_sensor_fusion/figures/3_errors.png)
+![IEKF and ERTS (IEKF) error](multi_sensor_fusion/figures/3_errors.png)
 
-![IEKF and ERTS (IEKF) error](multi_sensor_fusion/figures/6_errors_variant.png)
-
-![Variants](multi_sensor_fusion/figures/5_variants.png)
+![Variants](multi_sensor_fusion/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS | IEKF / ERTS (IEKF) |
 | --- | --- | --- | --- |
@@ -289,13 +287,11 @@ The figures per run: the true path and when each sensor fired, the path with the
 
 ![True path and sensor fixes](gnss_outage/figures/1_scenario.png)
 
-![Path and estimates](gnss_outage/figures/2_path.png)
+![IEKF and ERTS (IEKF) path and estimates](gnss_outage/figures/2_path.png)
 
-![EKF and ERTS error](gnss_outage/figures/3_errors.png)
+![IEKF and ERTS (IEKF) error](gnss_outage/figures/3_errors.png)
 
-![IEKF and ERTS (IEKF) error](gnss_outage/figures/6_errors_variant.png)
-
-![Variants](gnss_outage/figures/5_variants.png)
+![Variants](gnss_outage/figures/4_variants.png)
 
 | statistic | EKF / ERTS | UKF / URTSS | IEKF / ERTS (IEKF) |
 | --- | --- | --- | --- |
