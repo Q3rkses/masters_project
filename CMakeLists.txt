@@ -36,6 +36,7 @@ add_library(kalman_lib
   src/utilities/file_utilities.cpp
   src/scenarios/random_walk_scenario.cpp
   src/scenarios/strapdown_ins_2D_scenario.cpp
+  src/scenarios/strapdown_ins_3D_scenario.cpp
 )
 
 include_directories(lib)

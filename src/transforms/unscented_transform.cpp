@@ -35,9 +35,11 @@ GaussianMoments UnscentedTransform::transform(
     const std::function<Eigen::VectorXd(const Eigen::VectorXd &)> &f,
     const Eigen::MatrixXd &noise_covariance_matrix, const Manifold &input_space,
     const Manifold &output_space) const {
-  if (prior_gaussian.mean.size() != dimension_) {
+  // the dimension is that of the covariance, the mean can have more elements
+  // when the state lives on a manifold
+  if (prior_gaussian.covariance.rows() != dimension_) {
     throw std::invalid_argument(
-        "UnscentedTransform::transform: prior mean size does not match "
+        "UnscentedTransform::transform: prior covariance size does not match "
         "the dimension of the transform");
   }
 

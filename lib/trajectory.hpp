@@ -1,6 +1,6 @@
 /**
  * @file trajectory.hpp
- * @brief Ground-truth paths for exercising the 2D INS model: a path is a
+ * @brief Ground-truth paths for exercising the 2D and 3D INS models: a path is a
  * sequence of lines and circular arcs, each with an exact closed-form
  * length and an exact closed-form sample as a function of arc length. No
  * fitting, lookup tables or numerical differentiation are involved, since
@@ -154,5 +154,71 @@ struct Trajectory {
  * @return the path and whether it is closed
  */
 Trajectory build_trajectory(const YAML::Node &config);
+
+
+// The 3D paths are the shapes above laid in a plane tilted about the x axis, so
+// the depth changes smoothly along the loop. Frames follow the 3D scenario:
+// navigation frame NED (z down), attitude q rotates body to navigation, ZYX
+// Euler angles (roll phi, pitch theta, yaw psi), body x along the velocity.
+
+/**
+ * @brief The true motion at one instant. Gravity is not in here: the IMU
+ * reads the specific force R^T (acceleration - g), with g = [0, 0, gravity]
+ * in NED, which the caller forms from these fields.
+ */
+struct PathSample3D {
+  Eigen::Vector3d position;         // navigation frame [m]
+  Eigen::Vector3d velocity;         // navigation frame [m/s]
+  Eigen::Vector3d acceleration;     // navigation frame, kinematic [m/s^2]
+  Eigen::Quaterniond attitude;      // body to navigation, w x y z, unit
+  Eigen::Vector3d angular_rate;     // body frame, [p, q, r] [rad/s]
+  Eigen::Vector3d euler;            // [roll, pitch, yaw] [rad]
+};
+
+/**
+ * @brief A 2D path lifted into a tilted plane and traversed at constant speed.
+ */
+class Trajectory3D {
+public:
+  /**
+   * @param planar the 2D path and whether it loops
+   * @param speed constant speed along the path [m/s]
+   * @param tilt_angle rotation of the path plane about the x axis [rad]; the
+   * depth is then z = y sin(tilt_angle)
+   * @param bank_gain share of the coordinated-turn roll applied in turns,
+   * 0 keeps the vehicle level, 1 banks by atan(speed^2 curvature / gravity)
+   * @param roll_ramp_length arc length over which the roll builds up when a
+   * turn starts or ends [m], so the roll is continuous
+   * @param gravity magnitude of gravity [m/s^2], only used for the bank angle
+   */
+  Trajectory3D(const Trajectory &planar, double speed, double tilt_angle,
+               double bank_gain, double roll_ramp_length, double gravity);
+
+  /**
+   * @brief The true motion at time t from the start, looping when the path
+   * is closed and stopping at its end when it is not.
+   */
+  PathSample3D sample(double t) const;
+
+private:
+  Trajectory planar_;
+  double speed_;
+  double tilt_angle_;
+  double bank_gain_;
+  double roll_ramp_length_;
+  double gravity_;
+};
+
+/**
+ * @brief Builds the trajectory named by the "trajectory" key
+ * (rounded_rectangle | figure_eight) with the same shape keys as the 2D
+ * build_trajectory, plus
+ *   path_speed        constant speed [m/s]
+ *   tilt_angle        tilt of the path plane about the x axis [rad]
+ *   bank_gain         0 to 1, share of the coordinated-turn roll (default 1)
+ *   roll_ramp_length  arc length the roll takes to build up [m] (default 5)
+ *   gravity           [m/s^2] (default 9.81)
+ */
+Trajectory3D build_trajectory_3d(const YAML::Node &config);
 
 #endif

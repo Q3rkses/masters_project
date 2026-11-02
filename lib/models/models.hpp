@@ -21,7 +21,8 @@ public:
   /**
    * @brief Constructor for the Input class.
    * @param initial_input which is an Eigen vector of length 3,
-   * [a_x, a_y, omega_psi]
+   * [a_x, a_y, omega_psi], or of length 6, [a_x, a_y, a_z, omega_phi,
+   * omega_theta, omega_psi]
    */
   explicit Input(const Eigen::VectorXd initial_input);
 
@@ -32,8 +33,16 @@ public:
   Eigen::VectorXd input_to_eigen() const;
 
   /**
+   * @brief packages the input parameters into an Eigen vectorXd
+   * @return returns the 3D input as an Eigen vectorXd, [a_x, a_y, a_z,
+   * omega_phi, omega_theta, omega_psi]
+   */
+  Eigen::VectorXd input_to_eigen_3d() const;
+
+  /**
    * @brief assigns the input parameters from an Eigen vectorXd
    * @param eigen_input the input as an Eigen VectorXd, [a_x, a_y, omega_psi]
+   * or [a_x, a_y, a_z, omega_phi, omega_theta, omega_psi]
    * @returns void, simply assigns the member variables
    */
   void eigen_to_input(Eigen::VectorXd eigen_input);
@@ -41,6 +50,10 @@ public:
   double a_x_;
   double a_y_;
   double omega_psi_;
+  // only used by the 3D models, the rotation rates about the body x and y axes
+  double a_z_;
+  double omega_phi_;
+  double omega_theta_;
 };
 
 class MotionModel : public Manifold {

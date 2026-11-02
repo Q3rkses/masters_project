@@ -1,4 +1,5 @@
 #include "trajectory.hpp"
+#include "utilities/math_utilities.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -193,4 +194,99 @@ Trajectory build_trajectory(const YAML::Node &config) {
   }
 
   throw std::runtime_error("unknown trajectory: " + trajectory);
+}
+
+Trajectory3D::Trajectory3D(const Trajectory &planar, double speed,
+                           double tilt_angle, double bank_gain,
+                           double roll_ramp_length, double gravity)
+    : planar_(planar), speed_(speed), tilt_angle_(tilt_angle),
+      bank_gain_(bank_gain), roll_ramp_length_(roll_ramp_length),
+      gravity_(gravity) {}
+
+PathSample3D Trajectory3D::sample(double t) const {
+  const double path_length = planar_.path.length();
+
+  // arc length travelled, wrapped around a closed path
+  auto arc_at = [&](double arc_length) {
+    if (!planar_.is_closed) {
+      return arc_length;
+    }
+    return arc_length - path_length * std::floor(arc_length / path_length);
+  };
+  const double s = arc_at(speed_ * t);
+  const PathSample sample = planar_.path.sample(s);
+
+  const double c = std::cos(sample.heading);
+  const double sn = std::sin(sample.heading);
+
+  // the planar frame tilted about x: (x, y, 0) -> (x, y cos a, y sin a)
+  const Eigen::Matrix3d tilt =
+      Eigen::AngleAxisd(tilt_angle_, Eigen::Vector3d::UnitX()).toRotationMatrix();
+  const Eigen::Vector3d direction = tilt * Eigen::Vector3d(c, sn, 0.0);
+  const Eigen::Vector3d normal = tilt * Eigen::Vector3d(-sn, c, 0.0);
+  const Eigen::Vector3d position =
+      tilt * Eigen::Vector3d(sample.position.x(), sample.position.y(), 0.0);
+
+  // constant speed, so the only acceleration is centripetal
+  const Eigen::Vector3d velocity = speed_ * direction;
+  const Eigen::Vector3d direction_rate = speed_ * sample.curvature * normal;
+  const Eigen::Vector3d acceleration = speed_ * direction_rate;
+
+  // yaw and pitch of the velocity direction, and their rates
+  const double yaw = std::atan2(direction.y(), direction.x());
+  const double pitch = -std::asin(direction.z());
+  const double horizontal_squared = direction.head<2>().squaredNorm();
+  // clang-format off
+  const double yaw_rate = (direction.x() * direction_rate.y() - direction.y() * direction_rate.x()) / horizontal_squared;
+  const double pitch_rate = -direction_rate.z() / std::cos(pitch);
+  // clang-format on
+
+  // Roll follows the curvature averaged over roll_ramp_length, which is the
+  // heading change across that window over its length, so it builds up
+  // smoothly where a turn starts instead of jumping.
+  const double half_ramp = roll_ramp_length_ / 2.0;
+  const PathSample before = planar_.path.sample(arc_at(s - half_ramp));
+  const PathSample after = planar_.path.sample(arc_at(s + half_ramp));
+  const double mean_curvature =
+      ssa(after.heading - before.heading) / roll_ramp_length_;
+  const double curvature_slope =
+      (after.curvature - before.curvature) / roll_ramp_length_;
+  const double bank = speed_ * speed_ * mean_curvature / gravity_;
+  const double roll = bank_gain_ * std::atan(bank);
+  const double roll_rate = bank_gain_ * speed_ * speed_ * speed_ *
+                           curvature_slope / gravity_ / (1.0 + bank * bank);
+
+  // body rates from the ZYX Euler rates
+  const double cr = std::cos(roll);
+  const double sr = std::sin(roll);
+  const double cp = std::cos(pitch);
+  const double sp = std::sin(pitch);
+  Eigen::Vector3d angular_rate;
+  // clang-format off
+  angular_rate << roll_rate - yaw_rate * sp,
+                  pitch_rate * cr + yaw_rate * cp * sr,
+                  -pitch_rate * sr + yaw_rate * cp * cr;
+  // clang-format on
+
+  const Eigen::Quaterniond attitude =
+      Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
+      Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
+      Eigen::AngleAxisd(roll, Eigen::Vector3d::UnitX());
+
+  return PathSample3D{
+      .position = position,
+      .velocity = velocity,
+      .acceleration = acceleration,
+      .attitude = attitude,
+      .angular_rate = angular_rate,
+      .euler = Eigen::Vector3d(roll, pitch, yaw),
+  };
+}
+
+Trajectory3D build_trajectory_3d(const YAML::Node &config) {
+  return Trajectory3D(build_trajectory(config), config["path_speed"].as<double>(),
+                      config["tilt_angle"].as<double>(),
+                      config["bank_gain"].as<double>(1.0),
+                      config["roll_ramp_length"].as<double>(5.0),
+                      config["gravity"].as<double>(9.81));
 }

@@ -18,6 +18,8 @@ void run_scenario(const YAML::Node &config, const fs::path &output_dir) {
       config["scenario"].as<std::string>("strapdown_ins_2d");
   if (scenario == "strapdown_ins_2d") {
     run_strapdown_ins_2d(config, output_dir);
+  } else if (scenario == "strapdown_ins_3d") {
+    run_strapdown_ins_3d(config, output_dir);
   } else if (scenario == "random_walk") {
     run_random_walk(config, output_dir);
   } else {

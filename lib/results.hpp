@@ -31,14 +31,15 @@ public:
 
   /**
    * @brief exports all recorded filter data to a csv file. One row per
-   * timestep, with columns (state dim n, measurement dim m):
+   * timestep, with columns (state dim n, covariance dim d, which is only
+   * different from n when the state lives on a manifold, measurement dim m):
    * timestep,
    * x_predicted_0..x_predicted_{n-1},
-   * P_predicted_0_0..P_predicted_{n-1}_{n-1} (row-major),
+   * P_predicted_0_0..P_predicted_{d-1}_{d-1} (row-major),
    * x_updated_0..x_updated_{n-1},
    * innovation_0..innovation_{m-1},
    * S_0_0..S_{m-1}_{m-1} (row-major),
-   * P_updated_0_0..P_updated_{n-1}_{n-1} (row-major)
+   * P_updated_0_0..P_updated_{d-1}_{d-1} (row-major)
    * @param path where to write the csv file
    */
   void to_csv(const std::string &path) const;
@@ -73,10 +74,10 @@ public:
 
   /**
    * @brief exports all recorded smoother data to a csv file. One row per
-   * timestep, with columns (state dim n):
+   * timestep, with columns (state dim n, covariance dim d):
    * timestep,
    * x_smoothed_0..x_smoothed_{n-1},
-   * P_smoothed_0_0..P_smoothed_{n-1}_{n-1} (row-major)
+   * P_smoothed_0_0..P_smoothed_{d-1}_{d-1} (row-major)
    * @param path where to write the csv file
    */
   void to_csv(const std::string &path) const;

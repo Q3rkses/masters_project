@@ -47,16 +47,18 @@ void FilterResult::add(const FilterPredict &prediction,
 void FilterResult::to_csv(const std::string &path) const {
   std::ofstream out(path);
 
+  // the covariance can live on a smaller error state than the state itself
   int state_dim = filter_config_.x_prior.size();
+  int covariance_dim = filter_config_.P_prior.rows();
   int measurement_dim = updates_.empty() ? 0 : updates_[0].innovation.size();
 
   out << "timestep";
   write_vector_header(out, "x_predicted", state_dim);
-  write_matrix_header(out, "P_predicted", state_dim, state_dim);
+  write_matrix_header(out, "P_predicted", covariance_dim, covariance_dim);
   write_vector_header(out, "x_updated", state_dim);
   write_vector_header(out, "innovation", measurement_dim);
   write_matrix_header(out, "S", measurement_dim, measurement_dim);
-  write_matrix_header(out, "P_updated", state_dim, state_dim);
+  write_matrix_header(out, "P_updated", covariance_dim, covariance_dim);
   out << "\n";
 
   for (std::size_t k = 0; k < predictions_.size(); k++) {
@@ -82,10 +84,11 @@ void SmootherResult::to_csv(const std::string &path) const {
   std::ofstream out(path);
 
   int state_dim = smoother_config_.x_prior.size();
+  int covariance_dim = smoother_config_.P_prior.rows();
 
   out << "timestep";
   write_vector_header(out, "x_smoothed", state_dim);
-  write_matrix_header(out, "P_smoothed", state_dim, state_dim);
+  write_matrix_header(out, "P_smoothed", covariance_dim, covariance_dim);
   out << "\n";
 
   for (std::size_t k = 0; k < smoothed_.size(); k++) {

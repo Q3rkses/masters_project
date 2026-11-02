@@ -198,3 +198,228 @@ StrapdownINS2D::composition_minus(const Eigen::VectorXd &state_a,
   result(heading_index) = ssa(result(heading_index));
   return result;
 }
+
+namespace {
+
+// where each part sits in the state [p, v, q, b_a, b_g]
+const auto position_slice_3d = Eigen::seqN(0, 3);
+const auto velocity_slice_3d = Eigen::seqN(3, 3);
+const auto quaternion_slice = Eigen::seqN(6, 4);
+const auto accelerometer_bias_slice_3d = Eigen::seqN(10, 3);
+const auto gyro_bias_slice_3d = Eigen::seqN(13, 3);
+
+// where each part sits in the error state [dp, dv, dtheta, db_a, db_g], the
+// one the covariance, F, Q and the deltas of the composition operators use
+const auto error_position_slice = Eigen::seqN(0, 3);
+const auto error_velocity_slice = Eigen::seqN(3, 3);
+const auto error_attitude_slice = Eigen::seqN(6, 3);
+const auto error_accelerometer_bias_slice = Eigen::seqN(9, 3);
+const auto error_gyro_bias_slice = Eigen::seqN(12, 3);
+
+// where each noise source sits in the noise [n_a, n_g, n_ba, n_bg]
+const auto accelerometer_noise_slice_3d = Eigen::seqN(0, 3);
+const auto gyro_noise_slice_3d = Eigen::seqN(3, 3);
+const auto accelerometer_bias_noise_slice_3d = Eigen::seqN(6, 3);
+const auto gyro_bias_noise_slice_3d = Eigen::seqN(9, 3);
+
+// The quantities that f, F and Q all build on
+struct MidpointQuantities3D {
+  Eigen::Vector3d a_tilde;     // accelerometer reading minus its bias
+  Eigen::Vector3d omega_tilde; // gyro reading minus its bias
+  Eigen::Matrix3d R;           // R(q)
+  Eigen::Matrix3d R_half;      // rotation of half a time step, Exp(dt/2 * omega_tilde)
+  Eigen::Matrix3d R_mid;       // R(q_mid), the attitude half way through the time step
+};
+
+MidpointQuantities3D compute_midpoint_quantities(const State3D &state,
+                                               const Input &input,
+                                               const double dt) {
+  const Eigen::VectorXd reading = input.input_to_eigen_3d();
+
+  MidpointQuantities3D mid;
+  mid.a_tilde = reading.head<3>() - state.bias_accelerometer_;
+  mid.omega_tilde = reading.tail<3>() - state.bias_gyro_;
+  const Eigen::Quaterniond half_step = quaternion_exp(0.5 * dt * mid.omega_tilde);
+  mid.R = state.attitude_.toRotationMatrix();
+  mid.R_half = half_step.toRotationMatrix();
+  mid.R_mid = (state.attitude_ * half_step).toRotationMatrix();
+  return mid;
+}
+
+} // namespace
+
+State3D::State3D(const Eigen::VectorXd initial_state)
+    : position_(Eigen::Vector3d::Zero()), velocity_(Eigen::Vector3d::Zero()),
+      attitude_(Eigen::Quaterniond::Identity()),
+      bias_accelerometer_(Eigen::Vector3d::Zero()),
+      bias_gyro_(Eigen::Vector3d::Zero()) {
+  eigen_to_state(initial_state);
+}
+
+Eigen::VectorXd State3D::state_to_eigen() const {
+  Eigen::VectorXd state(16);
+  state << position_, velocity_, quaternion_to_vector(attitude_),
+      bias_accelerometer_, bias_gyro_;
+  return state;
+}
+
+void State3D::eigen_to_state(Eigen::VectorXd eigen_state) {
+  if (eigen_state.size() != 16) {
+    throw std::invalid_argument(
+        "State3D expects a vector of length 16: [p, v, q, "
+        "bias_accelerometer, bias_gyro]");
+  }
+  position_ = eigen_state(position_slice_3d);
+  velocity_ = eigen_state(velocity_slice_3d);
+  attitude_ = quaternion_from_vector(eigen_state(quaternion_slice)).normalized();
+  bias_accelerometer_ = eigen_state(accelerometer_bias_slice_3d);
+  bias_gyro_ = eigen_state(gyro_bias_slice_3d);
+}
+
+// A Gauss-Markov bias with stationary variance s2 and time constant T is driven
+// by white noise of intensity 2 * s2 / T, which is the driving_noise_variance
+// clang-format off
+StrapdownINS3D::StrapdownINS3D(const INS3DConfig &config)
+    : dt_(config.dt),
+      gravity_(config.gravity),
+      accelerometer_white_noise_intensity_(config.accelerometer_white_noise_intensity),
+      gyro_white_noise_intensity_(config.gyro_white_noise_intensity),
+      accelerometer_driving_noise_variance_((2.0 * config.accelerometer_noise_variance.array() / config.accelerometer_time_constant.array()).matrix()),
+      accelerometer_gauss_markov_variance_(config.accelerometer_noise_variance),
+      accelerometer_gauss_markov_timeconstant_(config.accelerometer_time_constant),
+      gyro_driving_noise_variance_((2.0 * config.gyro_noise_variance.array() / config.gyro_time_constant.array()).matrix()),
+      gyro_gauss_markov_variance_(config.gyro_noise_variance),
+      gyro_gauss_markov_timeconstant_(config.gyro_time_constant) {}
+// clang-format on
+
+Eigen::VectorXd StrapdownINS3D::f(const Eigen::VectorXd &input_state,
+                                  const Input &input) const {
+  State3D state(input_state);
+
+  // prepare variables that will be used for updating the state
+  MidpointQuantities3D mid = compute_midpoint_quantities(state, input, dt_);
+
+  // rotate acceleration vector with the midpoint attitude, and add gravity
+  Eigen::Vector3d acceleration = mid.R_mid * mid.a_tilde + gravity_;
+
+  // update all variables according to model, one line per equation
+  // clang-format off
+  Eigen::Vector3d position_next = state.position_ + dt_ * state.velocity_ + 0.5 * dt_ * dt_ * acceleration;
+  Eigen::Vector3d velocity_next = state.velocity_ + dt_ * acceleration;
+  Eigen::Quaterniond attitude_next = (state.attitude_ * quaternion_exp(dt_ * mid.omega_tilde)).normalized();
+  Eigen::Vector3d bias_accelerometer_next = (-dt_ / accelerometer_gauss_markov_timeconstant_.array()).exp() * state.bias_accelerometer_.array();
+  Eigen::Vector3d bias_gyro_next = (-dt_ / gyro_gauss_markov_timeconstant_.array()).exp() * state.bias_gyro_.array();
+
+  Eigen::VectorXd next_state(16);
+  next_state << position_next, velocity_next, quaternion_to_vector(attitude_next), bias_accelerometer_next, bias_gyro_next;
+  // clang-format on
+
+  return next_state;
+}
+
+Eigen::MatrixXd StrapdownINS3D::F(const Eigen::VectorXd &input_state,
+                                  const Input &input) const {
+  State3D state(input_state);
+
+  MidpointQuantities3D mid = compute_midpoint_quantities(state, input, dt_);
+  const Eigen::Matrix3d I3 = Eigen::Matrix3d::Identity();
+
+  // How the rotated acceleration R_mid * a_tilde changes with the attitude
+  // error, the accelerometer bias error and the gyro bias error
+  // clang-format off
+  const Eigen::Matrix3d dRa_attitude = -mid.R * skew(mid.R_half * mid.a_tilde);
+  const Eigen::Matrix3d dRa_accelerometer_bias = -mid.R_mid;
+  const Eigen::Matrix3d dRa_gyro_bias = 0.5 * dt_ * mid.R_mid * skew(mid.a_tilde) * right_jacobian_so3(0.5 * dt_ * mid.omega_tilde);
+
+  // the attitude error after a step is the old one rotated back by the step,
+  // and the gyro bias error turns the step itself
+  const Eigen::Matrix3d R_step = quaternion_exp(dt_ * mid.omega_tilde).toRotationMatrix();
+  const Eigen::Matrix3d J_step = right_jacobian_so3(dt_ * mid.omega_tilde);
+
+  // F_d, one line per block. Row = which next-state equation, column = what it
+  // is differentiated with respect to. Blocks that are not assigned stay zero
+  Eigen::MatrixXd F_matrix = Eigen::MatrixXd::Zero(15, 15);
+  F_matrix(error_position_slice, error_position_slice) = I3;
+  F_matrix(error_position_slice, error_velocity_slice) = dt_ * I3;
+  F_matrix(error_position_slice, error_attitude_slice) = dt_ * dt_ / 2 * dRa_attitude;
+  F_matrix(error_position_slice, error_accelerometer_bias_slice) = dt_ * dt_ / 2 * dRa_accelerometer_bias;
+  F_matrix(error_position_slice, error_gyro_bias_slice) = dt_ * dt_ / 2 * dRa_gyro_bias;
+
+  F_matrix(error_velocity_slice, error_velocity_slice) = I3;
+  F_matrix(error_velocity_slice, error_attitude_slice) = dt_ * dRa_attitude;
+  F_matrix(error_velocity_slice, error_accelerometer_bias_slice) = dt_ * dRa_accelerometer_bias;
+  F_matrix(error_velocity_slice, error_gyro_bias_slice) = dt_ * dRa_gyro_bias;
+
+  F_matrix(error_attitude_slice, error_attitude_slice) = R_step.transpose();
+  F_matrix(error_attitude_slice, error_gyro_bias_slice) = -dt_ * J_step;
+
+  Eigen::Vector3d accelerometer_bias_decay = (-dt_ / accelerometer_gauss_markov_timeconstant_.array()).exp();
+  Eigen::Vector3d gyro_bias_decay = (-dt_ / gyro_gauss_markov_timeconstant_.array()).exp();
+  F_matrix(error_accelerometer_bias_slice, error_accelerometer_bias_slice) = accelerometer_bias_decay.asDiagonal().toDenseMatrix();
+  F_matrix(error_gyro_bias_slice, error_gyro_bias_slice) = gyro_bias_decay.asDiagonal().toDenseMatrix();
+  // clang-format on
+
+  return F_matrix;
+}
+
+Eigen::MatrixXd StrapdownINS3D::Q(const Eigen::VectorXd &input_state,
+                                  const Input &input) const {
+  State3D state(input_state);
+
+  MidpointQuantities3D mid = compute_midpoint_quantities(state, input, dt_);
+
+  const Eigen::Matrix3d I3 = Eigen::Matrix3d::Identity();
+
+  // G, contionous time, how each noise source enters each error state.
+  // clang-format off
+  Eigen::MatrixXd G_matrix = Eigen::MatrixXd::Zero(15, 12);
+  G_matrix(error_velocity_slice, accelerometer_noise_slice_3d) = mid.R_mid;
+  G_matrix(error_attitude_slice, gyro_noise_slice_3d) = I3;
+  G_matrix(error_accelerometer_bias_slice, accelerometer_bias_noise_slice_3d) = I3;
+  G_matrix(error_gyro_bias_slice, gyro_bias_noise_slice_3d) = I3;
+
+  // D, the continuous-time intensity of each noise source, in noise order.
+  Eigen::VectorXd D_diagonal(12);
+  D_diagonal(accelerometer_noise_slice_3d) = accelerometer_white_noise_intensity_;
+  D_diagonal(gyro_noise_slice_3d) = gyro_white_noise_intensity_;
+  D_diagonal(accelerometer_bias_noise_slice_3d) = accelerometer_driving_noise_variance_;
+  D_diagonal(gyro_bias_noise_slice_3d) = gyro_driving_noise_variance_;
+
+  // First order approximation of Q_d
+  Eigen::MatrixXd Q_d = G_matrix * D_diagonal.asDiagonal() * G_matrix.transpose() * dt_;
+  // clang-format on
+
+  // Exact solution with Van Loan's Formula. not yet implemented
+
+  return Q_d;
+}
+
+Eigen::VectorXd
+StrapdownINS3D::composition_plus(const Eigen::VectorXd &state,
+                                 const Eigen::VectorXd &delta) const {
+  State3D composed(state);
+
+  // the attitude is perturbed in its own (body) frame, the rest is additive
+  composed.position_ += delta(error_position_slice);
+  composed.velocity_ += delta(error_velocity_slice);
+  composed.attitude_ =
+      (composed.attitude_ * quaternion_exp(delta(error_attitude_slice)))
+          .normalized();
+  composed.bias_accelerometer_ += delta(error_accelerometer_bias_slice);
+  composed.bias_gyro_ += delta(error_gyro_bias_slice);
+  return composed.state_to_eigen();
+}
+
+Eigen::VectorXd
+StrapdownINS3D::composition_minus(const Eigen::VectorXd &state_a,
+                                  const Eigen::VectorXd &state_b) const {
+  State3D a(state_a);
+  State3D b(state_b);
+
+  Eigen::VectorXd result(15);
+  result << a.position_ - b.position_, a.velocity_ - b.velocity_,
+      quaternion_log(b.attitude_.conjugate() * a.attitude_),
+      a.bias_accelerometer_ - b.bias_accelerometer_,
+      a.bias_gyro_ - b.bias_gyro_;
+  return result;
+}

@@ -82,12 +82,13 @@ lib/        headers, grouped by role; src/ mirrors this structure
   filters/      bayesian_filter (interface), kalman_filter, extended_kalman_filter
   smoothers/    bayesian_smoother (interface), rts and extended rts smoothers
   models/       motion/measurement interfaces, linear and nonlinear (INS) models
-  scenarios/    one run function per scenario
+  scenarios/    one run function per scenario, 2D and 3D strapdown INS and the random walk
+  utilities/    math_utilities (angles, rotations, quaternions), file_utilities (csv writing)
   estimation.hpp   runs any filter forward and any smoother backward over a list of sensors
-  sensors.hpp, simulation.hpp, results.hpp, utilities.hpp   sensor schedules, noise generators, CSV export, helpers
+  sensors.hpp, simulation.hpp, results.hpp, trajectory.hpp   sensor schedules, noise generators, CSV export, 2D and 3D ground-truth paths
 src/        implementations, and main.cpp which loads one config and runs it
 configs/    one yaml file per scenario
-scripts/    analysis: analyze_1d.py, analyze_2d.py, analyze_ins_2d.py
+scripts/    analysis: analyze_1d.py, analyze_2d.py, analyze_ins_2d.py, analyze_ins_3d.py
 results/    one folder per experiment: README.md, and per case config.yaml, data/, figures/, stats.txt
 data/       scratch output of the latest run (gitignored)
 figures/    scratch figures of the latest analysis (gitignored)
