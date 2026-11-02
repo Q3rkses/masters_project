@@ -1,5 +1,5 @@
 #include "models/measurement_models.hpp"
-#include "utilities.hpp"
+#include "utilities/math_utilities.hpp"
 
 // where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_gyro]
 namespace {

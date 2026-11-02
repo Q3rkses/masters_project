@@ -6,7 +6,7 @@
 #include "smoothers/rauch_tung_striebel_smoother.hpp"
 #include "results.hpp"
 #include "simulation.hpp"
-#include "utilities.hpp"
+#include "utilities/file_utilities.hpp"
 
 #include <Eigen/Dense>
 #include <iostream>

@@ -1,5 +1,5 @@
 #include "models/nonlinear_models.hpp"
-#include "utilities.hpp"
+#include "utilities/math_utilities.hpp"
 #include <stdexcept>
 
 // where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_g]

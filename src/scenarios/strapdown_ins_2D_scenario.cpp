@@ -12,7 +12,8 @@
 #include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
 #include "smoothers/unscented_rauch_tung_striebel_smoother.hpp"
 #include "trajectory.hpp"
-#include "utilities.hpp"
+#include "utilities/file_utilities.hpp"
+#include "utilities/math_utilities.hpp"
 
 #include <Eigen/Dense>
 #include <cmath>

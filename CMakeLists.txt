@@ -33,7 +33,7 @@ add_library(kalman_lib
   src/trajectory.cpp
   src/sensors.cpp
   src/estimation.cpp
-  src/utilities.cpp
+  src/utilities/file_utilities.cpp
   src/scenarios/random_walk_scenario.cpp
   src/scenarios/strapdown_ins_2D_scenario.cpp
 )
