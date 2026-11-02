@@ -193,7 +193,7 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
     const Eigen::Vector2d acceleration_body = rotation_matrix_z_2D(psi).transpose() * acceleration_nav;
 
     Eigen::VectorXd x_true(8);
-    x_true << sample.position, psi, velocity, accelerometer_bias_series[k],
+    x_true << sample.position, velocity, psi, accelerometer_bias_series[k],
         gyro_bias_series[k](0);
 
     // reading = ideal + true bias + white noise

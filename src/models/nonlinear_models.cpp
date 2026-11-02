@@ -2,12 +2,12 @@
 #include "utilities/math_utilities.hpp"
 #include <stdexcept>
 
-// where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_g]
+// where each part sits in the state [x, y, u, v, psi, b_ax, b_ay, b_g]
 const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index> position_slice =
     Eigen::seqN(0, 2);
-const int heading_index = 2;
 const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index> velocity_slice =
-    Eigen::seqN(3, 2);
+    Eigen::seqN(2, 2);
+const int heading_index = 4;
 const Eigen::ArithmeticSequence<Eigen::Index, Eigen::Index>
     accelerometer_bias_slice = Eigen::seqN(5, 2);
 const int gyro_bias_index = 7;
@@ -45,14 +45,14 @@ MidpointQuantities compute_midpoint_quantities(const State &state,
 }
 
 State::State(const Eigen::VectorXd initial_state)
-    : x_(0.0), y_(0.0), psi_(0.0), u_(0.0), v_(0.0), bias_accelerometer_x_(0.0),
+    : x_(0.0), y_(0.0), u_(0.0), v_(0.0), psi_(0.0), bias_accelerometer_x_(0.0),
       bias_accelerometer_y_(0.0), bias_gyro_psi_(0.0) {
   eigen_to_state(initial_state);
 }
 
 Eigen::VectorXd State::state_to_eigen() {
   Eigen::VectorXd state(8);
-  state << x_, y_, psi_, u_, v_, bias_accelerometer_x_, bias_accelerometer_y_,
+  state << x_, y_, u_, v_, psi_, bias_accelerometer_x_, bias_accelerometer_y_,
       bias_gyro_psi_;
   return state;
 }
@@ -60,14 +60,14 @@ Eigen::VectorXd State::state_to_eigen() {
 void State::eigen_to_state(Eigen::VectorXd eigen_state) {
   if (eigen_state.size() != 8) {
     throw std::invalid_argument(
-        "State expects a vector of length 8: [x, y, psi, u, v, "
+        "State expects a vector of length 8: [x, y, u, v, psi, "
         "bias_accelerometer_x, bias_accelerometer_y, bias_gyro_psi]");
   }
   x_ = eigen_state(0);
   y_ = eigen_state(1);
-  psi_ = eigen_state(2);
-  u_ = eigen_state(3);
-  v_ = eigen_state(4);
+  u_ = eigen_state(2);
+  v_ = eigen_state(3);
+  psi_ = eigen_state(4);
   bias_accelerometer_x_ = eigen_state(5);
   bias_accelerometer_y_ = eigen_state(6);
   bias_gyro_psi_ = eigen_state(7);
@@ -104,15 +104,15 @@ Eigen::VectorXd StrapdownINS2D::f(const Eigen::VectorXd &input_state,
   // clang-format off
   double x_next = state.x_ + dt_ * state.u_ + 0.5 * dt_ * dt_ * rotated_acceleration(0);
   double y_next = state.y_ + dt_ * state.v_ + 0.5 * dt_ * dt_ * rotated_acceleration(1);
-  double psi_next = state.psi_ + dt_ * mid.omega_tilde;
   double u_next = state.u_ + dt_ * rotated_acceleration(0);
   double v_next = state.v_ + dt_ * rotated_acceleration(1);
+  double psi_next = state.psi_ + dt_ * mid.omega_tilde;
   double bias_accelerometer_x_next = std::exp(-dt_ / accelerometer_gauss_markov_timeconstant_(0)) * state.bias_accelerometer_x_;
   double bias_accelerometer_y_next = std::exp(-dt_ / accelerometer_gauss_markov_timeconstant_(1)) * state.bias_accelerometer_y_;
   double bias_gyro_psi_next = std::exp(-dt_ / gyro_gauss_markov_timeconstant_) * state.bias_gyro_psi_;
 
   Eigen::VectorXd next_state(8);
-  next_state << x_next, y_next, psi_next, u_next, v_next, bias_accelerometer_x_next, bias_accelerometer_y_next, bias_gyro_psi_next;
+  next_state << x_next, y_next, u_next, v_next, psi_next, bias_accelerometer_x_next, bias_accelerometer_y_next, bias_gyro_psi_next;
   // clang-format on
 
   return next_state;
@@ -130,18 +130,18 @@ Eigen::MatrixXd StrapdownINS2D::F(const Eigen::VectorXd &input_state,
   Eigen::MatrixXd F_matrix = Eigen::MatrixXd::Zero(8, 8);
   // clang-format off
   F_matrix(position_slice, position_slice) = I2;
-  F_matrix(position_slice, heading_index) = dt_ * dt_ / 2 * mid.dRa;
   F_matrix(position_slice, velocity_slice) = dt_ * I2;
+  F_matrix(position_slice, heading_index) = dt_ * dt_ / 2 * mid.dRa;
   F_matrix(position_slice, accelerometer_bias_slice) = -dt_ * dt_ / 2 * mid.R_mid;
   F_matrix(position_slice, gyro_bias_index) = -dt_ * dt_ * dt_ / 4 * mid.dRa;
 
-  F_matrix(heading_index, heading_index) = 1.0;
-  F_matrix(heading_index, gyro_bias_index) = -dt_;
-
-  F_matrix(velocity_slice, heading_index) = dt_ * mid.dRa;
   F_matrix(velocity_slice, velocity_slice) = I2;
+  F_matrix(velocity_slice, heading_index) = dt_ * mid.dRa;
   F_matrix(velocity_slice, accelerometer_bias_slice) = -dt_ * mid.R_mid;
   F_matrix(velocity_slice, gyro_bias_index) = -dt_ * dt_ / 2 * mid.dRa;
+
+  F_matrix(heading_index, heading_index) = 1.0;
+  F_matrix(heading_index, gyro_bias_index) = -dt_;
 
   Eigen::Vector2d accelerometer_bias_decay = (-dt_ / accelerometer_gauss_markov_timeconstant_.array()).exp();
   F_matrix(accelerometer_bias_slice, accelerometer_bias_slice) = accelerometer_bias_decay.asDiagonal().toDenseMatrix();

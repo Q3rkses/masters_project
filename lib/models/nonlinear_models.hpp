@@ -63,9 +63,9 @@ public:
 
   double x_;
   double y_;
-  double psi_;
   double u_;
   double v_;
+  double psi_;
   double bias_accelerometer_x_;
   double bias_accelerometer_y_;
   double bias_gyro_psi_;
@@ -82,7 +82,7 @@ public:
 
   /**
    * @brief Gets f for a 2d particle following a strapdown INS model.
-   * The model has 8 states, [x, y, psi, u, w, b_x, b_y, b_psi].
+   * The model has 8 states, [x, y, u, v, psi, b_x, b_y, b_psi].
    * I.e 2 for position, 2 for speed, 1 heading, 2 bias accel, 1 bias gyro
    * @param state, the state of the system
    * @param input, the IMU input to the system, [a_x, a_y, omega_psi]

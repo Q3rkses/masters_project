@@ -1,10 +1,10 @@
 #include "models/measurement_models.hpp"
 #include "utilities/math_utilities.hpp"
 
-// where each part sits in the state [x, y, psi, u, v, b_ax, b_ay, b_gyro]
+// where each part sits in the state [x, y, u, v, psi, b_ax, b_ay, b_gyro]
 namespace {
-const int heading_index = 2;
-const auto velocity_slice = Eigen::seqN(3, 2);
+const auto velocity_slice = Eigen::seqN(2, 2);
+const int heading_index = 4;
 
 Eigen::MatrixXd position_H() {
   Eigen::MatrixXd H = Eigen::MatrixXd::Zero(2, 8);
@@ -60,8 +60,8 @@ Eigen::MatrixXd DVLMeasurementModel::H(const Eigen::VectorXd &state,
   const Eigen::Matrix2d dR_mid = derivative_rotation_matrix_z_2D(psi);
 
   Eigen::MatrixXd H_matrix = Eigen::MatrixXd::Zero(2, 8);
+  H_matrix.block<2, 2>(0, 2) = R_mid.transpose();
   H_matrix.block<2, 1>(0, heading_index) = dR_mid.transpose() * velocity_nav;
-  H_matrix.block<2, 2>(0, 3) = R_mid.transpose();
   return H_matrix;
 }
 
@@ -86,4 +86,3 @@ Eigen::VectorXd DVLMeasurementModel::composition_minus(
 bool DVLMeasurementModel::is_linear() const {
   return false; // H depends on state through psi
 }
-

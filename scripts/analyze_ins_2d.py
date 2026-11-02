@@ -31,7 +31,7 @@ the consistency are compared in the statistics instead:
     3_errors.png     the subject's error with 95% bands
     4_variants.png   errors, gyro bias and distances of all variants
 
-State: [x, y, psi, u, v, b_ax, b_ay, b_gyro].
+State: [x, y, u, v, psi, b_ax, b_ay, b_gyro].
 """
 
 import re
@@ -62,7 +62,7 @@ DENIED = "#f2c48d"
 
 STATE_DIM = 8
 POSITION = slice(0, 2)
-HEADING = 2
+HEADING = 4
 SENSOR_DIMS = {"GNSS": 2, "magnetometer": 1, "DVL": 2}
 SENSOR_COLORS = {"GNSS": GNSS, "magnetometer": MAGNETOMETER, "DVL": DVL}
 CONFIDENCE = 0.95
