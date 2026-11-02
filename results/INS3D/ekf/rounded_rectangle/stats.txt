@@ -1,0 +1,32 @@
+30000 timesteps, dt 0.01 s, fixes: GNSS 44, magnetometer 479, DVL 507, altimeter 487
+
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS EKF                     3.5143  band [2.3740, 3.6982]  95.5% of steps in band  -> consistent
+  ANIS magnetometer EKF             0.8011  band [0.8745, 1.1338]  96.9% of steps in band  -> underconfident
+  ANIS DVL EKF                      2.3186  band [2.7710, 3.2380]  97.0% of steps in band  -> underconfident
+  ANIS altimeter EKF                1.0114  band [0.8773, 1.1306]  96.1% of steps in band  -> consistent
+  ANEES full EKF                    8.2980  band [13.9668, 16.0695]  73.8% of steps in band  -> underconfident
+  ANEES full ERTS                   9.2762  band [12.3595, 17.8923]  80.7% of steps in band  -> underconfident
+  ANEES position EKF                2.1115  band [2.5209, 3.5202]  95.0% of steps in band  -> underconfident
+  ANEES position ERTS               2.5187  band [0.2158, 9.3484]  98.6% of steps in band  -> consistent
+  ANEES attitude EKF                1.2168  band [2.6820, 3.3356]  92.0% of steps in band  -> underconfident
+  ANEES attitude ERTS               1.5878  band [1.7494, 4.5824]  96.1% of steps in band  -> underconfident
+
+accuracy (position error in m, attitude error in deg):
+                 RMSE pos   median     95th      max  RMSE att  max att
+  EKF              1.0289   0.4920   2.0208   2.2930    1.7197   4.0543
+  ERTS             0.6370   0.3780   1.2599   1.4600    1.1831   3.1692
+
+bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  EKF              0.05012   0.13898   0.01927   0.00104   0.00146   0.00142
+  ERTS             0.06058   0.11113   0.00995   0.00091   0.00133   0.00102
+
+share of steps with the true position inside the reported 95% ellipsoid:
+  EKF            99.0%
+  ERTS           99.7%
+
+smallest eigenvalue of the full P:
+  EKF           min  6.593e-06  0 of 30000 steps below zero
+  ERTS          min  3.634e-06  0 of 30000 steps below zero
+
+ERTS trace(P_p) <= EKF trace(P_p) at every step: True

@@ -24,10 +24,10 @@ Everything is run on two paths, a four-corner test that only turns left and a fi
 
 ### State and motion model
 
-The state collects position, heading, velocity in the navigation frame and the two sensor biases,
+The state collects position, velocity in the navigation frame, heading and the two sensor biases,
 
 $$
-x = \begin{bmatrix} p^\top & \psi & v^\top & b_a^\top & b_g \end{bmatrix}^\top \in \mathbb{R}^{8},
+x = \begin{bmatrix} p^\top & v^\top & \psi & b_a^\top & b_g \end{bmatrix}^\top \in \mathbb{R}^{8},
 \qquad p, v \in \mathbb{R}^2 .
 $$
 
@@ -38,8 +38,8 @@ $\psi_{k+\frac12} = \psi_k + \tfrac{\Delta t}{2}\tilde\omega_k$:
 $$
 \begin{aligned}
 p_{k+1} &= p_k + \Delta t\, v_k + \tfrac{\Delta t^2}{2}\, R(\psi_{k+\frac12})\,\tilde a_k, \\
-\psi_{k+1} &= \psi_k + \Delta t\, \tilde\omega_k, \\
 v_{k+1} &= v_k + \Delta t\, R(\psi_{k+\frac12})\,\tilde a_k, \\
+\psi_{k+1} &= \psi_k + \Delta t\, \tilde\omega_k, \\
 b_{a,k+1} &= e^{-\Delta t / T_a}\, b_{a,k}, \qquad b_{g,k+1} = e^{-\Delta t / T_g}\, b_{g,k}.
 \end{aligned}
 $$
@@ -56,7 +56,7 @@ $$
 
 | symbol | meaning |
 | --- | --- |
-| $x_k$ | state: position $p_k$, heading $\psi_k$, navigation-frame velocity $v_k$, accelerometer bias $b_{a,k}$ and gyro bias $b_{g,k}$ |
+| $x_k$ | state: position $p_k$, navigation-frame velocity $v_k$, heading $\psi_k$, accelerometer bias $b_{a,k}$ and gyro bias $b_{g,k}$ |
 | $u_k$ | IMU reading $(a_k, \omega_k)$: body-frame specific force and yaw rate |
 | $R(\psi)$ | rotation from the body to the navigation frame |
 | $\bar x_k,\ \bar P_k$ | predicted mean and covariance |
@@ -176,7 +176,7 @@ The executable reads `<case>/config.yaml` and writes `<case>/data`. Given a fold
 `./build/kalman_filtering_and_smoothing results/INS2D/only_gnss` simulates every case of this page in one command. The analysis reads `<case>/data`
 and writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`.
 
-`data/` holds one CSV file per quantity with one row per timestep and a shared `timestep` column. `truth.csv` has the true state `x_true_0 ... x_true_7`;
+`data/` holds one CSV file per quantity with one row per timestep and a shared `timestep` column. `truth.csv` has the true state `x_true_0 ... x_true_7`, ordered as in the state $x$ above;
 `filter.csv` and `smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `*_fixes.csv` has, for each fix of one sensor, the raw measurement,
 the innovation and $S$, which is what the NIS is computed from.
 

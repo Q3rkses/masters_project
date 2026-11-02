@@ -17,8 +17,8 @@ filter_gyro_noise_variance: 5e-5
 filter_accelerometer_noise_variance: [5e-2, 5e-2]
 filter_gyro_white_noise_intensity: 5e-4
 filter_accelerometer_white_noise_intensity: [5e-4, 5e-4]
-# initial condition of the ASV: [x, y, psi, u, v, b_ax, b_ay, b_g]
-x0: [0, 0, 0, 2.0, 0, 0, 0, 0] # start at origin with heading +x
+# initial condition of the ASV: [x, y, u, v, psi, b_ax, b_ay, b_g]
+x0: [0, 0, 2.0, 0, 0, 0, 0, 0] # start at origin with heading +x
 p0_diagonal: [0.4, 0.4, 0.04, 0.04, 0.04, 0.004, 0.004, 0.0004]
 # measurement noise
 gnss_noise_variance: 0.20 # m^2, 1-sigma ~0.4m

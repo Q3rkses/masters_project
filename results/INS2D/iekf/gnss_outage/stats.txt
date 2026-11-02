@@ -4,26 +4,26 @@ consistency (time-averaged; above the band the estimator is overconfident, below
   ANIS GNSS EKF                   1.8012  band [1.4325, 2.6608]  97.8% of steps in band  -> consistent
   ANIS magnetometer EKF           0.8593  band [0.8682, 1.1410]  95.7% of steps in band  -> underconfident
   ANIS DVL EKF                    1.9876  band [1.8297, 2.1778]  94.3% of steps in band  -> consistent
-  ANIS GNSS UKF                   1.8013  band [1.4323, 2.6610]  97.8% of steps in band  -> consistent
-  ANIS magnetometer UKF           0.8593  band [0.8682, 1.1410]  95.7% of steps in band  -> underconfident
-  ANIS DVL UKF                    1.9872  band [1.8297, 2.1778]  94.3% of steps in band  -> consistent
+  ANIS GNSS UKF                   1.8012  band [1.4323, 2.6610]  97.8% of steps in band  -> consistent
+  ANIS magnetometer UKF           0.8592  band [0.8682, 1.1410]  95.7% of steps in band  -> underconfident
+  ANIS DVL UKF                    1.9870  band [1.8297, 2.1777]  94.3% of steps in band  -> consistent
   ANIS GNSS IEKF                  1.7990  band [1.4320, 2.6614]  97.8% of steps in band  -> consistent
   ANIS magnetometer IEKF          0.8595  band [0.8681, 1.1410]  96.0% of steps in band  -> underconfident
   ANIS DVL IEKF                   1.9878  band [1.8296, 2.1779]  94.3% of steps in band  -> consistent
   ANEES position EKF              2.3378  band [1.1958, 3.0076]  96.6% of steps in band  -> consistent
-  ANEES position UKF              2.3414  band [1.1952, 3.0086]  96.6% of steps in band  -> consistent
+  ANEES position UKF              2.3408  band [1.1954, 3.0082]  96.6% of steps in band  -> consistent
   ANEES position IEKF             2.2828  band [1.2012, 2.9992]  96.6% of steps in band  -> consistent
   ANEES position ERTS             1.7506  band [0.0506, 7.3778]  92.3% of steps in band  -> consistent
-  ANEES position URTSS            1.7479  band [0.0506, 7.3778]  92.3% of steps in band  -> consistent
+  ANEES position URTSS            1.7471  band [0.0506, 7.3778]  92.3% of steps in band  -> consistent
   ANEES position ERTS (IEKF)      1.7560  band [0.0506, 7.3778]  92.5% of steps in band  -> consistent
 
 accuracy (position error in m, heading error in deg):
                  RMSE pos   median     95th      max  RMSE head
   EKF              1.4191   1.2471   2.3804   2.6341     1.3551
-  UKF              1.4210   1.2483   2.3820   2.6360     1.3552
+  UKF              1.4209   1.2480   2.3823   2.6362     1.3550
   IEKF             1.3955   1.2180   2.3660   2.6227     1.3565
   ERTS             0.6844   0.3938   1.3213   1.5476     0.8437
-  URTSS            0.6838   0.3932   1.3187   1.5451     0.8436
+  URTSS            0.6837   0.3932   1.3187   1.5449     0.8436
   ERTS (IEKF)      0.6852   0.3956   1.3344   1.5621     0.8451
 
 bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
@@ -55,7 +55,7 @@ URTSS trace(P) <= UKF trace(P) at every step: True
 ERTS (IEKF) trace(P) <= IEKF trace(P) at every step: True
 
 distance to the EKF-based estimate (position in mm, heading in deg), and the range of the position trace(P) ratio:
-  UKF vs EKF: median 3.51 max 7.9, heading max 0.016, ratio [1.0000, 1.0004]
+  UKF vs EKF: median 4.05 max 8.7, heading max 0.011, ratio [1.0000, 1.0005]
   IEKF vs EKF: median 25.81 max 63.5, heading max 0.056, ratio [0.9959, 1.0054]
-  URTSS vs ERTS: median 2.00 max 5.5, heading max 0.003, ratio [0.9999, 1.0006]
+  URTSS vs ERTS: median 2.06 max 5.2, heading max 0.002, ratio [1.0000, 1.0011]
   ERTS (IEKF) vs ERTS: median 14.63 max 32.8, heading max 0.030, ratio [0.9991, 1.0033]

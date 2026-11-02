@@ -79,3 +79,6 @@ figures/
 !results/*/figures/
 !results/*/*/*/data/
 !results/*/*/*/figures/
+
+# the 3d csv files are large (hundreds of MB), generate them with the executable
+results/INS3D/*/*/data/
