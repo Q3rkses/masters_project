@@ -27,6 +27,7 @@ add_library(kalman_lib
   src/smoothers/rauch_tung_striebel_smoother.cpp
   src/smoothers/extended_rauch_tung_striebel_smoother.cpp
   src/smoothers/unscented_rauch_tung_striebel_smoother.cpp
+  src/smoothers/iterated_extended_kalman_smoother.cpp
   src/transforms/unscented_transform.cpp
   src/simulation.cpp
   src/results.cpp

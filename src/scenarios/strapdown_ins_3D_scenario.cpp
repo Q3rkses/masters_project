@@ -10,6 +10,7 @@
 #include "sensors.hpp"
 #include "simulation.hpp"
 #include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
+#include "smoothers/iterated_extended_kalman_smoother.hpp"
 #include "smoothers/unscented_rauch_tung_striebel_smoother.hpp"
 #include "trajectory.hpp"
 #include "utilities/file_utilities.hpp"
@@ -272,7 +273,8 @@ StrapdownINS3DScenario build_strapdown_ins_3d(const YAML::Node &config,
 }
 
 // Runs the EKF with the ERTS and the UKF with the URTSS over the scenario and
-// writes their results, the IEKF too for configs that set run_iekf.
+// writes their results, the IEKF and the IEKS too for configs that set
+// run_iekf and run_ieks.
 void run_strapdown_ins_3d_estimators(const YAML::Node &config,
                                      const StrapdownINS3DScenario &scenario,
                                      const std::filesystem::path &output_dir) {
@@ -309,6 +311,16 @@ void run_strapdown_ins_3d_estimators(const YAML::Node &config,
     EstimatorRun iekf_run = run_estimator(iekf, erts, filter_config,
                                           smoother_config, inputs, scenario.sensors);
     write_estimator_run(output_dir, "iekf_", iekf_run);
+  }
+
+  // The IEKS starts from the EKF's run and iterates over the whole trajectory,
+  // so it has no filter of its own and only writes its smoother.
+  if (config["run_ieks"].as<bool>(false)) {
+    IteratedExtendedKalmanSmoother ieks(smoother_config,
+                                        read_lm_config(config));
+    SmootherResult ieks_smoothed = run_smoother(
+        ieks, smoother_config, ekf_run.filtered.result, inputs, scenario.sensors);
+    ieks_smoothed.to_csv((output_dir / "ieks_smoother.csv").string());
   }
 }
 
