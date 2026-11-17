@@ -111,97 +111,14 @@ The executable runs every `config.yaml` it finds below the folder it is given an
 
 ## Results
 
-Each method folder holds one case per run below. The figures are shown for the figure-eight; the four-corner cases have the same figures in their own `figures/` folders.
+Each method has its own page with the setup, the figures and the numbers of its runs (figure-eight and four-corner).
 
-### Extended: EKF and ERTS
-
-![Scenario](extended/figure_eight/figures/1_scenario.png)
-
-*The true path with the body $x$ (forward) and $z$ (down) axes drawn along it, and when each sensor fired.*
-
-![Path and estimates](extended/figure_eight/figures/2_path.png)
-
-*The true path with the EKF and ERTS estimates in 3D, and the depth against time.*
-
-![Errors](extended/figure_eight/figures/3_errors.png)
-
-*Position error per axis and attitude error about each body axis, with each estimator's 95% band, shaded where GNSS is denied.*
-
-![Reported uncertainty](extended/figure_eight/figures/4_uncertainty.png)
-
-*The position and attitude standard deviation the EKF and ERTS report, on a log scale.*
-
-![Biases](extended/figure_eight/figures/5_biases.png)
-
-*True and estimated accelerometer and gyro biases.*
-
-![Consistency](extended/figure_eight/figures/6_consistency.png)
-
-*NIS of every fix per sensor against its 95% interval, and the running mean of the full-state NEES of the EKF and ERTS.*
-
-### Unscented: UKF and URTSS
-
-![Scenario](unscented/figure_eight/figures/1_scenario.png)
-
-*The true path with the body $x$ (forward) and $z$ (down) axes drawn along it, and when each sensor fired.*
-
-![Path and estimates](unscented/figure_eight/figures/2_path.png)
-
-*The true path with the UKF and URTSS estimates in 3D, and the depth against time.*
-
-![Errors](unscented/figure_eight/figures/3_errors.png)
-
-*Position error per axis and attitude error about each body axis, with each estimator's 95% band, shaded where GNSS is denied.*
-
-![Reported uncertainty](unscented/figure_eight/figures/4_uncertainty.png)
-
-*The position and attitude standard deviation the UKF and URTSS report, on a log scale.*
-
-![Biases](unscented/figure_eight/figures/5_biases.png)
-
-*True and estimated accelerometer and gyro biases.*
-
-![Consistency](unscented/figure_eight/figures/6_consistency.png)
-
-*NIS of every fix per sensor against its 95% interval, and the running mean of the full-state NEES of the UKF and URTSS.*
-
-### Iterated: IEKF and IEKS
-
-![Scenario](iterated/figure_eight/figures/1_scenario.png)
-
-*The true path with the body $x$ (forward) and $z$ (down) axes drawn along it, and when each sensor fired.*
-
-![Path and estimates](iterated/figure_eight/figures/2_path.png)
-
-*The true path with the IEKF and IEKS estimates in 3D, and the depth against time.*
-
-![Errors](iterated/figure_eight/figures/3_errors.png)
-
-*Position error per axis and attitude error about each body axis, with each estimator's 95% band, shaded where GNSS is denied.*
-
-![Reported uncertainty](iterated/figure_eight/figures/4_uncertainty.png)
-
-*The position and attitude standard deviation the IEKF and IEKS report, on a log scale.*
-
-![Biases](iterated/figure_eight/figures/5_biases.png)
-
-*True and estimated accelerometer and gyro biases.*
-
-![Consistency](iterated/figure_eight/figures/6_consistency.png)
-
-*NIS of every fix per sensor against its 95% interval, and the running mean of the full-state NEES of the IEKF and IEKS.*
-
-### Comparison
-
-The three filters and smoothers on the same data.
-
-![Scenario](comparison/figure_eight/figures/1_scenario.png)
-
-*The true path with the body axes, and when each sensor fired.*
-
-![All estimators](comparison/figure_eight/figures/2_variants.png)
-
-*From the top: position error of the three filters, position error of the three smoothers, attitude error of the filters and attitude error of the smoothers, shaded where GNSS is denied.*
+| page | estimators |
+| --- | --- |
+| [extended](extended/README.md) | EKF and ERTS |
+| [unscented](unscented/README.md) | UKF and URTSS |
+| [iterated](iterated/README.md) | IEKF and IEKS |
+| [comparison](comparison/README.md) | all three on the same data |
 
 ## Related results
 
