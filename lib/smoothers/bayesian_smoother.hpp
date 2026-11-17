@@ -24,8 +24,7 @@ struct SmootherConfig {
 };
 
 /**
- * @brief The Bayesian Smoother virtual class structure will
- * be inherited and overridden.
+ * @brief The Bayesian Smoother virtual class structure
  */
 class BayesianSmoother {
 public:
@@ -46,11 +45,9 @@ public:
    * @return returns x_smoothed, P_smoothed at timestep k, packaged in
    * the SmootherUpdate class
    */
-  virtual SmootherUpdate
-  backward_recursion(const FilterUpdate &filtered_current,
-                     const FilterPredict &predicted_next,
-                     const SmootherUpdate &smoothed_previous,
-                     const Input &input) = 0;
+  virtual SmootherUpdate backward_recursion(
+      const FilterUpdate &filtered_current, const FilterPredict &predicted_next,
+      const SmootherUpdate &smoothed_previous, const Input &input) = 0;
 };
 
 #endif

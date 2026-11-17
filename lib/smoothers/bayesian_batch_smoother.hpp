@@ -2,8 +2,7 @@
  * @file bayesian_batch_smoother.hpp
  * @brief Contains a basic Bayesian batch smoother virtual class. A batch
  * smoother needs the whole run at once, since it relinearizes the models
- * about a full trajectory and passes over the data several times, which
- * the one node at a time BayesianSmoother cannot do.
+ * about a full trajectory.
  */
 
 #ifndef BAYESIAN_BATCH_SMOOTHER_HPP
@@ -17,8 +16,7 @@
 #include <vector>
 
 /**
- * @brief The Bayesian batch smoother virtual class structure will
- * be inherited and overridden.
+ * @brief The Bayesian batch smoother virtual class
  */
 class BayesianBatchSmoother {
 public:

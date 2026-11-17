@@ -1,6 +1,6 @@
 # 3-D strapdown INS, UKF
 
-[Back to the overview](../../../README.md) | [Previous: IEKF](../iekf/README.md)
+[Back to the overview](../../../README.md) | [Previous: IEKF](../iekf/README.md) | [Next: IEKS](../ieks/README.md)
 
 The extended Kalman filter propagates the mean through the nonlinear model and the covariance through its Jacobian. The unscented Kalman filter replaces the Jacobian with a small set of sigma points that carry the mean and covariance through the nonlinear function itself. This page runs the unscented Kalman filter and its Rauch-Tung-Striebel smoother on a three-dimensional strapdown INS with an attitude quaternion, on a tilted figure-eight and a tilted four-corner path with a long GNSS outage, and compares them with both the EKF and the IEKF.
 
@@ -154,7 +154,7 @@ python3 scripts/analyze_ins_3d.py results/INS3D/ukf/figure_eight/data
 python3 scripts/analyze_ins_3d.py results/INS3D/ukf/rounded_rectangle/data
 ```
 
-The executable reads `<case>/config.yaml` and writes `<case>/data`, which is not tracked in git since the CSV files of the 3-D runs are hundreds of MB; given the folder `results/INS3D/ukf` it runs both cases. The analysis writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`. The UKF is always run next to the EKF, on the same simulated data; its files carry the prefix `ukf_`, and `run_iekf: true` in `config.yaml` adds the IEKF with the prefix `iekf_`. The sigma-point parameters are `ukf_alpha`, `ukf_beta` and `ukf_kappa` of the config. `truth.csv` holds the 16 true state elements, `filter.csv` and `smoother.csv` the mean and the full $15 \times 15$ covariance, and `*_fixes.csv` the raw measurement, innovation and $S$ of each fix.
+The executable reads `<case>/config.yaml` and writes `<case>/data`, which is not tracked in git since the CSV files of the 3-D runs are hundreds of MB; given the folder `results/INS3D/ukf` it runs both cases. The analysis writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`. The UKF is always run next to the EKF, on the same simulated data; its files carry the prefix `ukf_`, and `run_iekf: true` in `config.yaml` adds the IEKF with the prefix `iekf_`. The sigma-point parameters are `ukf_alpha`, `ukf_beta` and `ukf_kappa` of the config. `truth.csv` holds the 16 true state elements, `ekf_filter.csv` and `ekf_smoother.csv` the mean and the full $15 \times 15$ covariance, and `*_fixes.csv` the raw measurement, innovation and $S$ of each fix.
 
 ## Results
 
