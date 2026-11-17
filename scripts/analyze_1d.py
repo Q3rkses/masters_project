@@ -152,7 +152,10 @@ def trajectory_figures(window, k, z, x_true, x_filter, P_filter, x_smoother, P_s
 
 
 def main():
-    data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent.parent / "data"
+    # --pdf also writes every figure as a vector PDF next to the PNG, for the thesis
+    write_pdf = "--pdf" in sys.argv[1:]
+    arguments = [argument for argument in sys.argv[1:] if argument != "--pdf"]
+    data_dir = Path(arguments[0]) if arguments else Path(__file__).parent.parent / "data"
     figures_dir = data_dir.parent / "figures"
     figures_dir.mkdir(exist_ok=True)
     truth = load(data_dir / "truth.csv")
@@ -212,6 +215,9 @@ def main():
         figure.tight_layout()
         figure.savefig(figures_dir / name, dpi=150)
         print(f"wrote {figures_dir / name}")
+        if write_pdf:
+            figure.savefig((figures_dir / name).with_suffix(".pdf"))
+            print(f"wrote {(figures_dir / name).with_suffix('.pdf')}")
     plt.show()
 
 

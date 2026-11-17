@@ -500,7 +500,10 @@ def report(lines, text=""):
 
 
 def main():
-    data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent.parent / "data"
+    # --pdf also writes every figure as a vector PDF next to the PNG, for the thesis
+    write_pdf = "--pdf" in sys.argv[1:]
+    arguments = [argument for argument in sys.argv[1:] if argument != "--pdf"]
+    data_dir = Path(arguments[0]) if arguments else Path(__file__).parent.parent / "data"
     case_dir = data_dir.resolve().parent
     figures_dir = case_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
@@ -650,9 +653,11 @@ def main():
 
     for name, figure in figures.items():
         figure.savefig(figures_dir / name, dpi=150)
+        if write_pdf:
+            figure.savefig((figures_dir / name).with_suffix(".pdf"))
         plt.close(figure)
-    for stale in figures_dir.glob("*.png"):
-        if stale.name not in figures:
+    for stale in [*figures_dir.glob("*.png"), *figures_dir.glob("*.pdf")]:
+        if stale.with_suffix(".png").name not in figures:
             stale.unlink()
 
 
