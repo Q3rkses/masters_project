@@ -78,6 +78,7 @@ SENSOR_COLORS = {"GNSS": GNSS, "magnetometer": MAGNETOMETER, "DVL": DVL, "altime
 CONFIDENCE = 0.95
 AVERAGING_WINDOW = 150
 SKIP_STEPS = 100  # initial transient left out when choosing axis limits
+PLOT_BUCKETS = 1500  # time series are thinned to this many buckets so the pdfs stay small
 ATTITUDE_COUNT = 14  # attitude triads drawn along the true path
 
 Estimator = namedtuple("Estimator", "name color x P")
@@ -221,6 +222,28 @@ def read_run_settings(case_dir):
     return settings
 
 
+def thinned(values, buckets=PLOT_BUCKETS):
+    """Indices that keep the lowest and highest sample of every bucket, in time
+    order. A curve drawn through them looks the same as the full one, peaks
+    included, with a fraction of the points."""
+    values = np.asarray(values, dtype=float)
+    size = -(-len(values) // buckets)
+    if size < 3:
+        return np.arange(len(values))
+    count = -(-len(values) // size)
+    padded = np.concatenate([values, np.full(count * size - len(values), np.nan)]).reshape(count, size)
+    offsets = np.arange(count) * size
+    low = np.argmin(np.where(np.isnan(padded), np.inf, padded), axis=1) + offsets
+    high = np.argmax(np.where(np.isnan(padded), -np.inf, padded), axis=1) + offsets
+    keep = np.unique(np.concatenate([low, high, [0, len(values) - 1]]))
+    return keep[keep < len(values)]
+
+
+def plot_thinned(axis, t, values, **style):
+    keep = thinned(values)
+    return axis.plot(t[keep], np.asarray(values)[keep], **style)
+
+
 def style_axis(axis):
     axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
     axis.set_axisbelow(True)
@@ -321,9 +344,10 @@ def path_figure(t, x_true, filt, smooth, denied, reference=None):
     overview.set_title("Path and estimates", loc="left")
     overview.legend(loc="upper right", frameon=False, fontsize=9)
 
-    depth.plot(t, x_true[:, 2], color=TRUTH, linewidth=1.8, label="truth", zorder=3)
+    plot_thinned(depth, t, x_true[:, 2], color=TRUTH, linewidth=1.8, label="truth", zorder=3)
     for estimator in (filt, smooth):
-        depth.plot(t, estimator.x[:, 2], color=estimator.color, linewidth=1.0, label=estimator.name)
+        plot_thinned(depth, t, estimator.x[:, 2], color=estimator.color, linewidth=1.0,
+                     label=estimator.name)
     shade_denied(depth, denied)
     depth.invert_yaxis()
     depth.set_xlabel("time [s]")
@@ -352,8 +376,10 @@ def errors_figure(t, x_true, filt, smooth, denied):
             for estimator in (filt, smooth):
                 diff = errors[estimator.name][:, index] * scaling
                 sigma = scale * np.sqrt(np.clip(estimator.P[:, index, index], 0, None)) * scaling
-                axis.fill_between(t, -sigma, sigma, color=estimator.color, alpha=0.15, linewidth=0)
-                axis.plot(t, diff, color=estimator.color, linewidth=1, label=estimator.name)
+                keep = thinned(sigma)
+                axis.fill_between(t[keep], -sigma[keep], sigma[keep], color=estimator.color,
+                                  alpha=0.15, linewidth=0)
+                plot_thinned(axis, t, diff, color=estimator.color, linewidth=1, label=estimator.name)
                 curves += [diff, sigma]
             axis.axhline(0, color=BAND, linewidth=0.8, linestyle="--")
             shade_denied(axis, denied)
@@ -374,8 +400,8 @@ def uncertainty_figure(t, filt, smooth, denied):
                                (axes[1], ATTITUDE_ERR, r"$\sqrt{\mathrm{tr}\,P_{\theta}}$ [deg]")):
         scaling = 1.0 if block is POSITION_ERR else 180 / np.pi
         for estimator in (filt, smooth):
-            axis.plot(t, scaling * np.sqrt(np.trace(estimator.P[:, block, block], axis1=1, axis2=2)),
-                      color=estimator.color, linewidth=1.4, label=estimator.name)
+            plot_thinned(axis, t, scaling * np.sqrt(np.trace(estimator.P[:, block, block], axis1=1, axis2=2)),
+                         color=estimator.color, linewidth=1.4, label=estimator.name)
         shade_denied(axis, denied)
         axis.set_yscale("log")
         axis.set_ylabel(label)
@@ -395,10 +421,10 @@ def biases_figure(t, x_true, estimators, denied):
             ((ACCEL_BIAS, "Accelerometer bias", "m/s$^2$"), (GYRO_BIAS, "Gyro bias", "rad/s"))):
         for row in range(3):
             axis = axes[row, column]
-            axis.plot(t, x_true[:, block.start + row], color=TRUTH, linewidth=1.4, label="truth")
+            plot_thinned(axis, t, x_true[:, block.start + row], color=TRUTH, linewidth=1.4, label="truth")
             for estimator in estimators:
-                axis.plot(t, estimator.x[:, block.start + row], color=estimator.color,
-                          linewidth=1.1, label=estimator.name)
+                plot_thinned(axis, t, estimator.x[:, block.start + row], color=estimator.color,
+                             linewidth=1.1, label=estimator.name)
             shade_denied(axis, denied)
             axis.set_ylabel(f"{names[row]} [{unit}]")
             style_axis(axis)
@@ -431,8 +457,8 @@ def consistency_figure(t, nis, nees, summaries):
     axis.axhline(ERROR_DIM, color=BAND, linewidth=1, linestyle="--")
     for label, color, values in nees:
         values = np.nan_to_num(values)
-        axis.plot(t[AVERAGING_WINDOW - 1:], running_mean(values, AVERAGING_WINDOW),
-                  color=color, linewidth=1.3, label=f"{label}, {summaries[label]}")
+        plot_thinned(axis, t[AVERAGING_WINDOW - 1:], running_mean(values, AVERAGING_WINDOW),
+                     color=color, linewidth=1.3, label=f"{label}, {summaries[label]}")
     axis.set_ylabel(f"NEES, 15 dof\n({AVERAGING_WINDOW}-step mean)")
     axis.set_xlabel("time [s]")
     axis.legend(loc="best", frameon=False, fontsize=9)
@@ -455,7 +481,8 @@ def variants_figure(t, x_true, filters, smoothers, denied):
               (smoothers, attitude_norm, "smoother attitude error [deg]"))
     for axis, (group, series, label) in zip(axes, panels):
         for estimator in group:
-            axis.plot(t, series(estimator), color=estimator.color, linewidth=1.1, label=estimator.name)
+            plot_thinned(axis, t, series(estimator), color=estimator.color, linewidth=1.1,
+                         label=estimator.name)
         shade_denied(axis, denied)
         axis.set_ylabel(label)
         axis.legend(loc="upper right", frameon=False, ncol=len(group), fontsize=9)
