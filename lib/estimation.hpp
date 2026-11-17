@@ -12,6 +12,7 @@
 #include "models/models.hpp"
 #include "results.hpp"
 #include "sensors.hpp"
+#include "smoothers/bayesian_batch_smoother.hpp"
 #include "smoothers/bayesian_smoother.hpp"
 #include <Eigen/Dense>
 #include <string>
@@ -80,5 +81,21 @@ SmootherResult run_smoother(BayesianSmoother &smoother,
                             const SmootherConfig &smoother_config,
                             const FilterResult &filter_result,
                             const std::vector<Input> &inputs);
+
+/**
+ * @brief Runs any batch smoother over the whole run, starting from a
+ * filter's recorded states.
+ * @param smoother the batch smoother to run
+ * @param smoother_config the smoother's prior and motion model
+ * @param filter_result the filter's recorded states, the initial guess
+ * @param inputs the input of every step
+ * @param sensors the sensors, with their measurements and when they fire
+ * @return the smoothed state at every step
+ */
+SmootherResult run_smoother(BayesianBatchSmoother &smoother,
+                            const SmootherConfig &smoother_config,
+                            const FilterResult &filter_result,
+                            const std::vector<Input> &inputs,
+                            const std::vector<Sensor> &sensors);
 
 #endif

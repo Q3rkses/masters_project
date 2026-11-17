@@ -65,3 +65,11 @@ SmootherResult run_smoother(BayesianSmoother &smoother,
   }
   return smoother_result;
 }
+
+SmootherResult run_smoother(BayesianBatchSmoother &smoother,
+                            const SmootherConfig &smoother_config,
+                            const FilterResult &filter_result,
+                            const std::vector<Input> &inputs,
+                            const std::vector<Sensor> &sensors) {
+  return smoother.smooth(smoother_config, inputs, sensors, filter_result);
+}

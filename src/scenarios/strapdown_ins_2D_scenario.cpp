@@ -10,6 +10,7 @@
 #include "sensors.hpp"
 #include "simulation.hpp"
 #include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
+#include "smoothers/iterated_extended_kalman_smoother.hpp"
 #include "smoothers/unscented_rauch_tung_striebel_smoother.hpp"
 #include "trajectory.hpp"
 #include "utilities/file_utilities.hpp"
@@ -20,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -234,10 +236,23 @@ EstimatorRun run_estimator(BayesianFilter &filter, BayesianSmoother &smoother,
   return EstimatorRun{std::move(filtered), std::move(smoothed)};
 }
 
+// The same run with a batch smoother, which also needs the sensors.
+EstimatorRun run_estimator(BayesianFilter &filter,
+                           BayesianBatchSmoother &smoother,
+                           const FilterConfig &filter_config,
+                           const SmootherConfig &smoother_config,
+                           const std::vector<Input> &inputs,
+                           const std::vector<Sensor> &sensors) {
+  FilterRun filtered = run_filter(filter, filter_config, inputs, sensors);
+  SmootherResult smoothed = run_smoother(smoother, smoother_config,
+                                         filtered.result, inputs, sensors);
+  return EstimatorRun{std::move(filtered), std::move(smoothed)};
+}
+
 // Writes <prefix>filter.csv and <prefix>smoother.csv, and the fix file of
 // each sensor. The fix files hold innovations and S, which depend on the
-// filter, so each filter gets its own set. The EKF has no prefix, the others
-// are prefixed ukf_ and iekf_.
+// filter, so each estimator gets its own set, prefixed with its name: ekf_,
+// ukf_, iekf_ and ieks_.
 void write_estimator_run(const std::filesystem::path &output_dir,
                          const std::string &prefix, const EstimatorRun &run) {
   run.filtered.result.to_csv((output_dir / (prefix + "filter.csv")).string());
@@ -292,8 +307,27 @@ StrapdownINS2DScenario build_strapdown_ins_2d(const YAML::Node &config,
       std::move(simulated), std::move(sensors)};
 }
 
-// Runs the EKF with the ERTS and the UKF with the URTSS over the scenario and
-// writes their results, the IEKF too for configs that set run_iekf.
+// The estimators a config asks for, in the order they are run. Each is a
+// filter with its smoother: ekf is the EKF with the ERTS, ukf the UKF with the
+// URTSS, iekf the IEKF with the ERTS and ieks the IEKF with the IEKS. A config
+// without the estimators key runs ekf and ukf, and iekf and ieks where
+// run_iekf and run_ieks are set.
+std::vector<std::string> read_estimator_names(const YAML::Node &config) {
+  if (config["estimators"]) {
+    return config["estimators"].as<std::vector<std::string>>();
+  }
+  std::vector<std::string> names{"ekf", "ukf"};
+  if (config["run_iekf"].as<bool>(false)) {
+    names.push_back("iekf");
+  }
+  if (config["run_ieks"].as<bool>(false)) {
+    names.push_back("ieks");
+  }
+  return names;
+}
+
+// Runs the estimators the config asks for over the scenario and writes the
+// results of each, with its name as the prefix of the files.
 void run_strapdown_ins_2d_estimators(const YAML::Node &config,
                                      const StrapdownINS2DScenario &scenario,
                                      const std::filesystem::path &output_dir) {
@@ -301,34 +335,47 @@ void run_strapdown_ins_2d_estimators(const YAML::Node &config,
   const SmootherConfig &smoother_config = scenario.smoother_config;
   const std::vector<Input> &inputs = scenario.simulated.inputs;
 
-  ExtendedKalmanFilter ekf(filter_config);
-  ERTSSmoother erts(smoother_config);
-  EstimatorRun ekf_run = run_estimator(ekf, erts, filter_config,
-                                       smoother_config, inputs, scenario.sensors);
-
-  const TransformConfig transform_config{
-      .alpha = config["ukf_alpha"].as<double>(1.0),
-      .beta = config["ukf_beta"].as<double>(2.0),
-      .kappa = config["ukf_kappa"].as<double>(0.0),
-      .dimension = static_cast<int>(filter_config.x_prior.size())};
-  UnscentedKalmanFilter ukf(filter_config, transform_config);
-  URTSSmoother urts(smoother_config, transform_config);
-  EstimatorRun ukf_run = run_estimator(ukf, urts, filter_config,
-                                       smoother_config, inputs, scenario.sensors);
-
   std::filesystem::create_directories(output_dir);
   scenario.simulated.truth_result.to_csv((output_dir / "truth.csv").string());
-  write_estimator_run(output_dir, "", ekf_run);
-  write_estimator_run(output_dir, "ukf_", ukf_run);
 
-  // The IEKF's smoother is the plain ERTS over its output, only the filter
-  // iterates.
-  if (config["run_iekf"].as<bool>(false)) {
-    const LevenbergMarquardtConfig lm_config = read_lm_config(config);
-    IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
-    EstimatorRun iekf_run = run_estimator(iekf, erts, filter_config,
-                                          smoother_config, inputs, scenario.sensors);
-    write_estimator_run(output_dir, "iekf_", iekf_run);
+  for (const std::string &name : read_estimator_names(config)) {
+    if (name == "ekf") {
+      ExtendedKalmanFilter ekf(filter_config);
+      ERTSSmoother erts(smoother_config);
+      write_estimator_run(
+          output_dir, "ekf_",
+          run_estimator(ekf, erts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "ukf") {
+      const TransformConfig transform_config{
+          .alpha = config["ukf_alpha"].as<double>(1.0),
+          .beta = config["ukf_beta"].as<double>(2.0),
+          .kappa = config["ukf_kappa"].as<double>(0.0),
+          .dimension = static_cast<int>(filter_config.x_prior.size())};
+      UnscentedKalmanFilter ukf(filter_config, transform_config);
+      URTSSmoother urts(smoother_config, transform_config);
+      write_estimator_run(
+          output_dir, "ukf_",
+          run_estimator(ukf, urts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "iekf") {
+      IteratedExtendedKalmanFilter iekf(filter_config, read_lm_config(config));
+      ERTSSmoother erts(smoother_config);
+      write_estimator_run(
+          output_dir, "iekf_",
+          run_estimator(iekf, erts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "ieks") {
+      const LevenbergMarquardtConfig lm_config = read_lm_config(config);
+      IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
+      IteratedExtendedKalmanSmoother ieks(smoother_config, lm_config);
+      write_estimator_run(
+          output_dir, "ieks_",
+          run_estimator(iekf, ieks, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else {
+      throw std::runtime_error("unknown estimator: " + name);
+    }
   }
 }
 

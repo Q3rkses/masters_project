@@ -10,6 +10,7 @@
 #include "sensors.hpp"
 #include "simulation.hpp"
 #include "smoothers/extended_rauch_tung_striebel_smoother.hpp"
+#include "smoothers/iterated_extended_kalman_smoother.hpp"
 #include "smoothers/unscented_rauch_tung_striebel_smoother.hpp"
 #include "trajectory.hpp"
 #include "utilities/file_utilities.hpp"
@@ -20,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -55,34 +57,44 @@ std::vector<Sensor> build_sensors(const YAML::Node &config) {
 
   const double gnss_r = config["gnss_noise_variance"].as<double>();
   const Eigen::MatrixXd gnss_R = gnss_r * Eigen::MatrixXd::Identity(3, 3);
-  sensors.push_back(
-      Sensor{"gnss",
-             std::make_shared<GNSS3DMeasurementModel>(GNSS3DConfig{.position_noise = gnss_R}),
-             gnss_R, {}, {}});
+  sensors.push_back(Sensor{"gnss",
+                           std::make_shared<GNSS3DMeasurementModel>(
+                               GNSS3DConfig{.position_noise = gnss_R}),
+                           gnss_R,
+                           {},
+                           {}});
 
   // the magnetometer reports the yaw of the attitude
-  const double heading_variance = config["magnetometer_noise_variance"].as<double>();
-  sensors.push_back(
-      Sensor{"magnetometer",
-             std::make_shared<Magnetometer3DMeasurementModel>(
-                 Magnetometer3DConfig{.heading_noise_variance = heading_variance}),
-             Eigen::MatrixXd::Constant(1, 1, heading_variance), {}, {}});
+  const double heading_variance =
+      config["magnetometer_noise_variance"].as<double>();
+  sensors.push_back(Sensor{
+      "magnetometer",
+      std::make_shared<Magnetometer3DMeasurementModel>(
+          Magnetometer3DConfig{.heading_noise_variance = heading_variance}),
+      Eigen::MatrixXd::Constant(1, 1, heading_variance),
+      {},
+      {}});
 
   // the DVL reports body-frame velocity
   const Eigen::VectorXd dvl_r = read_vector(config["dvl_noise_variance"]);
   const Eigen::MatrixXd dvl_R = Eigen::MatrixXd(dvl_r.asDiagonal());
-  sensors.push_back(
-      Sensor{"dvl",
-             std::make_shared<DVL3DMeasurementModel>(DVL3DConfig{.velocity_noise = dvl_R}),
-             dvl_R, {}, {}});
+  sensors.push_back(Sensor{"dvl",
+                           std::make_shared<DVL3DMeasurementModel>(
+                               DVL3DConfig{.velocity_noise = dvl_R}),
+                           dvl_R,
+                           {},
+                           {}});
 
   // the altimeter reports the vertical position
-  const double altimeter_variance = config["altimeter_noise_variance"].as<double>();
+  const double altimeter_variance =
+      config["altimeter_noise_variance"].as<double>();
   sensors.push_back(
       Sensor{"altimeter",
              std::make_shared<AltimeterMeasurementModel>(
                  AltimeterConfig{.z_noise_variance = altimeter_variance}),
-             Eigen::MatrixXd::Constant(1, 1, altimeter_variance), {}, {}});
+             Eigen::MatrixXd::Constant(1, 1, altimeter_variance),
+             {},
+             {}});
 
   return sensors;
 }
@@ -104,29 +116,34 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
                                      std::vector<Sensor> &sensors) {
   SimulationConfig accelerometer_gauss_markov_config{
       .rng = rng,
-      .covariance = Eigen::MatrixXd(ins_config.accelerometer_noise_variance.asDiagonal()),
+      .covariance =
+          Eigen::MatrixXd(ins_config.accelerometer_noise_variance.asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
       .timeconstant = ins_config.accelerometer_time_constant,
   };
   SimulationConfig accelerometer_white_measurement_noise_config{
       .rng = rng,
-      .covariance = Eigen::MatrixXd(ins_config.accelerometer_white_noise_intensity.asDiagonal()),
+      .covariance = Eigen::MatrixXd(
+          ins_config.accelerometer_white_noise_intensity.asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
   };
   SimulationConfig gyro_gauss_markov_config{
       .rng = rng,
-      .covariance = Eigen::MatrixXd(ins_config.gyro_noise_variance.asDiagonal()),
+      .covariance =
+          Eigen::MatrixXd(ins_config.gyro_noise_variance.asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
       .timeconstant = ins_config.gyro_time_constant,
   };
   SimulationConfig gyro_white_measurement_noise_config{
       .rng = rng,
-      .covariance = Eigen::MatrixXd(ins_config.gyro_white_noise_intensity.asDiagonal()),
+      .covariance =
+          Eigen::MatrixXd(ins_config.gyro_white_noise_intensity.asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
   };
 
   GaussMarkov gyro_gauss_markov{gyro_gauss_markov_config, ins_config.dt};
-  GaussMarkov accelerometer_gauss_markov{accelerometer_gauss_markov_config, ins_config.dt};
+  GaussMarkov accelerometer_gauss_markov{accelerometer_gauss_markov_config,
+                                         ins_config.dt};
 
   const Trajectory3D trajectory = build_trajectory_3d(config);
 
@@ -167,7 +184,8 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
 
     // the IMU measures specific force in the body frame, not the nav frame
     const Eigen::Vector3d specific_force_body =
-        attitude.toRotationMatrix().transpose() * (sample.acceleration - ins_config.gravity);
+        attitude.toRotationMatrix().transpose() *
+        (sample.acceleration - ins_config.gravity);
 
     Eigen::VectorXd x_true(16);
     x_true << sample.position, sample.velocity, quaternion_to_vector(attitude),
@@ -175,7 +193,8 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
 
     // reading = ideal + true bias + white noise
     const Eigen::Vector3d accelerometer_reading = specific_force_body +
-        accelerometer_bias_series[k] + accelerometer_white_series[k];
+                                                  accelerometer_bias_series[k] +
+                                                  accelerometer_white_series[k];
     const Eigen::Vector3d gyro_reading =
         sample.angular_rate + gyro_bias_series[k] + gyro_white_series[k];
     Eigen::VectorXd reading_vector(6);
@@ -212,10 +231,23 @@ EstimatorRun run_estimator(BayesianFilter &filter, BayesianSmoother &smoother,
   return EstimatorRun{std::move(filtered), std::move(smoothed)};
 }
 
+// The same run with a batch smoother, which also needs the sensors.
+EstimatorRun run_estimator(BayesianFilter &filter,
+                           BayesianBatchSmoother &smoother,
+                           const FilterConfig &filter_config,
+                           const SmootherConfig &smoother_config,
+                           const std::vector<Input> &inputs,
+                           const std::vector<Sensor> &sensors) {
+  FilterRun filtered = run_filter(filter, filter_config, inputs, sensors);
+  SmootherResult smoothed = run_smoother(smoother, smoother_config,
+                                         filtered.result, inputs, sensors);
+  return EstimatorRun{std::move(filtered), std::move(smoothed)};
+}
+
 // Writes <prefix>filter.csv and <prefix>smoother.csv, and the fix file of
 // each sensor. The fix files hold innovations and S, which depend on the
-// filter, so each filter gets its own set. The EKF has no prefix, the others
-// are prefixed ukf_ and iekf_.
+// filter, so each estimator gets its own set, prefixed with its name: ekf_,
+// ukf_, iekf_ and ieks_.
 void write_estimator_run(const std::filesystem::path &output_dir,
                          const std::string &prefix, const EstimatorRun &run) {
   run.filtered.result.to_csv((output_dir / (prefix + "filter.csv")).string());
@@ -267,12 +299,32 @@ StrapdownINS3DScenario build_strapdown_ins_3d(const YAML::Node &config,
 
   return StrapdownINS3DScenario{
       FilterConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
-      SmootherConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
+      SmootherConfig{
+          .x_prior = x0, .P_prior = p0, .motion_model = motion_model},
       std::move(simulated), std::move(sensors)};
 }
 
-// Runs the EKF with the ERTS and the UKF with the URTSS over the scenario and
-// writes their results, the IEKF too for configs that set run_iekf.
+// The estimators a config asks for, in the order they are run. Each is a
+// filter with its smoother: ekf is the EKF with the ERTS, ukf the UKF with the
+// URTSS, iekf the IEKF with the ERTS and ieks the IEKF with the IEKS. A config
+// without the estimators key runs ekf and ukf, and iekf and ieks where
+// run_iekf and run_ieks are set.
+std::vector<std::string> read_estimator_names(const YAML::Node &config) {
+  if (config["estimators"]) {
+    return config["estimators"].as<std::vector<std::string>>();
+  }
+  std::vector<std::string> names{"ekf", "ukf"};
+  if (config["run_iekf"].as<bool>(false)) {
+    names.push_back("iekf");
+  }
+  if (config["run_ieks"].as<bool>(false)) {
+    names.push_back("ieks");
+  }
+  return names;
+}
+
+// Runs the estimators the config asks for over the scenario and writes the
+// results of each, with its name as the prefix of the files.
 void run_strapdown_ins_3d_estimators(const YAML::Node &config,
                                      const StrapdownINS3DScenario &scenario,
                                      const std::filesystem::path &output_dir) {
@@ -280,35 +332,48 @@ void run_strapdown_ins_3d_estimators(const YAML::Node &config,
   const SmootherConfig &smoother_config = scenario.smoother_config;
   const std::vector<Input> &inputs = scenario.simulated.inputs;
 
-  ExtendedKalmanFilter ekf(filter_config);
-  ERTSSmoother erts(smoother_config);
-  EstimatorRun ekf_run = run_estimator(ekf, erts, filter_config,
-                                       smoother_config, inputs, scenario.sensors);
-
-  // the unscented transform works on the error state, so on the covariance
-  const TransformConfig transform_config{
-      .alpha = config["ukf_alpha"].as<double>(1.0),
-      .beta = config["ukf_beta"].as<double>(2.0),
-      .kappa = config["ukf_kappa"].as<double>(0.0),
-      .dimension = static_cast<int>(filter_config.P_prior.rows())};
-  UnscentedKalmanFilter ukf(filter_config, transform_config);
-  URTSSmoother urts(smoother_config, transform_config);
-  EstimatorRun ukf_run = run_estimator(ukf, urts, filter_config,
-                                       smoother_config, inputs, scenario.sensors);
-
   std::filesystem::create_directories(output_dir);
   scenario.simulated.truth_result.to_csv((output_dir / "truth.csv").string());
-  write_estimator_run(output_dir, "", ekf_run);
-  write_estimator_run(output_dir, "ukf_", ukf_run);
 
-  // The IEKF's smoother is the plain ERTS over its output, only the filter
-  // iterates.
-  if (config["run_iekf"].as<bool>(false)) {
-    const LevenbergMarquardtConfig lm_config = read_lm_config(config);
-    IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
-    EstimatorRun iekf_run = run_estimator(iekf, erts, filter_config,
-                                          smoother_config, inputs, scenario.sensors);
-    write_estimator_run(output_dir, "iekf_", iekf_run);
+  for (const std::string &name : read_estimator_names(config)) {
+    if (name == "ekf") {
+      ExtendedKalmanFilter ekf(filter_config);
+      ERTSSmoother erts(smoother_config);
+      write_estimator_run(
+          output_dir, "ekf_",
+          run_estimator(ekf, erts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "ukf") {
+      // the unscented transform works on the error state, so on the covariance
+      const TransformConfig transform_config{
+          .alpha = config["ukf_alpha"].as<double>(1.0),
+          .beta = config["ukf_beta"].as<double>(2.0),
+          .kappa = config["ukf_kappa"].as<double>(0.0),
+          .dimension = static_cast<int>(filter_config.P_prior.rows())};
+      UnscentedKalmanFilter ukf(filter_config, transform_config);
+      URTSSmoother urts(smoother_config, transform_config);
+      write_estimator_run(
+          output_dir, "ukf_",
+          run_estimator(ukf, urts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "iekf") {
+      IteratedExtendedKalmanFilter iekf(filter_config, read_lm_config(config));
+      ERTSSmoother erts(smoother_config);
+      write_estimator_run(
+          output_dir, "iekf_",
+          run_estimator(iekf, erts, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else if (name == "ieks") {
+      const LevenbergMarquardtConfig lm_config = read_lm_config(config);
+      IteratedExtendedKalmanFilter iekf(filter_config, lm_config);
+      IteratedExtendedKalmanSmoother ieks(smoother_config, lm_config);
+      write_estimator_run(
+          output_dir, "ieks_",
+          run_estimator(iekf, ieks, filter_config, smoother_config, inputs,
+                        scenario.sensors));
+    } else {
+      throw std::runtime_error("unknown estimator: " + name);
+    }
   }
 }
 

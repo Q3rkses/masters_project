@@ -249,10 +249,10 @@ The executable reads `<case>/config.yaml` and writes `<case>/data`. Given a fold
 and writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`.
 
 `data/` holds one CSV file per quantity with one row per timestep and a shared `timestep` column. `truth.csv` has the true state `x_true_0 ... x_true_7`, ordered as in the state $x$ above;
-`filter.csv` and `smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `*_fixes.csv` has, for each fix of one sensor, the raw measurement,
+`ekf_filter.csv` and `ekf_smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `ekf_*_fixes.csv` has, for each fix of one sensor, the raw measurement,
 the innovation and $S$, which is what the NIS is computed from.
 
-One run writes the EKF/ERTS and the UKF/URTSS files; the UKF files carry the prefix `ukf_`.
+One run writes the EKF/ERTS and the UKF/URTSS files; the EKF files carry the prefix `ekf_` and the UKF files `ukf_`.
 
 ## Results
 

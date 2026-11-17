@@ -1,6 +1,6 @@
 # 2-D strapdown INS, IEKF
 
-[Back to the overview](../../../README.md) | [Previous: UKF and URTSS](../ukf/README.md)
+[Back to the overview](../../../README.md) | [Previous: UKF and URTSS](../ukf/README.md) | [Next: IEKS](../ieks/README.md)
 
 The extended Kalman filter linearises the measurement function once per update, at the prediction. If the prediction is far from the posterior the linearisation point is poor. The iterated extended Kalman filter relinearises at each improved estimate until the update settles, and a Levenberg-Marquardt damping keeps each step from overshooting. This page runs it next to the EKF and the UKF on a figure-eight, once with three sensors and once with a GNSS outage.
 
@@ -232,7 +232,7 @@ The executable reads `<case>/config.yaml` and writes `<case>/data`. Given a fold
 and writes `<case>/stats.txt`, which holds every number quoted below, and the figures in `<case>/figures`.
 
 `data/` holds one CSV file per quantity with one row per timestep and a shared `timestep` column. `truth.csv` has the true state `x_true_0 ... x_true_7`, ordered as in the state $x$ above;
-`filter.csv` and `smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `*_fixes.csv` has, for each fix of one sensor, the raw measurement,
+`ekf_filter.csv` and `ekf_smoother.csv` have the predicted and updated (or smoothed) mean and the full covariance; `ekf_*_fixes.csv` has, for each fix of one sensor, the raw measurement,
 the innovation and $S$, which is what the NIS is computed from.
 
 `run_iekf: true` in a case's `config.yaml` switches the IEKF on, together with the Levenberg-Marquardt parameters of the table above; the IEKF files carry the prefix `iekf_`.

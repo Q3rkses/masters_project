@@ -3,7 +3,7 @@
 
 usage: analyze_ins_2d.py <case_dir>/data
 
-Reads truth.csv, filter.csv, smoother.csv and the three *_fixes.csv files, and
+Reads truth.csv, ekf_filter.csv, ekf_smoother.csv and the three ekf_*_fixes.csv files, and
 config.yaml from the case folder for the time step and the GNSS outage window.
 The printed statistics are also written to <case_dir>/stats.txt and the
 figures to <case_dir>/figures. Each case folder gets six figures for the EKF
@@ -20,8 +20,8 @@ A statistic that falls above its 95% interval means the errors are larger than
 the reported covariance admits, the estimator is overconfident. Below the
 interval it is underconfident, the covariance is larger than it needs to be.
 
-In the folders of the ukf and iekf experiments the UKF/URTSS or IEKF/ERTS
-results are the subject, analysed next to the EKF/ERTS. Those folders get four
+In the folders of the ukf, iekf and ieks experiments the UKF/URTSS, IEKF/ERTS
+or IEKF/IEKS results are the subject, analysed next to the EKF/ERTS. Those folders get four
 figures about the subject, with the EKF-based estimate drawn wide underneath
 in the path figure so that differences show where they exist. The biases and
 the consistency are compared in the statistics instead:
@@ -55,6 +55,7 @@ UKF = "#2e9e5b"
 URTSS = "#b8860b"
 IEKF = "#7f5539"
 IERTS = "#d98c5f"
+IEKS = "#c2477f"
 GNSS = "#c0392b"
 MAGNETOMETER = "#8e44ad"
 DVL = "#16a085"
@@ -77,7 +78,8 @@ ARROW_COUNT = 10  # direction arrows drawn along the true path
 Estimator = namedtuple("Estimator", "name color x P")
 Turn = namedtuple("Turn", "first last direction centre")  # direction: +1 left, -1 right
 
-VARIANT_FOLDERS = {"ukf": "UKF", "iekf": "IEKF"}
+# the smoother that is the subject of each variant folder
+VARIANT_FOLDERS = {"ukf": "URTSS", "iekf": "ERTS (IEKF)", "ieks": "IEKS"}
 
 
 def load(path):
@@ -525,16 +527,17 @@ def nis_of(fixes):
 
 
 def load_estimators(data_dir, with_variants):
-    filtered = load(data_dir / "filter.csv")
-    smoothed = load(data_dir / "smoother.csv")
+    filtered = load(data_dir / "ekf_filter.csv")
+    smoothed = load(data_dir / "ekf_smoother.csv")
     filters = [Estimator("EKF", EKF, vectors(filtered, "x_updated", STATE_DIM),
                          matrices(filtered, "P_updated", STATE_DIM))]
     smoothers = [Estimator("ERTS", ERTS, vectors(smoothed, "x_smoothed", STATE_DIM),
                            matrices(smoothed, "P_smoothed", STATE_DIM))]
-    prefixes = {"EKF": ""}
+    prefixes = {"EKF": "ekf_"}
     if with_variants:
         for prefix, filter_name, smoother_name, f_color, s_color in (
-                ("ukf_", "UKF", "URTSS", UKF, URTSS), ("iekf_", "IEKF", "ERTS (IEKF)", IEKF, IERTS)):
+                ("ukf_", "UKF", "URTSS", UKF, URTSS), ("iekf_", "IEKF", "ERTS (IEKF)", IEKF, IERTS),
+                ("ieks_", "IEKF", "IEKS", IEKF, IEKS)):
             if not (data_dir / f"{prefix}filter.csv").exists():
                 continue
             f, s = load(data_dir / f"{prefix}filter.csv"), load(data_dir / f"{prefix}smoother.csv")
@@ -551,7 +554,10 @@ def report(lines, text=""):
 
 
 def main():
-    data_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).parent.parent / "data"
+    # --pdf also writes every figure as a vector PDF next to the PNG, for the thesis
+    write_pdf = "--pdf" in sys.argv[1:]
+    arguments = [argument for argument in sys.argv[1:] if argument != "--pdf"]
+    data_dir = Path(arguments[0]) if arguments else Path(__file__).parent.parent / "data"
     case_dir = data_dir.resolve().parent
     figures_dir = case_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
@@ -567,7 +573,7 @@ def main():
     estimators = filters + smoothers
     ekf, erts = filters[0], smoothers[0]
 
-    fixes = sensor_fix_data(data_dir, "")
+    fixes = sensor_fix_data(data_dir, "ekf_")
     gnss, magnetometer, dvl = fixes
     schedule = {"GNSS": np.zeros(len(k), bool), "magnetometer": np.zeros(len(k), bool),
                 "DVL": np.zeros(len(k), bool)}
@@ -668,7 +674,7 @@ def main():
     figures = {"1_scenario.png": scenario_figure(t, x_true, schedule, dt)}
     if with_variants:
         focus = VARIANT_FOLDERS[case_dir.parent.name]
-        index = [f.name for f in filters].index(focus)
+        index = [s.name for s in smoothers].index(focus)
         subject_filter, subject_smoother = filters[index], smoothers[index]
         figures["2_path.png"] = path_figure(x_true, subject_filter, subject_smoother, turns, dt,
                                             reference=(ekf, erts))
@@ -698,9 +704,11 @@ def main():
 
     for name, figure in figures.items():
         figure.savefig(figures_dir / name, dpi=150)
+        if write_pdf:
+            figure.savefig((figures_dir / name).with_suffix(".pdf"))
         plt.close(figure)
-    for stale in figures_dir.glob("*.png"):
-        if stale.name not in figures:
+    for stale in [*figures_dir.glob("*.png"), *figures_dir.glob("*.pdf")]:
+        if stale.with_suffix(".png").name not in figures:
             stale.unlink()
 
 
