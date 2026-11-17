@@ -3,11 +3,13 @@
 
 usage: analyze_ins_3d.py <case_dir>/data
 
-Reads truth.csv, ekf_filter.csv, ekf_smoother.csv and the four ekf_*_fixes.csv files, and
-config.yaml from the case folder for the time step and the GNSS outage window.
-The printed statistics are also written to <case_dir>/stats.txt and the
-figures to <case_dir>/figures. Each case folder gets six figures for the EKF
-and its ERTS smoother:
+Reads truth.csv and, for every estimator the run holds, <prefix>filter.csv,
+<prefix>smoother.csv and the four <prefix>*_fixes.csv files, where the prefix is
+ekf_ (EKF and ERTS), ukf_ (UKF and URTSS) or ieks_ (IEKF and IEKS). The time step
+and the GNSS outage window come from config.yaml in the case folder. The printed
+statistics are also written to <case_dir>/stats.txt and the figures to
+<case_dir>/figures. A case folder with one estimator gets six figures for its
+filter and smoother:
 
     1_scenario.png      the true 3D path with the vehicle's attitude, and when each sensor fired
     2_path.png          the 3D path with both estimates, and the depth against time
@@ -20,9 +22,11 @@ A statistic that falls above its 95% interval means the errors are larger than
 the reported covariance admits, the estimator is overconfident. Below the
 interval it is underconfident, the covariance is larger than it needs to be.
 
-In the folders of the ukf, iekf and ieks experiments the UKF/URTSS, IEKF/ERTS
-or IEKF/IEKS results are the subject, analysed next to the EKF/ERTS, and the fourth figure
-compares the variants instead of showing the uncertainty.
+A case folder with several estimators, the comparison folders, gets the scenario
+and one figure that puts the errors of all of them side by side:
+
+    1_scenario.png      as above
+    2_variants.png      position and attitude error of every filter and smoother
 
 Nominal state: [p(3), v(3), q(4), b_a(3), b_g(3)] with q = [w, x, y, z] rotating
 body to navigation (NED, z down). The covariance is on the 15D error state
@@ -78,8 +82,11 @@ ATTITUDE_COUNT = 14  # attitude triads drawn along the true path
 
 Estimator = namedtuple("Estimator", "name color x P")
 
-# the smoother that is the subject of each variant folder
-VARIANT_FOLDERS = {"ukf": "URTSS", "iekf": "ERTS (IEKF)", "ieks": "IEKS"}
+# the estimators a run can hold: file prefix, filter, smoother and their colors
+ESTIMATOR_FILES = (("ekf_", "EKF", "ERTS", EKF, ERTS),
+                   ("ukf_", "UKF", "URTSS", UKF, URTSS),
+                   ("iekf_", "IEKF", "ERTS (IEKF)", IEKF, IERTS),
+                   ("ieks_", "IEKF", "IEKS", IEKF, IEKS))
 
 
 def load(path):
@@ -472,26 +479,20 @@ def nis_of(fixes):
             for (name, dim), table in zip(SENSOR_DIMS.items(), fixes)}
 
 
-def load_estimators(data_dir, with_variants):
-    filtered = load(data_dir / "ekf_filter.csv")
-    smoothed = load(data_dir / "ekf_smoother.csv")
-    filters = [Estimator("EKF", EKF, vectors(filtered, "x_updated", STATE_DIM),
-                         matrices(filtered, "P_updated", ERROR_DIM))]
-    smoothers = [Estimator("ERTS", ERTS, vectors(smoothed, "x_smoothed", STATE_DIM),
-                           matrices(smoothed, "P_smoothed", ERROR_DIM))]
-    prefixes = {"EKF": "ekf_"}
-    if with_variants:
-        for prefix, filter_name, smoother_name, f_color, s_color in (
-                ("ukf_", "UKF", "URTSS", UKF, URTSS), ("iekf_", "IEKF", "ERTS (IEKF)", IEKF, IERTS),
-                ("ieks_", "IEKF", "IEKS", IEKF, IEKS)):
-            if not (data_dir / f"{prefix}filter.csv").exists():
-                continue
-            f, s = load(data_dir / f"{prefix}filter.csv"), load(data_dir / f"{prefix}smoother.csv")
-            filters.append(Estimator(filter_name, f_color, vectors(f, "x_updated", STATE_DIM),
-                                     matrices(f, "P_updated", ERROR_DIM)))
-            smoothers.append(Estimator(smoother_name, s_color, vectors(s, "x_smoothed", STATE_DIM),
-                                       matrices(s, "P_smoothed", ERROR_DIM)))
-            prefixes[filter_name] = prefix
+def load_estimators(data_dir):
+    """Every estimator the run holds, in the order of ESTIMATOR_FILES."""
+    filters, smoothers, prefixes = [], [], {}
+    for prefix, filter_name, smoother_name, f_color, s_color in ESTIMATOR_FILES:
+        if not (data_dir / f"{prefix}filter.csv").exists():
+            continue
+        f, s = load(data_dir / f"{prefix}filter.csv"), load(data_dir / f"{prefix}smoother.csv")
+        filters.append(Estimator(filter_name, f_color, vectors(f, "x_updated", STATE_DIM),
+                                 matrices(f, "P_updated", ERROR_DIM)))
+        smoothers.append(Estimator(smoother_name, s_color, vectors(s, "x_smoothed", STATE_DIM),
+                                   matrices(s, "P_smoothed", ERROR_DIM)))
+        prefixes[filter_name] = prefix
+    if not filters:
+        raise FileNotFoundError(f"no estimator results in {data_dir}")
     return filters, smoothers, prefixes
 
 
@@ -509,23 +510,22 @@ def main():
     figures_dir.mkdir(exist_ok=True)
     settings = read_run_settings(case_dir)
     dt, denied = settings["dt"], settings["denied"]
-    with_variants = case_dir.parent.name in VARIANT_FOLDERS
 
     truth = load(data_dir / "truth.csv")
     x_true = vectors(truth, "x_true", STATE_DIM)
     k = truth["timestep"].astype(int)
     t = k * dt
-    filters, smoothers, prefixes = load_estimators(data_dir, with_variants)
+    filters, smoothers, prefixes = load_estimators(data_dir)
     estimators = filters + smoothers
-    ekf, erts = filters[0], smoothers[0]
 
-    fixes = sensor_fix_data(data_dir, "ekf_")
+    # every filter sees the same fixes, so the schedule is read from the first one
+    fixes = sensor_fix_data(data_dir, prefixes[filters[0].name])
     schedule = {name: np.zeros(len(k), bool) for name in SENSOR_DIMS}
     for name, table in zip(schedule, fixes):
         schedule[name][table["timestep"].astype(int)] = True
     fix_counts = {name: int(due.sum()) for name, due in schedule.items()}
 
-    nis_by_filter = {"EKF": nis_of(fixes)}
+    nis_by_filter = {filters[0].name: nis_of(fixes)}
     for filter_ in filters[1:]:
         variant_fixes = sensor_fix_data(data_dir, prefixes[filter_.name])
         if variant_fixes is not None:
@@ -603,7 +603,7 @@ def main():
 
     if len(filters) > 1:
         report(out)
-        report(out, "distance to the EKF-based estimate (position in mm, attitude in deg), "
+        report(out, f"distance to the {filters[0].name}-based estimate (position in mm, attitude in deg), "
                     "and the range of the position trace(P) ratio:")
         for reference, others in ((filters[0], filters[1:]), (smoothers[0], smoothers[1:])):
             for other in others:
@@ -621,35 +621,30 @@ def main():
     (case_dir / "stats.txt").write_text(text)
 
     figures = {"1_scenario.png": scenario_figure(t, x_true, schedule, dt)}
-    if with_variants:
-        focus = VARIANT_FOLDERS[case_dir.parent.name]
-        index = [s.name for s in smoothers].index(focus)
-        subject_filter, subject_smoother = filters[index], smoothers[index]
-        figures["2_path.png"] = path_figure(t, x_true, subject_filter, subject_smoother, denied,
-                                            reference=(ekf, erts))
-        figures["3_errors.png"] = errors_figure(t, x_true, subject_filter, subject_smoother, denied)
-        figures["4_variants.png"] = variants_figure(t, x_true, filters, smoothers, denied)
+    if len(filters) > 1:
+        figures["2_variants.png"] = variants_figure(t, x_true, filters, smoothers, denied)
     else:
-        figures["2_path.png"] = path_figure(t, x_true, ekf, erts, denied)
-        figures["3_errors.png"] = errors_figure(t, x_true, ekf, erts, denied)
-        figures["4_uncertainty.png"] = uncertainty_figure(t, ekf, erts, denied)
-        figures["5_biases.png"] = biases_figure(t, x_true, [ekf, erts], denied)
+        subject_filter, subject_smoother = filters[0], smoothers[0]
+        figures["2_path.png"] = path_figure(t, x_true, subject_filter, subject_smoother, denied)
+        figures["3_errors.png"] = errors_figure(t, x_true, subject_filter, subject_smoother, denied)
+        figures["4_uncertainty.png"] = uncertainty_figure(t, subject_filter, subject_smoother, denied)
+        figures["5_biases.png"] = biases_figure(t, x_true, [subject_filter, subject_smoother], denied)
         nis = {}
         for sensor, table in zip(SENSOR_DIMS, fixes):
             if len(table["timestep"]):
-                nis[sensor] = (table["timestep"].astype(int) * dt, nis_by_filter["EKF"][sensor],
-                               SENSOR_COLORS[sensor])
+                nis[sensor] = (table["timestep"].astype(int) * dt,
+                               nis_by_filter[subject_filter.name][sensor], SENSOR_COLORS[sensor])
         summaries = {}
         for sensor in nis:
-            result = time_averaged(nis_by_filter["EKF"][sensor], SENSOR_DIMS[sensor])
+            result = time_averaged(nis_by_filter[subject_filter.name][sensor], SENSOR_DIMS[sensor])
             summaries[sensor] = (f"ANIS {result['average']:.3f}, band [{result['low']:.3f}, "
                                  f"{result['high']:.3f}], {result['verdict']}")
-        for estimator in (ekf, erts):
+        for estimator in (subject_filter, subject_smoother):
             result = time_averaged(nees_values["full"][estimator.name], ERROR_DIM)
             summaries[estimator.name] = f"ANEES {result['average']:.3f} ({result['verdict']})"
         figures["6_consistency.png"] = consistency_figure(
-            t, nis, [(ekf.name, ekf.color, nees_values["full"]["EKF"]),
-                     (erts.name, erts.color, nees_values["full"]["ERTS"])], summaries)
+            t, nis, [(estimator.name, estimator.color, nees_values["full"][estimator.name])
+                     for estimator in (subject_filter, subject_smoother)], summaries)
 
     for name, figure in figures.items():
         figure.savefig(figures_dir / name, dpi=150)

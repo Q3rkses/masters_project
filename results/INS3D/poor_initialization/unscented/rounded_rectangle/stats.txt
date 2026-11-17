@@ -1,0 +1,32 @@
+30000 timesteps, dt 0.01 s, fixes: GNSS 44, magnetometer 479, DVL 507, altimeter 487
+
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS UKF                     3.5914  band [2.3593, 3.7165]  97.7% of steps in band  -> consistent
+  ANIS magnetometer UKF             1.1469  band [0.6940, 1.3610]  96.2% of steps in band  -> consistent
+  ANIS DVL UKF                      2.4487  band [2.7129, 3.3014]  96.3% of steps in band  -> underconfident
+  ANIS altimeter UKF                1.0235  band [0.8782, 1.1296]  95.5% of steps in band  -> consistent
+  ANEES full UKF                   10.4790  band [11.2964, 19.2206]  73.0% of steps in band  -> underconfident
+  ANEES full URTSS                 10.1232  band [10.9721, 19.6479]  77.6% of steps in band  -> underconfident
+  ANEES position UKF                2.2270  band [2.5091, 3.5341]  95.2% of steps in band  -> underconfident
+  ANEES position URTSS              2.6407  band [0.2158, 9.3484]  97.8% of steps in band  -> consistent
+  ANEES attitude UKF                2.0953  band [1.9400, 4.2874]  90.2% of steps in band  -> consistent
+  ANEES attitude URTSS              1.7503  band [0.2760, 8.8937]  93.9% of steps in band  -> consistent
+
+accuracy (position error in m, attitude error in deg):
+                 RMSE pos   median     95th      max  RMSE att  max att
+  UKF              1.1219   0.5056   2.0717   5.6438    5.6344  89.1429
+  URTSS            0.6407   0.3795   1.2541   1.4496    1.4099  12.4686
+
+bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  UKF              0.04714   0.12519   0.02185   0.00308   0.00350   0.00961
+  URTSS            0.05441   0.09903   0.01032   0.00099   0.00154   0.00172
+
+share of steps with the true position inside the reported 95% ellipsoid:
+  UKF            98.5%
+  URTSS          98.8%
+
+smallest eigenvalue of the full P:
+  UKF           min  6.593e-06  0 of 30000 steps below zero
+  URTSS         min  3.634e-06  0 of 30000 steps below zero
+
+URTSS trace(P_p) <= UKF trace(P_p) at every step: True

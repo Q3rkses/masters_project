@@ -1,0 +1,32 @@
+30000 timesteps, dt 0.01 s, fixes: GNSS 44, magnetometer 479, DVL 507, altimeter 487
+
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS IEKF                    3.5074  band [2.3721, 3.7006]  95.5% of steps in band  -> consistent
+  ANIS magnetometer IEKF            0.7997  band [0.8744, 1.1340]  96.5% of steps in band  -> underconfident
+  ANIS DVL IEKF                     2.3167  band [2.7719, 3.2369]  97.2% of steps in band  -> underconfident
+  ANIS altimeter IEKF               1.0128  band [0.8774, 1.1305]  95.7% of steps in band  -> consistent
+  ANEES full IEKF                   8.3154  band [13.9791, 16.0563]  74.4% of steps in band  -> underconfident
+  ANEES full IEKS                   8.7322  band [12.5504, 17.6647]  77.3% of steps in band  -> underconfident
+  ANEES position IEKF               2.0990  band [2.5247, 3.5157]  94.5% of steps in band  -> underconfident
+  ANEES position IEKS               2.4548  band [0.2158, 9.3484]  98.6% of steps in band  -> consistent
+  ANEES attitude IEKF               1.2224  band [2.6811, 3.3366]  92.5% of steps in band  -> underconfident
+  ANEES attitude IEKS               1.4338  band [1.7604, 4.5646]  96.0% of steps in band  -> underconfident
+
+accuracy (position error in m, attitude error in deg):
+                 RMSE pos   median     95th      max  RMSE att  max att
+  IEKF             1.0239   0.4766   1.9932   2.2674    1.7233   4.0305
+  IEKS             0.6127   0.3993   1.1921   1.3993    1.1358   3.2221
+
+bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  IEKF             0.04840   0.14190   0.01921   0.00103   0.00143   0.00142
+  IEKS             0.05659   0.09970   0.00948   0.00092   0.00133   0.00103
+
+share of steps with the true position inside the reported 95% ellipsoid:
+  IEKF           99.0%
+  IEKS           99.7%
+
+smallest eigenvalue of the full P:
+  IEKF          min  6.593e-06  0 of 30000 steps below zero
+  IEKS          min  3.634e-06  0 of 30000 steps below zero
+
+IEKS trace(P_p) <= IEKF trace(P_p) at every step: False

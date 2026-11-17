@@ -74,6 +74,8 @@ Each experiment lives in `results/<name>/` with its own `README.md`. The INS exp
 | [2-D strapdown INS, GNSS outage](results/INS2D/gnss_outage/README.md) | GNSS denied for 210 s in the middle of the run, matched and mistuned IMU noise, on both trajectories | 30000 steps, consistent except the magnetometer NIS |
 | [2-D strapdown INS, UKF and URTSS](results/INS2D/ukf/README.md) | the unscented filter and smoother against the EKF and ERTS, on an outage run and a heading-stress run, on both trajectories | 30000 steps, indistinguishable on the outage run, UKF RMSE 4.90 against 8.49 m on the stress run |
 | [2-D strapdown INS, IEKF](results/INS2D/iekf/README.md) | the iterated EKF with Levenberg-Marquardt against the EKF and UKF, on the figure-eight with multi-sensor fusion and with a GNSS outage | 30000 steps, consistent, within about 6 cm of the EKF, no clear accuracy difference |
+| [3-D strapdown INS, base case](results/INS3D/base_case/README.md) | EKF/ERTS, UKF/URTSS and IEKF/IEKS on a tilted figure-eight and four-corner path with a quaternion attitude and a 210 s GNSS outage | 30000 steps, per method and compared |
+| [3-D strapdown INS, poor initialization](results/INS3D/poor_initialization/README.md) | the same estimators from a prior 89° off in attitude and several metres off in position, with a normal and a sparse magnetometer | 30000 steps, per method and compared |
 | [2-D strapdown INS, IEKS](results/INS2D/ieks/README.md) | the iterated EKS over the IEKF against the ERTS and URTSS, on the same two runs | 30000 steps, consistent, within a median of 5 to 15 mm of the ERTS, no accuracy difference |
 
 ## Repository layout

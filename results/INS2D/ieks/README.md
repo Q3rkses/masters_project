@@ -376,4 +376,4 @@ The figures per run: the true path and when each sensor fired, the path with the
 
 - [IEKF](../iekf/README.md) is the filter this smoother runs over, with the same two runs.
 - [UKF and URTSS](../ukf/README.md) asks the same question of the unscented filter and smoother, including a heading-stress run.
-- [3-D strapdown INS, IEKS](../../INS3D/ieks/README.md) is the same smoother with a quaternion attitude.
+- [3-D strapdown INS, IEKS](../../INS3D/base_case/iterated/) is the same smoother with a quaternion attitude.
