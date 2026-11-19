@@ -57,11 +57,15 @@ dvl_period_max: 1.0 # maximum period between DVL fixes [s]
 altimeter_noise_variance: 1e-2 # m^2, 1-sigma 0.1m, vertical position
 altimeter_period_min: 0.2 # minimum period between altimeter fixes [s]
 altimeter_period_max: 1.0 # maximum period between altimeter fixes [s]
-# which trajectory to run: rounded_rectangle | figure_eight, laid in a plane
-# that is tilted about the x axis so the depth changes along the loop
+# which trajectory to run: rounded_rectangle | figure_eight, flown horizontally.
+# The vehicle is at the surface (with GNSS) at the start and end of the run and
+# submerged on its mission for the whole GNSS outage above: it leaves the
+# surface at gnss_denied_start and is back up at gnss_denied_end
 trajectory: rounded_rectangle
-path_speed: 2 # constant speed along the path [m/s]
-tilt_angle: 0.15 # tilt of the path plane about the x axis [rad], z = y sin(tilt)
+path_speed: 2 # constant horizontal speed along the path [m/s]
+mission_depth: 10.0 # mission depth where y = 0 [m], the paths have y >= 0 so this is the shallowest
+dive_duration: 30.0 # time the descent and the ascent each take [s], peak pitch under 30deg
+tilt_angle: 0.15 # slope of the mission depth along y [rad], z = mission_depth + y sin(tilt), 10-16 m on the figure-eight, 10-17.5 m on the four-corner
 bank_gain: 1.0 # share of the coordinated-turn roll, 0 keeps the vehicle level
 roll_ramp_length: 5.0 # arc length the roll takes to build up in a turn [m]
 # rounded_rectangle: four straight sides with quarter-circle corners, looped

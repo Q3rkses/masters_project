@@ -1,28 +1,28 @@
 30000 timesteps, dt 0.01 s, fixes: GNSS 44, magnetometer 479, DVL 507, altimeter 487
 
 consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
-  ANIS GNSS EKF                     3.5888  band [2.4359, 3.6220]  95.5% of steps in band  -> consistent
-  ANIS magnetometer EKF             0.8295  band [0.8744, 1.1339]  96.7% of steps in band  -> underconfident
-  ANIS DVL EKF                      2.6620  band [2.6467, 3.3751]  95.9% of steps in band  -> consistent
-  ANIS altimeter EKF                1.0869  band [0.8639, 1.1459]  95.3% of steps in band  -> consistent
-  ANEES full EKF                   10.3962  band [13.4219, 16.6645]  63.9% of steps in band  -> underconfident
-  ANEES full ERTS                  12.7073  band [6.6629, 26.6620]  82.8% of steps in band  -> consistent
-  ANEES position EKF                2.6045  band [2.4336, 3.6247]  97.6% of steps in band  -> consistent
-  ANEES position ERTS               3.0604  band [0.2158, 9.3484]  96.7% of steps in band  -> consistent
-  ANEES attitude EKF                1.4052  band [2.6368, 3.3863]  86.1% of steps in band  -> underconfident
-  ANEES attitude ERTS               1.8364  band [0.8200, 6.5677]  94.6% of steps in band  -> consistent
+  ANIS GNSS EKF                     3.5837  band [2.4392, 3.6179]  95.5% of steps in band  -> consistent
+  ANIS magnetometer EKF             0.8278  band [0.8747, 1.1335]  96.5% of steps in band  -> underconfident
+  ANIS DVL EKF                      2.6603  band [2.6473, 3.3744]  95.5% of steps in band  -> consistent
+  ANIS altimeter EKF                1.0874  band [0.8635, 1.1464]  94.9% of steps in band  -> consistent
+  ANEES full EKF                   10.5279  band [13.4230, 16.6633]  65.5% of steps in band  -> underconfident
+  ANEES full ERTS                  12.8145  band [6.6989, 26.5897]  85.1% of steps in band  -> consistent
+  ANEES position EKF                2.6141  band [2.4328, 3.6257]  97.5% of steps in band  -> consistent
+  ANEES position ERTS               3.0823  band [0.2158, 9.3484]  96.8% of steps in band  -> consistent
+  ANEES attitude EKF                1.4199  band [2.6369, 3.3861]  86.2% of steps in band  -> underconfident
+  ANEES attitude ERTS               1.8549  band [0.8186, 6.5718]  94.3% of steps in band  -> consistent
 
 accuracy (position error in m, attitude error in deg):
                  RMSE pos   median     95th      max  RMSE att  max att
-  EKF              1.0085   0.7826   1.8498   4.4256    5.5136  89.3639
-  ERTS             0.7178   0.4277   1.3232   1.5781    1.3082   9.2102
+  EKF              1.0084   0.7862   1.8411   4.4256    5.5153  89.3639
+  ERTS             0.7259   0.4348   1.3349   1.5893    1.3186   9.2142
 
 bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
-  EKF              0.05508   0.07940   0.02882   0.00624   0.00446   0.00359
-  ERTS             0.06848   0.09351   0.01380   0.00149   0.00159   0.00128
+  EKF              0.05612   0.08110   0.02962   0.00624   0.00446   0.00358
+  ERTS             0.06687   0.09644   0.01503   0.00146   0.00159   0.00127
 
 share of steps with the true position inside the reported 95% ellipsoid:
-  EKF            97.0%
+  EKF            96.9%
   ERTS           96.7%
 
 smallest eigenvalue of the full P:

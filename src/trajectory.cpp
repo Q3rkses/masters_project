@@ -196,12 +196,60 @@ Trajectory build_trajectory(const YAML::Node &config) {
   throw std::runtime_error("unknown trajectory: " + trajectory);
 }
 
+namespace {
+
+// Quintic smoothstep 6u^5 - 15u^4 + 10u^3 on [0, 1], clamped outside it, with
+// its first and second derivatives in u. Its value, slope and curvature are
+// continuous at both ends, so a depth built from it has continuous vertical
+// speed and acceleration.
+struct Smoothstep {
+  double value, slope, curvature;
+};
+
+Smoothstep smoothstep(double u) {
+  if (u <= 0.0) {
+    return {0.0, 0.0, 0.0};
+  }
+  if (u >= 1.0) {
+    return {1.0, 0.0, 0.0};
+  }
+  const double u2 = u * u;
+  return {u2 * u * (10.0 - 15.0 * u + 6.0 * u2),
+          30.0 * u2 * (1.0 - 2.0 * u + u2),
+          60.0 * u * (1.0 - 3.0 * u + 2.0 * u2)};
+}
+
+} // namespace
+
 Trajectory3D::Trajectory3D(const Trajectory &planar, double speed,
-                           double tilt_angle, double bank_gain,
+                           const DiveProfile &dive, double bank_gain,
                            double roll_ramp_length, double gravity)
-    : planar_(planar), speed_(speed), tilt_angle_(tilt_angle),
-      bank_gain_(bank_gain), roll_ramp_length_(roll_ramp_length),
-      gravity_(gravity) {}
+    : planar_(planar), speed_(speed), dive_(dive), bank_gain_(bank_gain),
+      roll_ramp_length_(roll_ramp_length), gravity_(gravity) {
+  const bool submerges = dive_.surface_time > dive_.dive_start;
+  if (submerges) {
+    if (dive_.dive_duration <= 0.0) {
+      throw std::invalid_argument("dive_duration must be positive");
+    }
+    if (dive_.surface_time - dive_.dive_start < 2.0 * dive_.dive_duration) {
+      throw std::invalid_argument(
+          "the GNSS outage is too short to dive and resurface in");
+    }
+    // the mission depth must stay below the surface all around the loop
+    double highest_y = 0.0;
+    const int checks = 2000;
+    for (int i = 0; i <= checks; i++) {
+      const double y =
+          planar_.path.sample(planar_.path.length() * i / checks).position.y();
+      highest_y = std::max(highest_y, std::abs(y));
+    }
+    if (dive_.mission_depth - highest_y * std::abs(std::sin(dive_.tilt_angle)) <= 0.0) {
+      throw std::invalid_argument(
+          "mission_depth is too shallow for tilt_angle, the vehicle would "
+          "break the surface during the mission");
+    }
+  }
+}
 
 PathSample3D Trajectory3D::sample(double t) const {
   const double path_length = planar_.path.length();
@@ -218,28 +266,46 @@ PathSample3D Trajectory3D::sample(double t) const {
 
   const double c = std::cos(sample.heading);
   const double sn = std::sin(sample.heading);
+  const double v = speed_;
+  const double kappa = sample.curvature;
 
-  // the planar frame tilted about x: (x, y, 0) -> (x, y cos a, y sin a)
-  const Eigen::Matrix3d tilt =
-      Eigen::AngleAxisd(tilt_angle_, Eigen::Vector3d::UnitX()).toRotationMatrix();
-  const Eigen::Vector3d direction = tilt * Eigen::Vector3d(c, sn, 0.0);
-  const Eigen::Vector3d normal = tilt * Eigen::Vector3d(-sn, c, 0.0);
-  const Eigen::Vector3d position =
-      tilt * Eigen::Vector3d(sample.position.x(), sample.position.y(), 0.0);
+  // Depth z = h m: m is the mission depth along the loop and h the dive
+  // envelope, 0 at the surface and 1 on the mission. The envelope is the
+  // product of the descent ramp and the ascent ramp, so it is 1 between them
+  // and 0 before the dive and after resurfacing.
+  const double slope_factor = std::sin(dive_.tilt_angle);
+  const double m = dive_.mission_depth + slope_factor * sample.position.y();
+  const double m_rate = slope_factor * v * sn;
+  const double m_accel = slope_factor * v * v * kappa * c;
 
-  // constant speed, so the only acceleration is centripetal
-  const Eigen::Vector3d velocity = speed_ * direction;
-  const Eigen::Vector3d direction_rate = speed_ * sample.curvature * normal;
-  const Eigen::Vector3d acceleration = speed_ * direction_rate;
+  double h = 0.0, h_rate = 0.0, h_accel = 0.0;
+  if (dive_.surface_time > dive_.dive_start) {
+    const double T = dive_.dive_duration;
+    const Smoothstep down = smoothstep((t - dive_.dive_start) / T);
+    const Smoothstep up = smoothstep((dive_.surface_time - t) / T);
+    h = down.value * up.value;
+    h_rate = (down.slope * up.value - down.value * up.slope) / T;
+    h_accel = (down.curvature * up.value - 2.0 * down.slope * up.slope +
+               down.value * up.curvature) /
+              (T * T);
+  }
 
-  // yaw and pitch of the velocity direction, and their rates
-  const double yaw = std::atan2(direction.y(), direction.x());
-  const double pitch = -std::asin(direction.z());
-  const double horizontal_squared = direction.head<2>().squaredNorm();
-  // clang-format off
-  const double yaw_rate = (direction.x() * direction_rate.y() - direction.y() * direction_rate.x()) / horizontal_squared;
-  const double pitch_rate = -direction_rate.z() / std::cos(pitch);
-  // clang-format on
+  const double z = h * m;
+  const double z_rate = h_rate * m + h * m_rate;
+  const double z_accel = h_accel * m + 2.0 * h_rate * m_rate + h * m_accel;
+
+  // constant horizontal speed, so the horizontal acceleration is centripetal
+  const Eigen::Vector3d position(sample.position.x(), sample.position.y(), z);
+  const Eigen::Vector3d velocity(v * c, v * sn, z_rate);
+  const Eigen::Vector3d acceleration(-v * v * kappa * sn, v * v * kappa * c,
+                                     z_accel);
+
+  // body x along the velocity: yaw is the path heading, pitch the flight path
+  // angle, nose down (negative) while descending since z is down
+  const double yaw = std::atan2(sn, c);
+  const double pitch = -std::atan2(z_rate, v);
+  const double yaw_rate = v * kappa;
+  const double pitch_rate = -v * z_accel / (v * v + z_rate * z_rate);
 
   // Roll follows the curvature averaged over roll_ramp_length, which is the
   // heading change across that window over its length, so it builds up
@@ -284,9 +350,17 @@ PathSample3D Trajectory3D::sample(double t) const {
 }
 
 Trajectory3D build_trajectory_3d(const YAML::Node &config) {
+  // submerged exactly while GNSS is denied, at the surface the whole run if
+  // GNSS is never denied
+  const DiveProfile dive{
+      .dive_start = config["gnss_denied_start"].as<double>(0.0),
+      .surface_time = config["gnss_denied_end"].as<double>(0.0),
+      .dive_duration = config["dive_duration"].as<double>(0.0),
+      .mission_depth = config["mission_depth"].as<double>(0.0),
+      .tilt_angle = config["tilt_angle"].as<double>(0.0),
+  };
   return Trajectory3D(build_trajectory(config), config["path_speed"].as<double>(),
-                      config["tilt_angle"].as<double>(),
-                      config["bank_gain"].as<double>(1.0),
+                      dive, config["bank_gain"].as<double>(1.0),
                       config["roll_ramp_length"].as<double>(5.0),
                       config["gravity"].as<double>(9.81));
 }

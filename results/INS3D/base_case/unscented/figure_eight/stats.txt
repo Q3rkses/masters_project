@@ -1,29 +1,29 @@
 30000 timesteps, dt 0.01 s, fixes: GNSS 44, magnetometer 479, DVL 507, altimeter 487
 
 consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
-  ANIS GNSS UKF                     3.5668  band [2.4435, 3.6127]  93.2% of steps in band  -> consistent
-  ANIS magnetometer UKF             0.8051  band [0.8730, 1.1355]  97.3% of steps in band  -> underconfident
-  ANIS DVL UKF                      2.2626  band [2.7704, 3.2386]  97.0% of steps in band  -> underconfident
-  ANIS altimeter UKF                1.0095  band [0.8764, 1.1316]  95.3% of steps in band  -> consistent
-  ANEES full UKF                    9.0046  band [13.9103, 16.1302]  82.3% of steps in band  -> underconfident
-  ANEES full URTSS                 10.2017  band [12.6443, 17.5540]  89.4% of steps in band  -> underconfident
-  ANEES position UKF                2.3530  band [2.4797, 3.5691]  97.6% of steps in band  -> underconfident
-  ANEES position URTSS              2.8970  band [0.2158, 9.3484]  97.7% of steps in band  -> consistent
-  ANEES attitude UKF                1.3173  band [2.6855, 3.3317]  93.0% of steps in band  -> underconfident
-  ANEES attitude URTSS              1.9890  band [1.6466, 4.7527]  96.7% of steps in band  -> consistent
+  ANIS GNSS UKF                     3.5569  band [2.4462, 3.6095]  93.2% of steps in band  -> consistent
+  ANIS magnetometer UKF             0.8032  band [0.8734, 1.1350]  97.3% of steps in band  -> underconfident
+  ANIS DVL UKF                      2.2610  band [2.7710, 3.2380]  96.6% of steps in band  -> underconfident
+  ANIS altimeter UKF                1.0090  band [0.8759, 1.1323]  95.5% of steps in band  -> consistent
+  ANEES full UKF                    9.1990  band [13.8683, 16.1755]  82.6% of steps in band  -> underconfident
+  ANEES full URTSS                 10.4512  band [12.4788, 17.7498]  89.7% of steps in band  -> underconfident
+  ANEES position UKF                2.3544  band [2.4818, 3.5666]  97.8% of steps in band  -> underconfident
+  ANEES position URTSS              2.8873  band [0.2158, 9.3484]  97.8% of steps in band  -> consistent
+  ANEES attitude UKF                1.3310  band [2.6850, 3.3322]  93.1% of steps in band  -> underconfident
+  ANEES attitude URTSS              2.0247  band [1.6252, 4.7892]  96.5% of steps in band  -> consistent
 
 accuracy (position error in m, attitude error in deg):
                  RMSE pos   median     95th      max  RMSE att  max att
-  UKF              0.9444   0.7416   1.8334   2.2208    1.7884   4.0194
-  URTSS            0.7080   0.4231   1.3109   1.5631    1.3409   3.1805
+  UKF              0.9423   0.7385   1.8378   2.2318    1.7955   4.1316
+  URTSS            0.7091   0.4234   1.3122   1.5639    1.3590   3.1880
 
 bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
-  UKF              0.05317   0.15447   0.02010   0.00106   0.00200   0.00142
-  URTSS            0.05722   0.15627   0.00999   0.00094   0.00131   0.00101
+  UKF              0.05467   0.15487   0.02177   0.00109   0.00199   0.00141
+  URTSS            0.05580   0.15818   0.01201   0.00091   0.00131   0.00101
 
 share of steps with the true position inside the reported 95% ellipsoid:
-  UKF            98.3%
-  URTSS          98.5%
+  UKF            98.1%
+  URTSS          98.6%
 
 smallest eigenvalue of the full P:
   UKF           min  6.593e-06  0 of 30000 steps below zero

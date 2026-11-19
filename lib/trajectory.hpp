@@ -156,8 +156,10 @@ struct Trajectory {
 Trajectory build_trajectory(const YAML::Node &config);
 
 
-// The 3D paths are the shapes above laid in a plane tilted about the x axis, so
-// the depth changes smoothly along the loop. Frames follow the 3D scenario:
+// The 3D paths fly the shapes above horizontally at constant speed, with a dive
+// profile on top: the vehicle sits at the surface (where it gets GNSS), dives to
+// a mission depth, runs its mission submerged, and comes back up to the surface
+// at the end. Frames follow the 3D scenario:
 // navigation frame NED (z down), attitude q rotates body to navigation, ZYX
 // Euler angles (roll phi, pitch theta, yaw psi), body x along the velocity.
 
@@ -176,22 +178,40 @@ struct PathSample3D {
 };
 
 /**
- * @brief A 2D path lifted into a tilted plane and traversed at constant speed.
+ * @brief When the vehicle is under water and how deep it goes. The depth is
+ *   z(t) = h(t) (mission_depth + y sin(tilt_angle)),
+ * where y is the vehicle's planar y coordinate and h(t) goes from 0 (at the
+ * surface) to 1 (on the mission) and back. h rises over dive_duration from
+ * dive_start and falls over dive_duration so it reaches 0 at surface_time,
+ * each ramp a quintic smoothstep so depth, vertical speed and vertical
+ * acceleration are all continuous. The tilt term undulates the mission depth
+ * along the loop like a survey over sloping ground.
+ */
+struct DiveProfile {
+  double dive_start;    // time the vehicle leaves the surface [s]
+  double surface_time;  // time the vehicle is back at the surface [s]
+  double dive_duration; // time the descent and the ascent each take [s]
+  double mission_depth; // depth on the mission where y = 0 [m], positive down
+  double tilt_angle;    // slope of the mission depth along y [rad]
+};
+
+/**
+ * @brief A 2D path flown horizontally at constant speed, with the depth given
+ * by a dive profile.
  */
 class Trajectory3D {
 public:
   /**
    * @param planar the 2D path and whether it loops
-   * @param speed constant speed along the path [m/s]
-   * @param tilt_angle rotation of the path plane about the x axis [rad]; the
-   * depth is then z = y sin(tilt_angle)
+   * @param speed constant horizontal speed along the path [m/s]
+   * @param dive when the vehicle dives and resurfaces, and how deep it goes
    * @param bank_gain share of the coordinated-turn roll applied in turns,
    * 0 keeps the vehicle level, 1 banks by atan(speed^2 curvature / gravity)
    * @param roll_ramp_length arc length over which the roll builds up when a
    * turn starts or ends [m], so the roll is continuous
    * @param gravity magnitude of gravity [m/s^2], only used for the bank angle
    */
-  Trajectory3D(const Trajectory &planar, double speed, double tilt_angle,
+  Trajectory3D(const Trajectory &planar, double speed, const DiveProfile &dive,
                double bank_gain, double roll_ramp_length, double gravity);
 
   /**
@@ -203,7 +223,7 @@ public:
 private:
   Trajectory planar_;
   double speed_;
-  double tilt_angle_;
+  DiveProfile dive_;
   double bank_gain_;
   double roll_ramp_length_;
   double gravity_;
@@ -213,11 +233,16 @@ private:
  * @brief Builds the trajectory named by the "trajectory" key
  * (rounded_rectangle | figure_eight) with the same shape keys as the 2D
  * build_trajectory, plus
- *   path_speed        constant speed [m/s]
- *   tilt_angle        tilt of the path plane about the x axis [rad]
+ *   path_speed        constant horizontal speed [m/s]
+ *   mission_depth     depth on the mission where y = 0 [m]
+ *   dive_duration     time the descent and the ascent each take [s]
+ *   tilt_angle        slope of the mission depth along y [rad] (default 0)
  *   bank_gain         0 to 1, share of the coordinated-turn roll (default 1)
  *   roll_ramp_length  arc length the roll takes to build up [m] (default 5)
  *   gravity           [m/s^2] (default 9.81)
+ * The vehicle is submerged exactly while GNSS is denied: it leaves the surface
+ * at gnss_denied_start and is back at the surface at gnss_denied_end, and is
+ * at the surface for the whole run when there is no outage.
  */
 Trajectory3D build_trajectory_3d(const YAML::Node &config);
 
