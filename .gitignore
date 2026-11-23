@@ -83,3 +83,11 @@ figures/
 
 # the 3d csv files are large (hundreds of MB), generate them with the executable
 results/INS3D/*/*/data/
+
+# Monte Carlo runs: keep each seed's config, stats and figures, but not the per-seed csv
+# files, which the Monte Carlo script regenerates exactly
+!results/1D/monte_carlo/figures/
+results/1D/monte_carlo/seed_*/data/
+
+# python bytecode
+__pycache__/

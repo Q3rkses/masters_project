@@ -1,0 +1,9 @@
+scenario: random_walk
+seed: 32
+timesteps: 1000
+dim: 1
+q: 0.05
+r: 0.5
+x0:
+- 0.0
+p0: 1.0
