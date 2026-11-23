@@ -107,6 +107,7 @@ std::vector<Sensor> build_sensors(const YAML::Node &config) {
 struct SimulatedData {
   TruthResult truth_result;
   std::vector<Input> inputs;
+  Eigen::VectorXd x_true_initial; // the true state at the first timestep
 };
 
 // Moves along the configured path at constant speed and simulates the IMU
@@ -171,6 +172,7 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
 
   TruthResult truth_result;
   std::vector<Input> inputs;
+  Eigen::VectorXd x_true_initial;
   inputs.reserve(timesteps);
   for (Sensor &sensor : sensors) {
     sensor.measurements.clear();
@@ -212,11 +214,15 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
                                         sensor_noise_series[i][k]);
     }
 
+    if (k == 0) {
+      x_true_initial = x_true;
+    }
     truth_result.add(x_true);
     inputs.push_back(reading);
   }
 
-  return SimulatedData{std::move(truth_result), std::move(inputs)};
+  return SimulatedData{std::move(truth_result), std::move(inputs),
+                       std::move(x_true_initial)};
 }
 
 // A filter's run together with the smoother's run over it.
@@ -301,9 +307,26 @@ StrapdownINS2DScenario build_strapdown_ins_2d(const YAML::Node &config,
     sensors[i].due = schedules[i];
   }
 
+  // For the prior to be honest, the true initial state has to be a draw from
+  // N(x_prior, P0). The path is fixed by the trajectory, so the equivalent is
+  // done here: the prior mean is drawn around the true initial state instead.
+  // It is drawn last, so the truth, the IMU data and the sensor schedules a
+  // seed gives do not depend on it. With draw_initial_error set to false the
+  // prior mean is x0 exactly, which the heading stress cases use to place a
+  // deliberate, known error in the prior.
+  Eigen::VectorXd x_prior = x0;
+  if (config["draw_initial_error"].as<bool>(true)) {
+    std::normal_distribution<double> standard_normal(0.0, 1.0);
+    Eigen::VectorXd draw(x0.size());
+    for (Eigen::Index i = 0; i < draw.size(); i++) {
+      draw(i) = standard_normal(rng);
+    }
+    x_prior = simulated.x_true_initial + p0.llt().matrixL() * draw;
+  }
+
   return StrapdownINS2DScenario{
-      FilterConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
-      SmootherConfig{.x_prior = x0, .P_prior = p0, .motion_model = motion_model},
+      FilterConfig{.x_prior = x_prior, .P_prior = p0, .motion_model = motion_model},
+      SmootherConfig{.x_prior = x_prior, .P_prior = p0, .motion_model = motion_model},
       std::move(simulated), std::move(sensors)};
 }
 

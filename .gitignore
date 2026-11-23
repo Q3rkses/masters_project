@@ -91,3 +91,7 @@ results/1D/monte_carlo/seed_*/data/
 
 # python bytecode
 __pycache__/
+
+# 2D INS Monte Carlo: keep stats and figures, the summaries are rebuilt by the script
+!results/INS2D/*/*/monte_carlo/*/figures/
+results/INS2D/*/*/monte_carlo/*/summary.npy

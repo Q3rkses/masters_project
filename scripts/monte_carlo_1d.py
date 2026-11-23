@@ -169,6 +169,16 @@ def main():
                     MEASUREMENT_DIM, M, "NIS")
     figures["mc_nis.png"] = figure
 
+    # NIS on top and NEES below, sharing the time axis, as in the single-run analysis
+    figure, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
+    plot_mc_average(axes[0], k, {"filter": (nis.mean(axis=0), FILTER)},
+                    MEASUREMENT_DIM, M, "NIS")
+    plot_mc_average(axes[1], k, {"filter": (nees_f.mean(axis=0), FILTER),
+                                 "smoother": (nees_s.mean(axis=0), SMOOTHER)},
+                    STATE_DIM, M, "NEES")
+    axes[0].set_xlabel("")
+    figures["mc_consistency.png"] = figure
+
     # error spread across runs against what the filter claims, sqrt(P)
     figure, axis = plt.subplots(figsize=(11, 4.5))
     axis.plot(k, np.sqrt(np.mean(err_f ** 2, axis=0)), color=FILTER, linewidth=0.8,

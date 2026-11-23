@@ -1,0 +1,26 @@
+only_gnss/figure_eight, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               0.7232 +- 0.0457    0.6268 +- 0.0394
+  ERTS              0.2761 +- 0.0253    0.2449 +- 0.0234
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF              14.4229 +- 2.8178   11.5764 +- 2.3615
+  ERTS              8.1492 +- 1.9774    6.6659 +- 1.6758
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF            93.0% inside,   3.1% below,   3.9% above
+  ERTS          100.0% inside,   0.0% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             2.0724 +- 0.0534  [1.9610, 2.1838]  runs [1.671, 2.490]  -> consistent
+  ERTS            1.9618 +- 0.0805  [1.7938, 2.1298]  runs [1.315, 2.839]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF              2.1067 +- 0.0420  [2.0192, 2.1942]  expected 2  -> overconfident
+  magnetometer EKF     no fixes
+  DVL EKF              no fixes

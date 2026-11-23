@@ -1,0 +1,31 @@
+gnss_outage/figure_eight_mistuned, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               1.3291 +- 0.4621    1.0954 +- 0.3664
+  ERTS              0.7274 +- 0.2205    0.6034 +- 0.1741
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                              RMSE               MAE
+  EKF               1.5659 +- 0.5598    1.4221 +- 0.5206
+  ERTS              0.8543 +- 0.2675    0.7730 +- 0.2472
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF               1.8058 +- 0.1282    1.4232 +- 0.1078
+  ERTS              1.1407 +- 0.0680    0.9096 +- 0.0561
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF            99.5% inside,   0.3% below,   0.2% above
+  ERTS           99.6% inside,   0.4% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             2.2731 +- 0.2407  [1.7710, 2.7753]  runs [0.967, 4.880]  -> consistent
+  ERTS            2.0665 +- 0.1850  [1.6806, 2.4523]  runs [1.012, 4.950]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF              1.9607 +- 0.0619  [1.8316, 2.0898]  expected 2  -> consistent
+  magnetometer EKF      0.9988 +- 0.0130  [0.9717, 1.0259]  expected 1  -> consistent
+  DVL EKF               1.9708 +- 0.0185  [1.9323, 2.0094]  expected 2  -> consistent

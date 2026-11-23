@@ -1,0 +1,48 @@
+ieks/multi_sensor_fusion, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               0.6241 +- 0.0752    0.5438 +- 0.0641
+  ERTS              0.3929 +- 0.0439    0.3530 +- 0.0429
+  UKF               0.6238 +- 0.0753    0.5436 +- 0.0641
+  URTSS             0.3929 +- 0.0438    0.3530 +- 0.0428
+  IEKF              0.6243 +- 0.0751    0.5442 +- 0.0639
+  IEKS              0.3932 +- 0.0438    0.3532 +- 0.0427
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF               1.8214 +- 0.1408    1.4289 +- 0.1004
+  ERTS              1.1483 +- 0.0486    0.9199 +- 0.0391
+  UKF               1.8210 +- 0.1404    1.4287 +- 0.1004
+  URTSS             1.1482 +- 0.0487    0.9199 +- 0.0392
+  IEKF              1.8212 +- 0.1406    1.4287 +- 0.1000
+  IEKS              1.1480 +- 0.0490    0.9200 +- 0.0394
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF            87.4% inside,   7.6% below,   5.0% above
+  ERTS           92.6% inside,   7.4% below,   0.0% above
+  UKF            87.3% inside,   7.6% below,   5.0% above
+  URTSS          92.7% inside,   7.3% below,   0.0% above
+  IEKF           87.6% inside,   7.4% below,   5.0% above
+  IEKS           92.5% inside,   7.5% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             1.9725 +- 0.0923  [1.7800, 2.1650]  runs [1.284, 2.820]  -> consistent
+  ERTS            1.9126 +- 0.0964  [1.7115, 2.1138]  runs [1.164, 2.837]  -> consistent
+  UKF             1.9713 +- 0.0921  [1.7791, 2.1634]  runs [1.286, 2.822]  -> consistent
+  URTSS           1.9122 +- 0.0962  [1.7115, 2.1130]  runs [1.164, 2.834]  -> consistent
+  IEKF            1.9746 +- 0.0926  [1.7816, 2.1677]  runs [1.285, 2.810]  -> consistent
+  IEKS            1.9139 +- 0.0962  [1.7133, 2.1145]  runs [1.168, 2.840]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF              2.0621 +- 0.0987  [1.8562, 2.2680]  expected 2  -> consistent
+  magnetometer EKF      1.0035 +- 0.0169  [0.9682, 1.0387]  expected 1  -> consistent
+  DVL EKF               2.0076 +- 0.0228  [1.9601, 2.0551]  expected 2  -> consistent
+  GNSS UKF              2.0616 +- 0.0987  [1.8557, 2.2675]  expected 2  -> consistent
+  magnetometer UKF      1.0033 +- 0.0169  [0.9681, 1.0385]  expected 1  -> consistent
+  DVL UKF               2.0064 +- 0.0228  [1.9589, 2.0540]  expected 2  -> consistent
+  GNSS IEKF             2.0617 +- 0.0985  [1.8564, 2.2671]  expected 2  -> consistent
+  magnetometer IEKF     1.0035 +- 0.0169  [0.9682, 1.0387]  expected 1  -> consistent
+  DVL IEKF              2.0071 +- 0.0229  [1.9593, 2.0549]  expected 2  -> consistent
