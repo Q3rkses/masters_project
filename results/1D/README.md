@@ -10,8 +10,8 @@ modelling choice.
 
 |               |                                                               |
 | ------------- | ------------------------------------------------------------- |
-| **Status**    | done, consistent over a Monte Carlo of 21 seeds               |
-| **Run**       | Monte Carlo over seeds 22 to 42, 21 runs of 1000 timesteps     |
+| **Status**    | done, consistent over a Monte Carlo of 1279 seeds             |
+| **Run**       | Monte Carlo over seeds 42 to 1320, 1279 runs of 1000 timesteps |
 | **Reproduce** | see [Reproduce](#reproduce)                                   |
 
 ## Setup
@@ -47,11 +47,13 @@ $$
 ### Monte Carlo
 
 A single run says little about consistency, because the time average of NEES
-from one realisation scatters widely. Over the 21 seeds used here the filter's
-single-run ANEES ranges from 0.81 to 1.14. The experiment is therefore repeated
-for $M = 21$ seeds (22 to 42), each a full independent realisation of the truth,
-the measurements and the prior draw, with everything else in the configuration
-unchanged.
+from one realisation scatters widely. Over the seeds used here the filter's
+single-run ANEES ranges from 0.75 to 1.32. The experiment is therefore repeated
+for $M = 1279$ seeds, 42 to 1320, each a full independent realisation of the
+truth, the measurements and the prior draw, with everything else in the
+configuration unchanged. The range starts at 42 from _The Hitchhiker's Guide to
+the Galaxy_ and ends at 1320, the 22 minutes of the _Outer Wilds_ time loop in
+seconds.
 
 For each run $i$ and timestep $k$, with estimation error $\tilde x_k^i = x_k^i - \hat x_k^i$
 and innovation $\nu_k^i$ with covariance $S_k$,
@@ -70,12 +72,12 @@ $$
 
 Because the runs are independent, $M\bar\epsilon_k \sim \chi^2_{M n}$ under a
 consistent filter, with $n = 1$ here. Every timestep therefore gets an exact 95%
-band $[\chi^2_{M,\,0.025},\ \chi^2_{M,\,0.975}]/M = [0.49,\ 1.69]$, with no
+band $[\chi^2_{M,\,0.025},\ \chi^2_{M,\,0.975}]/M = [0.924,\ 1.079]$, with no
 correction for autocorrelation over time. The same holds for NIS with $m = 1$.
 
 The overall averages over all runs and timesteps are tested with the spread of
 the per-run averages. These are independent across runs, so a 95% $t$-interval
-over the 21 values is a valid interval for the overall average, which should
+over the 1279 values is a valid interval for the overall average, which should
 contain 1.
 
 $P_k$ and $S_k$ do not depend on the data in a linear Kalman filter, so they are
@@ -89,17 +91,19 @@ To regenerate the figures and statistics from the stored data:
 python3 scripts/monte_carlo_1d.py --skip-run results/1D/monte_carlo
 ```
 
-To regenerate the data as well:
+To regenerate the data as well (about 10 s on 8 cores):
 
 ```bash
 cmake -S . -B build && cmake --build build
-python3 scripts/monte_carlo_1d.py results/1D/monte_carlo   # writes one seed_<n>/ per seed, then the figures
+python3 scripts/monte_carlo_1d.py results/1D/monte_carlo
 ```
 
-The script copies `results/1D/config.yaml` into `monte_carlo/seed_<n>/config.yaml`
-with only the seed changed, runs the executable on all of them, and writes
-`monte_carlo/stats.txt` and `monte_carlo/figures/`. Add `--pdf` for vector
-figures.
+The script runs `results/1D/config.yaml` once per seed with only the seed
+changed. Each run happens in a temporary folder that is deleted afterwards, and
+only the reduced Monte Carlo data is written to `monte_carlo/data/`, together
+with `monte_carlo/stats.txt` and `monte_carlo/figures/`. The seeds are set in
+the script and recorded in the first column of `per_run.csv`. Add `--pdf` for
+vector figures.
 
 The example run shown in the trajectory figures is the seed 42 case in this
 folder, and is regenerated with
@@ -111,8 +115,18 @@ python3 scripts/analyze_1d.py results/1D/data         # writes results/1D/figure
 
 ## Data
 
-Every `monte_carlo/seed_<n>/data/` (and the example run in `data/`) holds four
-CSV files with one row per timestep and a shared `timestep` column, so they can
+The Monte Carlo data is in `monte_carlo/data/`.
+
+| file               | rows                | columns                                                                                                                |
+| ------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `per_run.csv`      | one per seed (1279) | `seed, rmse_filter, rmse_smoother, mae_filter, mae_smoother, anis, anees_filter, anees_smoother`                       |
+| `per_timestep.csv` | one per timestep    | `timestep, nis, nees_filter, nees_smoother, rmse_filter, rmse_smoother, mae_filter, mae_smoother, P_filter, P_smoother` |
+
+The per-run columns are time averages over one run. The per-timestep columns
+are averages over all runs at that timestep, except `P`, which is the same in
+every run.
+
+The example run in `data/` (seed 42) holds four CSV files with one row per timestep and a shared `timestep` column, so they can
 be joined on it. The column layout is documented in `lib/results.hpp`.
 
 | file                    | columns                                                                                     |
@@ -128,10 +142,10 @@ be joined on it. The column layout is documented in `lib/results.hpp`.
 
 ### What one run looks like
 
-The trajectory figures show a single realisation (seed 42), since 21 overlaid
-trajectories would be unreadable. Its errors are typical of the Monte Carlo set,
-with filter RMSE 0.365 and smoother RMSE 0.274 against the means of 0.358 and
-0.276 below.
+The trajectory figures show a single realisation (seed 42), since overlaid
+trajectories from many runs would be unreadable. Its errors are typical of the
+Monte Carlo set, with filter RMSE 0.365 and smoother RMSE 0.274 against the
+means of 0.368 and 0.279 below.
 
 The problem: a hidden random walk and the noisy measurements of it.
 
@@ -157,17 +171,17 @@ the filter's (its variance is about 58% of the filter's).
 
 ![filter vs smoother, all 1000 timesteps](figures/4_filter_vs_smoother_1000.png)
 
-### Accuracy over 21 runs
+### Accuracy over 1279 runs
 
 Mean and standard deviation across the runs of each run's time-averaged error.
 
 |          | RMSE            | MAE             | mean $P$ |
 | -------- | --------------- | --------------- | -------- |
-| filter   | 0.3581 ± 0.0153 | 0.2857 ± 0.0122 | 0.1354   |
-| smoother | 0.2759 ± 0.0098 | 0.2200 ± 0.0075 | 0.0783   |
+| filter   | 0.3676 ± 0.0149 | 0.2935 ± 0.0124 | 0.1354   |
+| smoother | 0.2794 ± 0.0113 | 0.2231 ± 0.0093 | 0.0783   |
 
-The smoother has the lower RMSE in all 21 runs, on average 22.9% lower, and its
-mean $P$ is 42% lower.
+The smoother has the lower RMSE in all 1279 runs, on average 23.9% lower, its
+MAE is also 23.9% lower, and its mean $P$ is 42% lower.
 
 The RMSE across the runs at each timestep, $\sqrt{\frac{1}{M}\sum_i (\tilde x_k^i)^2}$,
 should scatter around the standard deviation the estimator reports, $\sqrt{P_k}$.
@@ -190,40 +204,35 @@ run.
 
 ## Consistency
 
-NEES averaged over the 21 runs at every timestep, for the filter and the
+NEES averaged over the 1279 runs at every timestep, for the filter and the
 smoother, against the exact 95% band. The dashed line is the expected value
 $\mathbb{E}[\chi^2_1] = 1$.
 
 ![NEES averaged over runs](monte_carlo/figures/mc_nees.png)
 
-NIS averaged over the 21 runs, against the same band.
+NIS averaged over the 1279 runs, against the same band.
 
 ![NIS averaged over runs](monte_carlo/figures/mc_nis.png)
 
 About 95% of the timesteps should land inside the band if the estimator is
 consistent, and they do.
 
-| statistic     | timesteps inside [0.49, 1.69] |
-| ------------- | ----------------------------- |
-| NIS           | 94.5%                         |
-| NEES filter   | 95.9%                         |
-| NEES smoother | 94.0%                         |
+| statistic     | timesteps inside [0.924, 1.079] |
+| ------------- | ------------------------------- |
+| NIS           | 95.3%                           |
+| NEES filter   | 95.0%                           |
+| NEES smoother | 95.4%                           |
 
-Averaged over all runs and timesteps, with the 95% $t$-interval from the spread
-of the per-run averages:
+Averaged over all runs and timesteps, as mean ± standard error with the 95%
+$t$-interval from the spread of the per-run averages:
 
-| statistic      | value  | 95% interval     | per-run range    | verdict                    |
-| -------------- | ------ | ---------------- | ---------------- | -------------------------- |
-| ANIS           | 0.9815 | [0.9598, 1.0032] | [0.8660, 1.0728] | consistent                 |
-| ANEES filter   | 0.9488 | [0.9121, 0.9856] | [0.8053, 1.1437] | slightly low, see below    |
-| ANEES smoother | 0.9741 | [0.9429, 1.0052] | [0.8446, 1.0911] | consistent                 |
+| statistic      | value           | 95% interval     | per-run range    | verdict    |
+| -------------- | --------------- | ---------------- | ---------------- | ---------- |
+| ANIS           | 0.9987 ± 0.0013 | [0.9962, 1.0012] | [0.8610, 1.1744] | consistent |
+| ANEES filter   | 0.9994 ± 0.0023 | [0.9950, 1.0039] | [0.7473, 1.3158] | consistent |
+| ANEES smoother | 0.9986 ± 0.0023 | [0.9941, 1.0030] | [0.7741, 1.3103] | consistent |
 
-The filter's ANEES sits just below its interval for this set of seeds. This is
-the seed set and not the filter. A check over 200 other seeds (1000 to 1199)
-gives a filter ANEES of $1.0005 \pm 0.0053$, a smoother ANEES of
-$1.0040 \pm 0.0055$ and an ANIS of $0.9987 \pm 0.0033$ (mean ± standard error),
-all on 1. Seeds 22 to 42 happen to land about three standard errors low, which
-also shows how much a 21-run Monte Carlo can still scatter.
+All three overall averages are within a quarter of a percent of 1.
 
 ## Takeaways and limits
 
@@ -235,5 +244,7 @@ also shows how much a 21-run Monte Carlo can still scatter.
 - The measured error across runs follows $\sqrt{P_k}$ over the whole run, so the
   covariance the estimators report is the covariance of their actual error.
 - One run is not enough to judge consistency. Single-run ANEES values here span
-  0.81 to 1.14, so a single run can look over- or underconfident by chance.
-  Even 21 runs leave visible scatter in the overall average.
+  0.75 to 1.32, so a single run can look over- or underconfident by chance. An
+  earlier Monte Carlo over only 21 seeds (22 to 42) put the filter ANEES at
+  0.949, just outside its interval, which the 1279 runs show was the seed set
+  and not the filter.

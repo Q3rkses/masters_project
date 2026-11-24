@@ -55,8 +55,8 @@ Other interesting tests to perform when writing about results and theory:
 
 A 1-D random walk seen through noisy measurements, estimated with the filter and
 the smoother. Both draw a 95% confidence band; the smoother's path is closer to
-the truth and its band is narrower. Over a Monte Carlo of 21 seeds the smoother's
-RMSE is 0.276 against the filter's 0.358.
+the truth and its band is narrower. Over a Monte Carlo of 1279 seeds the smoother's
+RMSE is 0.279 against the filter's 0.368.
 
 ![1-D filter vs smoother](results/1D/figures/4_filter_vs_smoother_500.png)
 
@@ -67,7 +67,7 @@ Each experiment lives in `results/<name>/` with its own `README.md`. The INS exp
 
 | experiment                              | what it tests                                     | result                                                |
 | --------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| [1-D random walk](results/1D/README.md) | filter and smoother on the simplest matched model | Monte Carlo over 21 seeds of 1000 steps, RMSE 0.358 to 0.276, consistent |
+| [1-D random walk](results/1D/README.md) | filter and smoother on the simplest matched model | Monte Carlo over 1279 seeds of 1000 steps, RMSE 0.368 to 0.279, consistent |
 | [2-D random walk](results/2D/README.md) | the same with vectors, and covariance ellipses    | 200 steps, RMSE 0.545 to 0.388, all three consistent  |
 | [2-D strapdown INS, GNSS only](results/INS2D/only_gnss/README.md) | GNSS the only aiding sensor, on a four-corner test and a figure-eight | 30000 steps, position consistent, smoother RMSE 0.21 m against filter 0.70 m |
 | [2-D strapdown INS, multi-sensor fusion](results/INS2D/multi_sensor_fusion/README.md) | GNSS, magnetometer and DVL fused sequentially, on both trajectories | 30000 steps, all consistency checks pass, filter RMSE 0.66 to 0.68 m |

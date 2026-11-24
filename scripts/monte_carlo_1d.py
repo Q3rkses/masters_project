@@ -1,28 +1,41 @@
 #!/usr/bin/env python3
 """Monte Carlo over seeds for the 1-D random walk.
 
-Writes one case folder per seed under <mc_dir>/seed_<seed>/, each a copy of the
-base config with only the seed changed, runs the executable on all of them,
-and then checks consistency across the runs. With M independent runs the
-NEES averaged over the runs at a single timestep is chi2(M n) / M, so every
-timestep gets its own exact band without any autocorrelation correction.
+Runs the base config (results/1D/config.yaml) once per seed, each run in a
+temporary folder that is deleted afterwards, and keeps only the Monte Carlo
+data in <mc_dir>/data/:
+
+  per_run.csv       one row per seed, with that run's time-averaged errors and
+                    consistency statistics, so the seeds are recorded too
+  per_timestep.csv  one row per timestep, with the statistics averaged over
+                    all runs
+
+With M independent runs the NEES averaged over the runs at a single timestep is
+chi2(M n) / M, so every timestep gets its own exact band without any
+autocorrelation correction.
 
 usage: monte_carlo_1d.py [--skip-run] [--pdf] [mc_dir]
 """
 
+import re
 import subprocess
 import sys
+import tempfile
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import yaml
 from scipy.stats import chi2, t
 
 PROJECT = Path(__file__).resolve().parent.parent
 EXECUTABLE = PROJECT / "build" / "kalman_filtering_and_smoothing"
 BASE_CONFIG = PROJECT / "results" / "1D" / "config.yaml"
-SEEDS = range(22, 43)  # 22 up to and including 42, so 21 runs
+# 42 as in The Hitchhiker's Guide to the Galaxy, up to 1320, the 22 minutes of
+# the Outer Wilds time loop in seconds, both included, so 1279 runs
+SEEDS = range(42, 1321)
 
 FILTER = "#2a78d6"
 SMOOTHER = "#eb6834"
@@ -31,6 +44,11 @@ BAND = "#8a8984"
 STATE_DIM = 1
 MEASUREMENT_DIM = 1
 CONFIDENCE = 0.95
+
+PER_RUN = ["seed", "rmse_filter", "rmse_smoother", "mae_filter", "mae_smoother",
+           "anis", "anees_filter", "anees_smoother"]
+PER_TIMESTEP = ["timestep", "nis", "nees_filter", "nees_smoother", "rmse_filter",
+                "rmse_smoother", "mae_filter", "mae_smoother", "P_filter", "P_smoother"]
 
 
 def load(path):
@@ -44,19 +62,16 @@ def chi2_interval(dof, samples):
     return low / samples, high / samples
 
 
-def write_cases(mc_dir):
-    base = yaml.safe_load(BASE_CONFIG.read_text())
-    for seed in SEEDS:
-        case = mc_dir / f"seed_{seed}"
-        case.mkdir(parents=True, exist_ok=True)
-        config = dict(base, seed=seed)
-        (case / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
-
-
-def load_run(case):
-    truth = load(case / "data" / "truth.csv")
-    filtered = load(case / "data" / "filter.csv")
-    smoothed = load(case / "data" / "smoother.csv")
+def run_one(seed):
+    """One run of the base config with the given seed, reduced to its errors."""
+    config = re.sub(r"^seed:.*$", f"seed: {seed}", BASE_CONFIG.read_text(), flags=re.M)
+    with tempfile.TemporaryDirectory(prefix="mc_1d_") as scratch:
+        run_dir = Path(scratch)
+        (run_dir / "config.yaml").write_text(config)
+        subprocess.run([EXECUTABLE, run_dir], check=True, stdout=subprocess.DEVNULL)
+        truth = load(run_dir / "data" / "truth.csv")
+        filtered = load(run_dir / "data" / "filter.csv")
+        smoothed = load(run_dir / "data" / "smoother.csv")
     x_true = truth["x_true_0"]
     return {
         "k": truth["timestep"],
@@ -66,6 +81,34 @@ def load_run(case):
         "P_smoother": smoothed["P_smoothed_0_0"],
         "nis": filtered["innovation_0"] ** 2 / filtered["S_0_0"],
     }
+
+
+def run_monte_carlo(data_dir):
+    """Runs every seed and writes the per-run and per-timestep data."""
+    with ProcessPoolExecutor() as pool:
+        runs = list(pool.map(run_one, SEEDS, chunksize=16))
+    stack = lambda key: np.vstack([run[key] for run in runs])  # runs x timesteps
+    err_f, err_s = stack("err_filter"), stack("err_smoother")
+    nees_f, nees_s = err_f ** 2 / stack("P_filter"), err_s ** 2 / stack("P_smoother")
+    nis = stack("nis")
+
+    per_run = np.column_stack([
+        np.array(SEEDS), np.sqrt(np.mean(err_f ** 2, axis=1)), np.sqrt(np.mean(err_s ** 2, axis=1)),
+        np.mean(np.abs(err_f), axis=1), np.mean(np.abs(err_s), axis=1),
+        nis.mean(axis=1), nees_f.mean(axis=1), nees_s.mean(axis=1)])
+    # P does not depend on the data in a linear Kalman filter, so any run's P is every run's P
+    per_timestep = np.column_stack([
+        runs[0]["k"], nis.mean(axis=0), nees_f.mean(axis=0), nees_s.mean(axis=0),
+        np.sqrt(np.mean(err_f ** 2, axis=0)), np.sqrt(np.mean(err_s ** 2, axis=0)),
+        np.mean(np.abs(err_f), axis=0), np.mean(np.abs(err_s), axis=0),
+        runs[0]["P_filter"], runs[0]["P_smoother"]])
+
+    data_dir.mkdir(parents=True, exist_ok=True)
+    np.savetxt(data_dir / "per_run.csv", per_run, delimiter=",", header=",".join(PER_RUN),
+               comments="", fmt=["%d"] + ["%.6g"] * (len(PER_RUN) - 1))
+    np.savetxt(data_dir / "per_timestep.csv", per_timestep, delimiter=",",
+               header=",".join(PER_TIMESTEP), comments="",
+               fmt=["%d"] + ["%.6g"] * (len(PER_TIMESTEP) - 1))
 
 
 def style(axis, title, ylabel):
@@ -89,105 +132,104 @@ def plot_mc_average(axis, k, series, dof, runs, name):
     style(axis, f"{name} averaged over {runs} runs", name)
 
 
-def main():
-    flags = {argument for argument in sys.argv[1:] if argument.startswith("--")}
-    arguments = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
-    mc_dir = Path(arguments[0]) if arguments else PROJECT / "results" / "1D" / "monte_carlo"
+def report(per_run, per_timestep):
+    seeds = per_run["seed"].astype(int)
+    M = len(seeds)
+    lines = [f"{M} runs (seeds {seeds[0]} to {seeds[-1]}), "
+             f"{len(per_timestep['timestep'])} timesteps each", ""]
 
-    if "--skip-run" not in flags:
-        write_cases(mc_dir)
-        subprocess.run([EXECUTABLE, mc_dir], check=True, stdout=subprocess.DEVNULL)
-
-    runs = [load_run(mc_dir / f"seed_{seed}") for seed in SEEDS]
-    M = len(runs)
-    k = runs[0]["k"]
-    stack = lambda key: np.vstack([run[key] for run in runs])  # runs x timesteps
-    err_f, err_s = stack("err_filter"), stack("err_smoother")
-    P_f, P_s = stack("P_filter"), stack("P_smoother")
-    nis = stack("nis")
-    nees_f, nees_s = err_f ** 2 / P_f, err_s ** 2 / P_s
-
-    # per-run numbers, the same ones analyze_1d.py prints for a single run
-    rmse_f = np.sqrt(np.mean(err_f ** 2, axis=1))
-    rmse_s = np.sqrt(np.mean(err_s ** 2, axis=1))
-    mae_f = np.mean(np.abs(err_f), axis=1)
-    mae_s = np.mean(np.abs(err_s), axis=1)
-
-    lines = [f"{M} runs (seeds {SEEDS[0]} to {SEEDS[-1]}), {len(k)} timesteps each", ""]
-    lines.append("per run:")
-    lines.append("  seed   RMSE f   RMSE s    MAE f    MAE s    ANIS  ANEES f  ANEES s")
-    for seed, i in zip(SEEDS, range(M)):
-        lines.append(f"  {seed:4d}  {rmse_f[i]:7.4f}  {rmse_s[i]:7.4f}  {mae_f[i]:7.4f}  "
-                     f"{mae_s[i]:7.4f}  {nis[i].mean():6.4f}  {nees_f[i].mean():7.4f}  "
-                     f"{nees_s[i].mean():7.4f}")
-
-    lines += ["", "accuracy over runs (mean +- std across runs):"]
-    for name, values in [("RMSE filter", rmse_f), ("RMSE smoother", rmse_s),
-                         ("MAE filter", mae_f), ("MAE smoother", mae_s)]:
-        lines.append(f"  {name:<14} {values.mean():.4f} +- {values.std(ddof=1):.4f}")
-    lines.append(f"  smoother RMSE lower than filter in {np.sum(rmse_s < rmse_f)}/{M} runs, "
-                 f"mean reduction {np.mean(1 - rmse_s / rmse_f):.1%}")
-    lines.append(f"  mean P filter {P_f.mean():.4f}, smoother {P_s.mean():.4f} "
-                 f"(identical in every run, P does not depend on the data)")
+    lines.append("accuracy over runs (mean +- std across runs):")
+    for label, key in [("RMSE filter", "rmse_filter"), ("RMSE smoother", "rmse_smoother"),
+                       ("MAE filter", "mae_filter"), ("MAE smoother", "mae_smoother")]:
+        values = per_run[key]
+        lines.append(f"  {label:<14} {values.mean():.4f} +- {values.std(ddof=1):.4f}")
+    lower = per_run["rmse_smoother"] < per_run["rmse_filter"]
+    lines.append(f"  smoother RMSE lower than filter in {lower.sum()}/{M} runs, mean reduction "
+                 f"{np.mean(1 - per_run['rmse_smoother'] / per_run['rmse_filter']):.1%}")
+    lines.append(f"  smoother MAE mean reduction "
+                 f"{np.mean(1 - per_run['mae_smoother'] / per_run['mae_filter']):.1%}")
+    lines.append(f"  mean P filter {per_timestep['P_filter'].mean():.4f}, smoother "
+                 f"{per_timestep['P_smoother'].mean():.4f} (identical in every run, P does not "
+                 f"depend on the data)")
 
     lines += ["", "consistency, run-averaged at each timestep (band chi2(M)/M):"]
     step_low, step_high = chi2_interval(1, M)
-    for name, values in [("NIS", nis), ("NEES filter", nees_f), ("NEES smoother", nees_s)]:
-        inside = np.mean((values.mean(axis=0) >= step_low) & (values.mean(axis=0) <= step_high))
-        lines.append(f"  {name:<14} {inside:5.1%} of timesteps inside [{step_low:.4f}, {step_high:.4f}]")
+    for label, key in [("NIS", "nis"), ("NEES filter", "nees_filter"),
+                       ("NEES smoother", "nees_smoother")]:
+        values = per_timestep[key]
+        inside = np.mean((values >= step_low) & (values <= step_high))
+        lines.append(f"  {label:<14} {inside:5.1%} of timesteps inside [{step_low:.4f}, {step_high:.4f}]")
 
     # The runs are independent, so the per-run averages are too, and their spread
     # gives an honest interval for the overall average. A chi2 band with an AR(1)
     # effective sample count is far too narrow here, because NEES of a random walk
     # stays correlated much longer than one step.
     lines += ["", "consistency, averaged over all runs and timesteps "
-              "(95% t-interval from the spread of the per-run averages):"]
-    for name, values in [("ANIS", nis), ("ANEES filter", nees_f), ("ANEES smoother", nees_s)]:
-        per_run = values.mean(axis=1)
-        half = t.ppf(0.5 + CONFIDENCE / 2, M - 1) * per_run.std(ddof=1) / np.sqrt(M)
-        low, high = per_run.mean() - half, per_run.mean() + half
+              "(mean +- standard error, 95% t-interval from the spread of the per-run averages):"]
+    for label, key in [("ANIS", "anis"), ("ANEES filter", "anees_filter"),
+                       ("ANEES smoother", "anees_smoother")]:
+        values = per_run[key]
+        se = values.std(ddof=1) / np.sqrt(M)
+        half = t.ppf(0.5 + CONFIDENCE / 2, M - 1) * se
+        low, high = values.mean() - half, values.mean() + half
         verdict = "consistent" if low <= 1 <= high else "INCONSISTENT"
-        lines.append(f"  {name:<14} {per_run.mean():6.4f}  interval [{low:.4f}, {high:.4f}]  "
-                     f"range over runs [{per_run.min():.4f}, {per_run.max():.4f}]  -> {verdict}")
+        lines.append(f"  {label:<14} {values.mean():6.4f} +- {se:.4f}  interval [{low:.4f}, {high:.4f}]  "
+                     f"range over runs [{values.min():.4f}, {values.max():.4f}]  -> {verdict}")
+    return "\n".join(lines)
 
-    report = "\n".join(lines)
-    print(report)
-    (mc_dir / "stats.txt").write_text(report + "\n")
+
+def main():
+    flags = {argument for argument in sys.argv[1:] if argument.startswith("--")}
+    arguments = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
+    mc_dir = Path(arguments[0]) if arguments else PROJECT / "results" / "1D" / "monte_carlo"
+    data_dir = mc_dir / "data"
+
+    if "--skip-run" not in flags:
+        run_monte_carlo(data_dir)
+
+    per_run = load(data_dir / "per_run.csv")
+    per_timestep = load(data_dir / "per_timestep.csv")
+    M = len(per_run)
+    k = per_timestep["timestep"]
+
+    text = report(per_run, per_timestep)
+    print(text)
+    (mc_dir / "stats.txt").write_text(text + "\n")
 
     figures_dir = mc_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
     figures = {}
 
     figure, axis = plt.subplots(figsize=(11, 4.5))
-    plot_mc_average(axis, k, {"filter": (nees_f.mean(axis=0), FILTER),
-                              "smoother": (nees_s.mean(axis=0), SMOOTHER)},
+    plot_mc_average(axis, k, {"filter": (per_timestep["nees_filter"], FILTER),
+                              "smoother": (per_timestep["nees_smoother"], SMOOTHER)},
                     STATE_DIM, M, "NEES")
     figures["mc_nees.png"] = figure
 
     figure, axis = plt.subplots(figsize=(11, 4.5))
-    plot_mc_average(axis, k, {"filter": (nis.mean(axis=0), FILTER)},
+    plot_mc_average(axis, k, {"filter": (per_timestep["nis"], FILTER)},
                     MEASUREMENT_DIM, M, "NIS")
     figures["mc_nis.png"] = figure
 
     # NIS on top and NEES below, sharing the time axis, as in the single-run analysis
     figure, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
-    plot_mc_average(axes[0], k, {"filter": (nis.mean(axis=0), FILTER)},
+    plot_mc_average(axes[0], k, {"filter": (per_timestep["nis"], FILTER)},
                     MEASUREMENT_DIM, M, "NIS")
-    plot_mc_average(axes[1], k, {"filter": (nees_f.mean(axis=0), FILTER),
-                                 "smoother": (nees_s.mean(axis=0), SMOOTHER)},
+    plot_mc_average(axes[1], k, {"filter": (per_timestep["nees_filter"], FILTER),
+                                 "smoother": (per_timestep["nees_smoother"], SMOOTHER)},
                     STATE_DIM, M, "NEES")
     axes[0].set_xlabel("")
     figures["mc_consistency.png"] = figure
 
     # error spread across runs against what the filter claims, sqrt(P)
     figure, axis = plt.subplots(figsize=(11, 4.5))
-    axis.plot(k, np.sqrt(np.mean(err_f ** 2, axis=0)), color=FILTER, linewidth=0.8,
+    axis.plot(k, per_timestep["rmse_filter"], color=FILTER, linewidth=0.8,
               alpha=0.7, label="filter RMSE over runs")
-    axis.plot(k, np.sqrt(P_f[0]), color=FILTER, linewidth=1.6, linestyle="--",
+    axis.plot(k, np.sqrt(per_timestep["P_filter"]), color=FILTER, linewidth=1.6, linestyle="--",
               label=r"filter $\sqrt{P}$")
-    axis.plot(k, np.sqrt(np.mean(err_s ** 2, axis=0)), color=SMOOTHER, linewidth=0.8,
+    axis.plot(k, per_timestep["rmse_smoother"], color=SMOOTHER, linewidth=0.8,
               alpha=0.7, label="smoother RMSE over runs")
-    axis.plot(k, np.sqrt(P_s[0]), color=SMOOTHER, linewidth=1.6, linestyle="--",
+    axis.plot(k, np.sqrt(per_timestep["P_smoother"]), color=SMOOTHER, linewidth=1.6, linestyle="--",
               label=r"smoother $\sqrt{P}$")
     style(axis, f"RMSE across {M} runs against reported standard deviation", "position error")
     figures["mc_rmse_vs_sigma.png"] = figure

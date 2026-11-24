@@ -18,7 +18,9 @@ heading stress cases) is kept in both variants.
 A single run writes 150 to 220 MB of csv, so every run is reduced to the
 numbers below as soon as it finishes and its csv files are deleted. What is
 kept per case and variant goes to <case>/monte_carlo/<variant>/: stats.txt,
-figures/ and summary.npz, from which --skip-run rebuilds the report.
+figures/, data/per_run.csv with one row per seed (which records the seeds too),
+and summary.npy with the per-timestep averages, from which --skip-run rebuilds
+the report. summary.npy is 2 to 5 MB per case and variant, so it is not tracked.
 
 usage: monte_carlo_ins_2d.py [--skip-run] [--pdf] [--jobs N] [case_dir ...]
 """
@@ -415,12 +417,33 @@ def find_cases(arguments):
     return cases
 
 
+def write_per_run(summary, path):
+    """One row per seed with that run's time-averaged errors and statistics."""
+    slug = lambda name: re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    header, columns = ["seed"], [np.array(SEEDS)]
+    fields = ["rmse", "mae", "heading_rmse", "heading_mae", "anees"]
+    if summary["denied"]:
+        fields += ["outage_rmse", "outage_mae"]
+    for key in summary["estimators"]:
+        for field in fields:
+            header.append(f"{slug(key[1])}_{field}")
+            columns.append(summary[key][field])
+    for (prefix, sensor), entry in summary["nis"].items():
+        if not np.all(np.isnan(entry["per_run"])):
+            header.append(f"{slug(PAIRS[prefix][0])}_anis_{slug(sensor)}")
+            columns.append(entry["per_run"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savetxt(path, np.column_stack(columns), delimiter=",", header=",".join(header),
+               comments="", fmt=["%d"] + ["%.6g"] * (len(header) - 1))
+
+
 def write_outputs(summary, case_dir, variant, pdf):
     out_dir = case_dir / "monte_carlo" / variant
     figures_dir = out_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     text = report(summary, case_dir, variant)
     (out_dir / "stats.txt").write_text(text)
+    write_per_run(summary, out_dir / "data" / "per_run.csv")
     figures = {"mc_nees.png": nees_figure(summary), "mc_nis.png": nis_figure(summary),
                "mc_position_rmse.png": rmse_figure(summary)}
     for name, figure in figures.items():
