@@ -35,9 +35,10 @@ $$
 | $\hat x_0$, $P_0$ | 0.0, 1.0 | prior mean and variance    |
 | timesteps        | 1000     |                            |
 
-- $q$ and $r$ are declared once in `config.yaml` and handed to both the
-  simulator and the filter, so the filter's model matches the truth by
-  construction.
+- As in the INS scenarios, `config.yaml` holds the noise the truth is simulated
+  with, $q$ and $r$, and separately the noise the filter and smoother are
+  modeled with, `filter_q` and `filter_r`. Here they are set equal, so the
+  filter's model matches the truth.
 - The true initial state is drawn from the prior $\mathcal{N}(\hat x_0, P_0)$,
   so the prior is honest from the first step.
 - The Kalman filter runs predict then update at every timestep, starting from
@@ -88,14 +89,14 @@ identical in every run.
 To regenerate the figures and statistics from the stored data:
 
 ```bash
-python3 scripts/monte_carlo_1d.py --skip-run results/1D/monte_carlo
+python3 scripts/monte_carlo_1d.py --skip-run results/1D
 ```
 
 To regenerate the data as well (about 10 s on 8 cores):
 
 ```bash
 cmake -S . -B build && cmake --build build
-python3 scripts/monte_carlo_1d.py results/1D/monte_carlo
+python3 scripts/monte_carlo_1d.py results/1D
 ```
 
 The script runs `results/1D/config.yaml` once per seed with only the seed
@@ -233,6 +234,66 @@ $t$-interval from the spread of the per-run averages:
 | ANEES smoother | 0.9986 ± 0.0023 | [0.9941, 1.0030] | [0.7741, 1.3103] | consistent |
 
 All three overall averages are within a quarter of a percent of 1.
+
+## Mistuned process noise
+
+The same Monte Carlo over the same 1279 seeds, but with the estimators given the
+wrong process noise. Each case is its own folder in `mistuned/` with a config
+that differs from the matched one only in `filter_q`. The truth is still
+simulated with $q = 0.05$, so every seed gives exactly the same ground truth and
+measurements as in the matched case, and the filter and smoother assume
+$q_\text{filter} = q/10 = 0.005$ (`q_too_small`) or $q_\text{filter} = 10q = 0.5$
+(`q_too_large`). The only difference from the matched case is the tuning.
+
+```bash
+python3 scripts/monte_carlo_1d.py results/1D/mistuned/q_too_small
+python3 scripts/monte_carlo_1d.py results/1D/mistuned/q_too_large
+```
+
+Each folder also holds the seed 42 run and its trajectory figures, made with
+the same two commands as the matched example run.
+
+|                        | matched | $q$ too small | $q$ too large |
+| ---------------------- | ------- | ------------- | ------------- |
+| RMSE filter            | 0.3676  | 0.4977        | 0.4816        |
+| RMSE smoother          | 0.2794  | 0.3694        | 0.3781        |
+| MAE filter             | 0.2935  | 0.3982        | 0.3844        |
+| MAE smoother           | 0.2231  | 0.2951        | 0.3018        |
+| ANIS                   | 0.9987  | 1.4428        | 0.5971        |
+| ANEES filter           | 0.9994  | 5.2068        | 0.7510        |
+| ANEES smoother         | 0.9986  | 5.4349        | 0.6396        |
+| smoother RMSE lower in | 1279/1279 | 1279/1279   | 1279/1279     |
+
+All six mistuned ANIS/ANEES intervals exclude 1, and almost no timestep lands
+inside the band (at most 0.3%).
+
+**$q$ too small, overconfident.** The filter believes the state barely moves,
+so it trusts its prediction over the measurements and lags behind every turn of
+the walk. Its reported $\sqrt{P}$ is about 0.22 while the actual error across
+runs is about 0.50, so NEES sits around 5 instead of 1. The smoother is just as
+overconfident (ANEES 5.43), since it inherits the filter's wrong model and
+reports an even narrower band.
+
+![q too small, NIS and NEES](mistuned/q_too_small/monte_carlo/figures/mc_consistency.png)
+
+![q too small, RMSE against sqrt(P)](mistuned/q_too_small/monte_carlo/figures/mc_rmse_vs_sigma.png)
+
+**$q$ too large, underconfident.** The filter believes the state jumps a lot,
+so it follows the measurements closely and passes their noise through. Its
+reported $\sqrt{P}$ is about 0.56 against an actual error of about 0.48, so NEES
+sits around 0.75 and NIS around 0.6. The smoother does more to clean this up,
+because averaging the noisy filter estimates over neighbouring steps helps more
+than the filter's band suggests, so it is even more underconfident (ANEES 0.64).
+
+![q too large, NIS and NEES](mistuned/q_too_large/monte_carlo/figures/mc_consistency.png)
+
+![q too large, RMSE against sqrt(P)](mistuned/q_too_large/monte_carlo/figures/mc_rmse_vs_sigma.png)
+
+Both mistunings cost accuracy, about 35% and 31% higher filter RMSE than the
+matched case, and in both the smoother still beats the filter in every run. The
+smoother cannot repair a wrong model, though. It reproduces the filter's over-
+or underconfidence and makes it slightly worse in both directions, because its
+gain from the future data is computed with the same wrong $q$.
 
 ## Takeaways and limits
 

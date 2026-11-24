@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Monte Carlo over seeds for the 1-D random walk.
 
-Runs the base config (results/1D/config.yaml) once per seed, each run in a
-temporary folder that is deleted afterwards, and keeps only the Monte Carlo
-data in <mc_dir>/data/:
+Runs <case_dir>/config.yaml (results/1D by default) once per seed with only
+the seed changed, each run in a temporary folder that is deleted afterwards,
+and keeps only the Monte Carlo data in <case_dir>/monte_carlo/data/:
 
   per_run.csv       one row per seed, with that run's time-averaged errors and
                     consistency statistics, so the seeds are recorded too
@@ -14,9 +14,14 @@ With M independent runs the NEES averaged over the runs at a single timestep is
 chi2(M n) / M, so every timestep gets its own exact band without any
 autocorrelation correction.
 
-usage: monte_carlo_1d.py [--skip-run] [--pdf] [mc_dir]
+A mistuned case is just another case folder whose config gives the filter a
+different filter_q or filter_r than the q and r the truth is simulated with,
+for example results/1D/mistuned/q_too_small.
+
+usage: monte_carlo_1d.py [--skip-run] [--pdf] [case_dir]
 """
 
+import functools
 import re
 import subprocess
 import sys
@@ -28,11 +33,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from legend_placement import place_legend
 from scipy.stats import chi2, t
 
 PROJECT = Path(__file__).resolve().parent.parent
 EXECUTABLE = PROJECT / "build" / "kalman_filtering_and_smoothing"
-BASE_CONFIG = PROJECT / "results" / "1D" / "config.yaml"
 # 42 as in The Hitchhiker's Guide to the Galaxy, up to 1320, the 22 minutes of
 # the Outer Wilds time loop in seconds, both included, so 1279 runs
 SEEDS = range(42, 1321)
@@ -62,9 +67,9 @@ def chi2_interval(dof, samples):
     return low / samples, high / samples
 
 
-def run_one(seed):
-    """One run of the base config with the given seed, reduced to its errors."""
-    config = re.sub(r"^seed:.*$", f"seed: {seed}", BASE_CONFIG.read_text(), flags=re.M)
+def run_one(seed, base_config):
+    """One run of the case's config with the given seed, reduced to its errors."""
+    config = re.sub(r"^seed:.*$", f"seed: {seed}", base_config, flags=re.M)
     with tempfile.TemporaryDirectory(prefix="mc_1d_") as scratch:
         run_dir = Path(scratch)
         (run_dir / "config.yaml").write_text(config)
@@ -83,10 +88,11 @@ def run_one(seed):
     }
 
 
-def run_monte_carlo(data_dir):
+def run_monte_carlo(config_path, data_dir):
     """Runs every seed and writes the per-run and per-timestep data."""
+    run = functools.partial(run_one, base_config=config_path.read_text())
     with ProcessPoolExecutor() as pool:
-        runs = list(pool.map(run_one, SEEDS, chunksize=16))
+        runs = list(pool.map(run, SEEDS, chunksize=16))
     stack = lambda key: np.vstack([run[key] for run in runs])  # runs x timesteps
     err_f, err_s = stack("err_filter"), stack("err_smoother")
     nees_f, nees_s = err_f ** 2 / stack("P_filter"), err_s ** 2 / stack("P_smoother")
@@ -118,8 +124,18 @@ def style(axis, title, ylabel):
     axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
     axis.set_axisbelow(True)
     axis.spines[["top", "right"]].set_visible(False)
-    axis.legend(loc="upper right", frameon=False, fontsize=9)
 
+
+LEGEND = dict(frameon=False, fontsize=15, handlelength=2.5)  # about 8.5 pt at report width
+
+
+def place_legends(figure):
+    """Puts each panel's legend inside it where it covers no curve. Run after the
+    layout is final, since the free space is measured on the drawn figure."""
+    for axis in figure.axes:
+        if axis.get_legend_handles_labels()[0]:
+            # the dashed expected value at 1 is kept clear of the legend text too
+            place_legend(axis, avoid_reference_lines=True, **LEGEND)
 
 def plot_mc_average(axis, k, series, dof, runs, name):
     """Run-averaged statistic at every timestep against its exact chi2 band."""
@@ -181,18 +197,24 @@ def report(per_run, per_timestep):
 def main():
     flags = {argument for argument in sys.argv[1:] if argument.startswith("--")}
     arguments = [argument for argument in sys.argv[1:] if not argument.startswith("--")]
-    mc_dir = Path(arguments[0]) if arguments else PROJECT / "results" / "1D" / "monte_carlo"
+    case_dir = Path(arguments[0]) if arguments else PROJECT / "results" / "1D"
+    mc_dir = case_dir / "monte_carlo"
     data_dir = mc_dir / "data"
 
     if "--skip-run" not in flags:
-        run_monte_carlo(data_dir)
+        run_monte_carlo(case_dir / "config.yaml", data_dir)
 
     per_run = load(data_dir / "per_run.csv")
     per_timestep = load(data_dir / "per_timestep.csv")
     M = len(per_run)
     k = per_timestep["timestep"]
 
-    text = report(per_run, per_timestep)
+    noise = {key: re.search(rf"^{key}:\s*(\S+)", (case_dir / "config.yaml").read_text(), re.M)
+             for key in ("q", "r", "filter_q", "filter_r")}
+    noise = {key: match.group(1) if match else "?" for key, match in noise.items()}
+    text = (f"truth simulated with q = {noise['q']}, r = {noise['r']}, filter and smoother "
+            f"modeled with q = {noise['filter_q']}, r = {noise['filter_r']}\n"
+            + report(per_run, per_timestep))
     print(text)
     (mc_dir / "stats.txt").write_text(text + "\n")
 
@@ -236,6 +258,7 @@ def main():
 
     for name, figure in figures.items():
         figure.tight_layout()
+        place_legends(figure)
         figure.savefig(figures_dir / name, dpi=150)
         if "--pdf" in flags:
             figure.savefig((figures_dir / name).with_suffix(".pdf"))

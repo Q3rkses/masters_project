@@ -1,0 +1,21 @@
+truth simulated with q = 0.05, r = 0.5, filter and smoother modeled with q = 0.005, r = 0.5
+1279 runs (seeds 42 to 1320), 1000 timesteps each
+
+accuracy over runs (mean +- std across runs):
+  RMSE filter    0.4977 +- 0.0341
+  RMSE smoother  0.3694 +- 0.0185
+  MAE filter     0.3982 +- 0.0281
+  MAE smoother   0.2951 +- 0.0152
+  smoother RMSE lower than filter in 1279/1279 runs, mean reduction 25.6%
+  smoother MAE mean reduction 25.7%
+  mean P filter 0.0484, smoother 0.0252 (identical in every run, P does not depend on the data)
+
+consistency, run-averaged at each timestep (band chi2(M)/M):
+  NIS             0.3% of timesteps inside [0.9240, 1.0790]
+  NEES filter     0.2% of timesteps inside [0.9240, 1.0790]
+  NEES smoother   0.0% of timesteps inside [0.9240, 1.0790]
+
+consistency, averaged over all runs and timesteps (mean +- standard error, 95% t-interval from the spread of the per-run averages):
+  ANIS           1.4428 +- 0.0025  interval [1.4380, 1.4477]  range over runs [1.1941, 1.7681]  -> INCONSISTENT
+  ANEES filter   5.2068 +- 0.0201  interval [5.1674, 5.2463]  range over runs [3.3296, 7.7773]  -> INCONSISTENT
+  ANEES smoother 5.4349 +- 0.0152  interval [5.4050, 5.4649]  range over runs [3.7205, 7.6712]  -> INCONSISTENT

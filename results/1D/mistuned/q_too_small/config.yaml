@@ -1,0 +1,16 @@
+# 1-D random walk observed directly:
+#   x_k = x_{k-1} + w_k,  w_k ~ N(0, q)
+#   z_k = x_k     + v_k,  v_k ~ N(0, r)
+scenario: random_walk
+seed: 42
+timesteps: 1000
+dim: 1
+q: 0.05   # process noise variance (random walk step size)
+r: 0.5    # measurement noise variance
+# the filter's own belief about the noise above, deliberately mistuned with a
+# process noise ten times too small (0.1x q), so it trusts its prediction too
+# much and is overconfident
+filter_q: 0.005
+filter_r: 0.5
+x0: [0.0] # prior mean, one entry per dimension
+p0: 1.0   # prior covariance is p0 * I

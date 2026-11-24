@@ -38,6 +38,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter, LogLocator, NullFormatter
 import numpy as np
+from legend_placement import place_legend
 from scipy.stats import chi2, t as student_t
 
 PROJECT = Path(__file__).resolve().parent.parent
@@ -324,8 +325,17 @@ def style(axis, title, ylabel, denied):
     axis.grid(color=BAND, alpha=0.2, linewidth=0.5)
     axis.set_axisbelow(True)
     axis.spines[["top", "right"]].set_visible(False)
-    axis.legend(loc="best", frameon=False, fontsize=9)
 
+
+LEGEND = dict(frameon=False, fontsize=15, handlelength=2.5)  # about 8.5 pt at report width
+
+
+def place_legends(figure):
+    """Puts each panel's legend inside it where it covers no curve. Run after the
+    layout is final, since the free space is measured on the drawn figure."""
+    for axis in figure.axes:
+        if axis.get_legend_handles_labels()[0]:
+            place_legend(axis, **LEGEND)
 
 def pairs_of(summary):
     """The (filter, smoother) keys of each pair, in run order."""
@@ -399,6 +409,9 @@ def rmse_figure(summary):
             axis.plot(t, summary[key]["sigma_t"], color=color, linewidth=1.5, linestyle="--",
                       label=rf"{key[1]} $\sqrt{{\mathrm{{tr}}\,P}}$")
         axis.set_yscale("log")
+        # the first step can sit near zero, which would stretch the log axis over decades
+        values = np.concatenate([summary[k][name] for k in (f, s) for name in ("rmse_t", "sigma_t")])
+        axis.set_ylim(bottom=0.8 * np.nanpercentile(values, 1))
         style(axis, f"Position RMSE over {M} runs against reported uncertainty, "
                     f"{f[1]} and {s[1]}", "position error [m]", denied)
     axes[-1, 0].set_xlabel("time [s]")
@@ -448,6 +461,7 @@ def write_outputs(summary, case_dir, variant, pdf):
                "mc_position_rmse.png": rmse_figure(summary)}
     for name, figure in figures.items():
         figure.tight_layout()
+        place_legends(figure)
         figure.savefig(figures_dir / name, dpi=150)
         if pdf:
             figure.savefig((figures_dir / name).with_suffix(".pdf"))

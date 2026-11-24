@@ -71,8 +71,12 @@ def draw_variance(axis, k, P_filter, P_smoother):
     axis.set_ylabel("variance")
 
 
-def finish(axis):
-    axis.legend(loc="best", frameon=False, fontsize=9)
+LEGEND_SIZE = 15  # about 8.5 pt once the 11 inch figure is scaled to a report's text width
+
+
+def finish(axis, loc="best"):
+    axis.legend(loc=loc, frameon=False, fontsize=LEGEND_SIZE, markerscale=2,
+                handlelength=2.5)
 
 
 def running_mean(values, window):
@@ -118,34 +122,38 @@ def summarise(name, values, dof):
 def trajectory_figures(window, k, z, x_true, x_filter, P_filter, x_smoother, P_smoother):
     """The four trajectory views over the first `window` timesteps."""
     w = slice(0, window)
+    # the legend goes in the right-hand corner the path stays away from at the end of the window
+    tail = x_true[w][-max(1, window // 3):]
+    low, high = x_true[w].min(), x_true[w].max()
+    legend = "lower right" if tail.mean() > (low + high) / 2 else "upper right"
     span = f"first {window} timesteps" if window < len(k) else f"all {len(k)} timesteps"
     figures = {}
 
     figure, axis = new_figure(f"Simulation, {span}")
     draw_measurements(axis, k[w], z[w])
     draw_truth(axis, k[w], x_true[w])
-    finish(axis)
+    finish(axis, legend)
     figures[f"1_simulation_{window}.png"] = figure
 
     figure, axis = new_figure(f"Kalman filter, {span}")
     draw_measurements(axis, k[w], z[w])
     draw_truth(axis, k[w], x_true[w])
     draw_estimate(axis, k[w], x_filter[w], P_filter[w], FILTER, "filter")
-    finish(axis)
+    finish(axis, legend)
     figures[f"2_filter_{window}.png"] = figure
 
     figure, axis = new_figure(f"RTS smoother, {span}")
     draw_measurements(axis, k[w], z[w])
     draw_truth(axis, k[w], x_true[w])
     draw_estimate(axis, k[w], x_smoother[w], P_smoother[w], SMOOTHER, "smoother")
-    finish(axis)
+    finish(axis, legend)
     figures[f"3_smoother_{window}.png"] = figure
 
     figure, axis = new_figure(f"Filter vs smoother, {span}")
     draw_truth(axis, k[w], x_true[w])
     draw_estimate(axis, k[w], x_filter[w], P_filter[w], FILTER, "filter")
     draw_estimate(axis, k[w], x_smoother[w], P_smoother[w], SMOOTHER, "smoother")
-    finish(axis)
+    finish(axis, legend)
     figures[f"4_filter_vs_smoother_{window}.png"] = figure
 
     return figures

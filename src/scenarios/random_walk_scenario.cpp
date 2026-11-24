@@ -25,14 +25,19 @@ void run_random_walk(const YAML::Node &config,
   //   z_k = x_k     + v_k,  v_k ~ N(0, R)  ->  H = I, R = r * I
 
   const int dim = config["dim"].as<int>();
+  // q and r are the noise the truth is simulated with, filter_q and filter_r
+  // what the filter and smoother are modeled with, as in the INS scenarios
   const double q = config["q"].as<double>(); // process noise variance
   const double r = config["r"].as<double>(); // measurement noise variance
+  const double filter_q = config["filter_q"].as<double>();
+  const double filter_r = config["filter_r"].as<double>();
   const std::vector<double> x0_values = config["x0"].as<std::vector<double>>();
   const double p0_variance = config["p0"].as<double>();
 
-  if (timesteps < 1 || dim < 1 || q <= 0.0 || r <= 0.0 || p0_variance <= 0.0) {
-    throw std::runtime_error(
-        "random_walk: timesteps and dim must be >= 1, q, r and p0 must be > 0");
+  if (timesteps < 1 || dim < 1 || q <= 0.0 || r <= 0.0 || filter_q <= 0.0 ||
+      filter_r <= 0.0 || p0_variance <= 0.0) {
+    throw std::runtime_error("random_walk: timesteps and dim must be >= 1, q, "
+                             "r, filter_q, filter_r and p0 must be > 0");
   }
   if (static_cast<int>(x0_values.size()) != dim) {
     throw std::runtime_error("random_walk: x0 must have exactly dim entries");
@@ -52,9 +57,15 @@ void run_random_walk(const YAML::Node &config,
       .R = r * Eigen::MatrixXd::Identity(dim, dim),
   };
 
-  auto motion_model = std::make_shared<LinearMotionModel>(model_config);
+  // the truth is simulated with model_config, the filter and smoother get the
+  // same model with their own belief about the noise
+  ModelConfig filter_model_config = model_config;
+  filter_model_config.Q = filter_q * Eigen::MatrixXd::Identity(dim, dim);
+  filter_model_config.R = filter_r * Eigen::MatrixXd::Identity(dim, dim);
+
+  auto motion_model = std::make_shared<LinearMotionModel>(filter_model_config);
   auto measurement_model =
-      std::make_shared<LinearMeasurementModel>(model_config);
+      std::make_shared<LinearMeasurementModel>(filter_model_config);
 
   FilterConfig filter_config{
       .x_prior = x0,

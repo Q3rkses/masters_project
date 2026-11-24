@@ -87,6 +87,7 @@ results/INS3D/*/*/data/
 # 1D Monte Carlo: the runs themselves are temporary, the reduced data, stats and figures are kept
 !results/1D/monte_carlo/data/
 !results/1D/monte_carlo/figures/
+!results/1D/mistuned/*/monte_carlo/data/
 
 # python bytecode
 __pycache__/
