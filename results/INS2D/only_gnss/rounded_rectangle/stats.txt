@@ -8,13 +8,17 @@ consistency (time-averaged; above the band the estimator is overconfident, below
   ANEES position ERTS             1.1497  band [0.0506, 7.3778]  95.5% of steps in band  -> consistent
 
 accuracy (position error in m, heading error in deg):
-                 RMSE pos   median     95th      max  RMSE head
-  EKF              0.6967   0.5363   1.2766   2.5790     5.7227
-  ERTS             0.2142   0.1833   0.3785   0.6128     2.6559
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE head  MAE head  max head
+  EKF              0.6967   0.5986   0.5363   1.2766   2.5790   0.6128     5.7227    4.0056   35.2426
+  ERTS             0.2142   0.1904   0.1833   0.3785   0.6128   0.6128     2.6559    2.2502    4.7808
 
 bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
   EKF              0.0313   0.0312    0.00268     0.0177
   ERTS             0.0133   0.0144    0.00141     0.0034
+
+bias MAE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]):
+  EKF              0.0248   0.0251    0.00191
+  ERTS             0.0104   0.0113    0.00113
 
 share of steps with the true position inside the reported 95% ellipse:
   EKF            95.1%

@@ -174,11 +174,19 @@ Eigen::MatrixXd StrapdownINS2D::Q(const Eigen::VectorXd &input_state,
   D_diagonal(accelerometer_bias_noise_slice) = accelerometer_driving_noise_variance_;
   D_diagonal(gyro_bias_noise_index) = gyro_driving_noise_variance_;
 
-  // First order approximation of Q_d
-  Eigen::MatrixXd Q_d = G_matrix * D_diagonal.asDiagonal() * G_matrix.transpose() * dt_;
-  // clang-format on
+  // A, continuous time, one line per block like F. Blocks that are not
+  // assigned stay zero
+  Eigen::MatrixXd A_matrix = Eigen::MatrixXd::Zero(8, 8);
+  A_matrix(position_slice, velocity_slice) = I2;
+  A_matrix(velocity_slice, heading_index) = mid.dRa;
+  A_matrix(velocity_slice, accelerometer_bias_slice) = -mid.R_mid;
+  A_matrix(heading_index, gyro_bias_index) = -1.0;
+  A_matrix(accelerometer_bias_slice, accelerometer_bias_slice) = (-1.0 / accelerometer_gauss_markov_timeconstant_.array()).matrix().asDiagonal();
+  A_matrix(gyro_bias_index, gyro_bias_index) = -1.0 / gyro_gauss_markov_timeconstant_;
 
-  // Exact solution with Van Loan's Formula. not yet implemented
+  // Exact solution with Van Loan's Formula
+  Eigen::MatrixXd Q_d = van_loan_Q(A_matrix, G_matrix * D_diagonal.asDiagonal() * G_matrix.transpose(), dt_);
+  // clang-format on
 
   return Q_d;
 }
@@ -385,11 +393,20 @@ Eigen::MatrixXd StrapdownINS3D::Q(const Eigen::VectorXd &input_state,
   D_diagonal(accelerometer_bias_noise_slice_3d) = accelerometer_driving_noise_variance_;
   D_diagonal(gyro_bias_noise_slice_3d) = gyro_driving_noise_variance_;
 
-  // First order approximation of Q_d
-  Eigen::MatrixXd Q_d = G_matrix * D_diagonal.asDiagonal() * G_matrix.transpose() * dt_;
-  // clang-format on
+  // A, continuous time error dynamics, one line per block like F. Blocks that
+  // are not assigned stay zero
+  Eigen::MatrixXd A_matrix = Eigen::MatrixXd::Zero(15, 15);
+  A_matrix(error_position_slice, error_velocity_slice) = I3;
+  A_matrix(error_velocity_slice, error_attitude_slice) = -mid.R_mid * skew(mid.a_tilde);
+  A_matrix(error_velocity_slice, error_accelerometer_bias_slice) = -mid.R_mid;
+  A_matrix(error_attitude_slice, error_attitude_slice) = -skew(mid.omega_tilde);
+  A_matrix(error_attitude_slice, error_gyro_bias_slice) = -I3;
+  A_matrix(error_accelerometer_bias_slice, error_accelerometer_bias_slice) = (-1.0 / accelerometer_gauss_markov_timeconstant_.array()).matrix().asDiagonal();
+  A_matrix(error_gyro_bias_slice, error_gyro_bias_slice) = (-1.0 / gyro_gauss_markov_timeconstant_.array()).matrix().asDiagonal();
 
-  // Exact solution with Van Loan's Formula. not yet implemented
+  // Exact solution with Van Loan's Formula
+  Eigen::MatrixXd Q_d = van_loan_Q(A_matrix, G_matrix * D_diagonal.asDiagonal() * G_matrix.transpose(), dt_);
+  // clang-format on
 
   return Q_d;
 }

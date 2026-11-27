@@ -60,7 +60,13 @@ The filters are given the same IMU noise parameters the data is simulated with.
 
 ### Trajectories
 
-Both paths are flown at 2 m/s in a plane tilted 0.15 rad about the $x$ axis, so the depth changes along the loop. The vehicle rolls into each turn as in a coordinated turn, building up the roll over 5 m of path.
+Both paths are flown horizontally at 2 m/s. GNSS does not penetrate the water column, so the vehicle is at the surface while it has GNSS and submerged for the whole outage: it starts at the surface, dives at 45 s, runs its mission under water and is back at the surface at 255 s. The depth is
+
+$$
+z(t) = h(t)\left(z_m + y \sin\alpha\right),
+$$
+
+with mission depth $z_m = 10$ m and slope $\alpha = 0.15$ rad, so the mission depth varies along the loop as over sloping ground, between 10 and 16 m on the figure-eight and between 10 and 17.5 m on the four-corner. The envelope $h(t)$ is 0 at the surface and 1 on the mission, and ramps between them over 30 s with a quintic smoothstep, so depth, vertical speed and vertical acceleration are continuous. The vehicle points along its velocity, so it pitches nose down by up to about 30° while diving and nose up while surfacing. It rolls into each turn as in a coordinated turn, building up the roll over 5 m of path.
 
 | trajectory | geometry |
 | --- | --- |
@@ -123,4 +129,5 @@ Each method has its own page with the setup, the figures and the numbers of its 
 ## Related results
 
 - [Poor initialization](../poor_initialization/README.md): the same scenario with a filter prior far from the truth.
+- [Exaggerated poor initialization](../exaggerated_poor_initialization/README.md): the poor prior with a sparse magnetometer.
 - [2-D strapdown INS, IEKS](../../INS2D/ieks/README.md): the planar version of the same estimators.

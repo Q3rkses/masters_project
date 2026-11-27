@@ -17,6 +17,7 @@ filter and smoother:
     4_uncertainty.png   the position and attitude spread the estimators report
     5_biases.png        true and estimated sensor biases
     6_consistency.png   NIS per sensor and the running NEES
+    7_outage_bands.png  north position error with its 95% band, filter and smoother side by side
 
 A statistic that falls above its 95% interval means the errors are larger than
 the reported covariance admits, the estimator is overconfident. Below the
@@ -393,6 +394,42 @@ def errors_figure(t, x_true, filt, smooth, denied):
     return figure
 
 
+def outage_bands_figure(t, x_true, filt, smooth, denied):
+    """North position error with the 95% band, the filter on the left and the
+    smoother on the right on the same scale. Without GNSS the filter's band can
+    only grow until the fixes return, while the smoother also draws on the
+    fixes after the outage, so its band is widest around the middle."""
+    from matplotlib.patches import Patch
+
+    scale = norm.ppf(0.5 + CONFIDENCE / 2)
+    figure, axes = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+    curves = []
+    for axis, estimator, title in zip(axes, (filt, smooth), ("Filter", "Smoother")):
+        error = error_state(x_true, estimator.x)[:, 0]
+        sigma = scale * np.sqrt(np.clip(estimator.P[:, 0, 0], 0, None))
+        keep = thinned(sigma)
+        axis.fill_between(t[keep], -sigma[keep], sigma[keep], color=estimator.color,
+                          alpha=0.15, linewidth=0)
+        plot_thinned(axis, t, error, color=estimator.color, linewidth=1)
+        axis.axhline(0, color=BAND, linewidth=0.8, linestyle="--")
+        shade_denied(axis, denied)
+        handles = [plt.Line2D([], [], color=estimator.color, linewidth=1,
+                              label=title),
+                   Patch(color=estimator.color, alpha=0.15, linewidth=0, label="95% band")]
+        if denied:
+            handles.append(Patch(color=DENIED, alpha=0.2, linewidth=0, label="GNSS denied"))
+        axis.legend(handles=handles, loc="upper left", frameon=False, ncol=3, fontsize=9)
+        axis.set_title(title, loc="left")
+        axis.set_xlabel("time [s]")
+        style_axis(axis)
+        curves += [error, sigma]
+    peak = max(np.nanmax(np.abs(c[SKIP_STEPS:])) for c in curves)
+    axes[0].set_ylim(-1.1 * peak, 1.35 * peak)  # room for the legend above the bands
+    axes[0].set_ylabel("x [m]")
+    figure.tight_layout()
+    return figure
+
+
 def uncertainty_figure(t, filt, smooth, denied):
     """The position and attitude spread the estimators report about themselves."""
     figure, axes = plt.subplots(1, 2, figsize=(14, 4.5), sharex=True)
@@ -523,6 +560,17 @@ def load_estimators(data_dir):
     return filters, smoothers, prefixes
 
 
+def rmse(errors, axis=None):
+    """Root mean square error. Errors given as norms are squared as they are."""
+    return np.sqrt(np.mean(np.square(errors), axis=axis))
+
+
+def mae(errors, axis=None):
+    """Mean absolute error. For a vector error given as its norm, this is the
+    mean distance, which unlike the RMSE does not weigh large errors extra."""
+    return np.mean(np.abs(errors), axis=axis)
+
+
 def report(lines, text=""):
     lines.append(text)
 
@@ -593,19 +641,37 @@ def main():
 
     report(out)
     report(out, "accuracy (position error in m, attitude error in deg):")
-    report(out, f"  {'':<14}{'RMSE pos':>9}{'median':>9}{'95th':>9}{'max':>9}{'RMSE att':>10}{'max att':>9}")
+    report(out, f"  {'':<14}{'RMSE pos':>9}{'MAE pos':>9}{'median':>9}{'95th':>9}{'max':>9}{'final':>9}"
+                f"{'RMSE att':>10}{'MAE att':>9}{'max att':>9}")
     for estimator in estimators:
         error = position_error(estimator)
         attitude = np.degrees(attitude_norm(estimator))
-        report(out, f"  {estimator.name:<14}{np.sqrt(np.mean(error ** 2)):9.4f}{np.median(error):9.4f}"
-                    f"{np.percentile(error, 95):9.4f}{error.max():9.4f}"
-                    f"{np.sqrt(np.mean(attitude ** 2)):10.4f}{attitude.max():9.4f}")
+        report(out, f"  {estimator.name:<14}{rmse(error):9.4f}{mae(error):9.4f}{np.median(error):9.4f}"
+                    f"{np.percentile(error, 95):9.4f}{error.max():9.4f}{error[-1]:9.4f}"
+                    f"{rmse(attitude):10.4f}{mae(attitude):9.4f}{attitude.max():9.4f}")
+
+    if denied:
+        inside = (t >= denied[0]) & (t <= denied[1])
+        end = np.flatnonzero(inside)[-1]
+        report(out)
+        report(out, f"position error inside the GNSS outage, {denied[0]:g} to {denied[1]:g} s [m]:")
+        report(out, f"  {'':<14}{'RMSE':>9}{'MAE':>9}{'max':>9}{'at end':>9}")
+        for estimator in estimators:
+            error = position_error(estimator)
+            report(out, f"  {estimator.name:<14}{rmse(error[inside]):9.4f}{mae(error[inside]):9.4f}"
+                        f"{error[inside].max():9.4f}{error[end]:9.4f}")
 
     report(out)
     report(out, "bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):")
     for estimator in estimators:
-        rmse = np.sqrt(np.mean(errors[estimator.name][:, 9:15] ** 2, axis=0))
-        report(out, f"  {estimator.name:<14}" + "".join(f"{value:10.5f}" for value in rmse))
+        bias_rmse = rmse(errors[estimator.name][:, 9:15], axis=0)
+        report(out, f"  {estimator.name:<14}" + "".join(f"{value:10.5f}" for value in bias_rmse))
+
+    report(out)
+    report(out, "bias MAE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):")
+    for estimator in estimators:
+        bias_mae = mae(errors[estimator.name][:, 9:15], axis=0)
+        report(out, f"  {estimator.name:<14}" + "".join(f"{value:10.5f}" for value in bias_mae))
 
     report(out)
     report(out, "share of steps with the true position inside the reported 95% ellipsoid:")
@@ -672,6 +738,9 @@ def main():
         figures["6_consistency.png"] = consistency_figure(
             t, nis, [(estimator.name, estimator.color, nees_values["full"][estimator.name])
                      for estimator in (subject_filter, subject_smoother)], summaries)
+        if denied:
+            figures["7_outage_bands.png"] = outage_bands_figure(t, x_true, subject_filter,
+                                                                subject_smoother, denied)
 
     for name, figure in figures.items():
         figure.savefig(figures_dir / name, dpi=150)

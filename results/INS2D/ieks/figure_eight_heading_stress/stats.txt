@@ -18,13 +18,22 @@ consistency (time-averaged; above the band the estimator is overconfident, below
   ANEES position IEKS             1.4692  band [0.0506, 7.3778]  96.9% of steps in band  -> consistent
 
 accuracy (position error in m, heading error in deg):
-                 RMSE pos   median     95th      max  RMSE head
-  EKF              8.5651   4.8460  21.2741  23.0729    14.0728
-  UKF              5.3723   2.1501  11.5789  13.1620     7.0305
-  IEKF             7.3701   4.3801  17.0260  19.4186     8.7400
-  ERTS             6.0216   1.3433  15.3698  16.2952     7.2728
-  URTSS            3.2893   1.8070   6.7754   7.0137     2.7996
-  IEKS             2.7521   1.1152   5.4630   5.6225     2.4218
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE head  MAE head  max head
+  EKF              8.5651   6.0429   4.8460  21.2741  23.0729   0.6701    14.0728   10.2032   85.9901
+  UKF              5.3723   3.7227   2.1501  11.5789  13.1620   0.6795     7.0305    4.5434   85.9901
+  IEKF             7.3701   5.1563   4.3801  17.0260  19.4186   0.6742     8.7400    5.8022   85.9901
+  ERTS             6.0216   3.6513   1.3433  15.3698  16.2952   0.6701     7.2728    5.3918   26.9367
+  URTSS            3.2893   2.4093   1.8070   6.7754   7.0137   0.6795     2.7996    2.3713    5.6115
+  IEKS             2.7521   1.9616   1.1152   5.4630   5.6225   0.6719     2.4218    2.0310    5.8392
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                     RMSE      MAE      max   at end
+  EKF             10.2215   8.3674  23.0729   0.3942
+  UKF              6.4159   5.1722  13.1620   0.3861
+  IEKF             8.8051   7.2220  19.4186   0.3800
+  ERTS             7.1926   5.1018  16.2952   0.1113
+  URTSS            3.9279   3.3490   7.0137   0.0992
+  IEKS             3.2856   2.7132   5.6225   0.1207
 
 bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
   EKF              0.0408   0.0260    0.01510     0.0781
@@ -33,6 +42,14 @@ bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
   ERTS             0.0121   0.0157    0.00359     0.0104
   URTSS            0.0105   0.0145    0.00167     0.0043
   IEKS             0.0103   0.0123    0.00157     0.0039
+
+bias MAE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]):
+  EKF              0.0212   0.0210    0.00774
+  UKF              0.0176   0.0196    0.00205
+  IEKF             0.0173   0.0205    0.00209
+  ERTS             0.0091   0.0116    0.00279
+  URTSS            0.0083   0.0105    0.00140
+  IEKS             0.0082   0.0097    0.00131
 
 share of steps with the true position inside the reported 95% ellipse:
   EKF            75.2%

@@ -13,13 +13,22 @@ consistency (time-averaged; above the band the estimator is overconfident, below
   ANEES attitude IEKS               1.7730  band [1.7188, 4.6322]  97.2% of steps in band  -> consistent
 
 accuracy (position error in m, attitude error in deg):
-                 RMSE pos   median     95th      max  RMSE att  max att
-  IEKF             0.9798   0.7485   1.7891   4.3661    5.5364  89.3639
-  IEKS             0.6930   0.4467   1.2652   1.5221    1.2716   3.1817
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE att  MAE att  max att
+  IEKF             0.9798   0.8071   0.7485   1.7891   4.3661   0.1472    5.5364   2.0100  89.3639
+  IEKS             0.6930   0.5769   0.4467   1.2652   1.5221   0.1450    1.2716   1.1769   3.1817
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                     RMSE      MAE      max   at end
+  IEKF             1.0669   0.9708   2.1482   0.3739
+  IEKS             0.8100   0.7270   1.5221   0.2618
 
 bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
   IEKF             0.05011   0.15389   0.02290   0.00362   0.00390   0.00237
   IEKS             0.05775   0.13682   0.01136   0.00090   0.00129   0.00103
+
+bias MAE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  IEKF             0.04296   0.14562   0.01707   0.00137   0.00209   0.00128
+  IEKS             0.04643   0.12636   0.00804   0.00070   0.00106   0.00083
 
 share of steps with the true position inside the reported 95% ellipsoid:
   IEKF           98.1%

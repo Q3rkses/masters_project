@@ -1,0 +1,26 @@
+dead_reckoning/rounded_rectangle, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               1.8054 +- 0.6077    1.6612 +- 0.5933
+  ERTS              1.8001 +- 0.6098    1.6572 +- 0.5953
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF               1.8699 +- 0.1075    1.4582 +- 0.0600
+  ERTS              1.2194 +- 0.0822    0.9781 +- 0.0690
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF           100.0% inside,   0.0% below,   0.0% above
+  ERTS          100.0% inside,   0.0% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             1.8978 +- 0.2570  [1.3616, 2.4339]  runs [0.455, 5.378]  -> consistent
+  ERTS            1.8989 +- 0.2593  [1.3580, 2.4399]  runs [0.445, 5.450]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF             no fixes
+  magnetometer EKF      1.0231 +- 0.0131  [0.9957, 1.0505]  expected 1  -> consistent
+  DVL EKF               1.9930 +- 0.0141  [1.9636, 2.0224]  expected 2  -> consistent

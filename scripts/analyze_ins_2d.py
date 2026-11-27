@@ -549,6 +549,17 @@ def load_estimators(data_dir, with_variants):
     return filters, smoothers, prefixes
 
 
+def rmse(errors, axis=None):
+    """Root mean square error. Errors given as norms are squared as they are."""
+    return np.sqrt(np.mean(np.square(errors), axis=axis))
+
+
+def mae(errors, axis=None):
+    """Mean absolute error. For a vector error given as its norm, this is the
+    mean distance, which unlike the RMSE does not weigh large errors extra."""
+    return np.mean(np.abs(errors), axis=axis)
+
+
 def report(lines, text=""):
     lines.append(text)
 
@@ -616,20 +627,39 @@ def main():
 
     report(out)
     report(out, "accuracy (position error in m, heading error in deg):")
-    report(out, f"  {'':<14}{'RMSE pos':>9}{'median':>9}{'95th':>9}{'max':>9}{'RMSE head':>11}")
+    report(out, f"  {'':<14}{'RMSE pos':>9}{'MAE pos':>9}{'median':>9}{'95th':>9}{'max':>9}{'final':>9}"
+                f"{'RMSE head':>11}{'MAE head':>10}{'max head':>10}")
     for estimator in estimators:
         error = position_error(estimator)
         heading = np.degrees(angle_diff(estimator.x[:, HEADING], x_true[:, HEADING]))
-        report(out, f"  {estimator.name:<14}{np.sqrt(np.mean(error ** 2)):9.4f}{np.median(error):9.4f}"
-                    f"{np.percentile(error, 95):9.4f}{error.max():9.4f}{np.sqrt(np.mean(heading ** 2)):11.4f}")
+        report(out, f"  {estimator.name:<14}{rmse(error):9.4f}{mae(error):9.4f}{np.median(error):9.4f}"
+                    f"{np.percentile(error, 95):9.4f}{error.max():9.4f}{error[-1]:9.4f}"
+                    f"{rmse(heading):11.4f}{mae(heading):10.4f}{np.abs(heading).max():10.4f}")
+
+    if denied:
+        inside = (t >= denied[0]) & (t <= denied[1])
+        end = np.flatnonzero(inside)[-1]
+        report(out)
+        report(out, f"position error inside the GNSS outage, {denied[0]:g} to {denied[1]:g} s [m]:")
+        report(out, f"  {'':<14}{'RMSE':>9}{'MAE':>9}{'max':>9}{'at end':>9}")
+        for estimator in estimators:
+            error = position_error(estimator)
+            report(out, f"  {estimator.name:<14}{rmse(error[inside]):9.4f}{mae(error[inside]):9.4f}"
+                        f"{error[inside].max():9.4f}{error[end]:9.4f}")
 
     report(out)
     report(out, "bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:")
     for estimator in estimators:
         bias_error = estimator.x[:, 5:8] - x_true[:, 5:8]
-        rmse = np.sqrt(np.mean(bias_error ** 2, axis=0))
-        report(out, f"  {estimator.name:<14}{rmse[0]:9.4f}{rmse[1]:9.4f}{rmse[2]:11.5f}"
+        bias_rmse = rmse(bias_error, axis=0)
+        report(out, f"  {estimator.name:<14}{bias_rmse[0]:9.4f}{bias_rmse[1]:9.4f}{bias_rmse[2]:11.5f}"
                     f"{np.abs(bias_error[:, 2]).max():11.4f}")
+
+    report(out)
+    report(out, "bias MAE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]):")
+    for estimator in estimators:
+        bias_mae = mae(estimator.x[:, 5:8] - x_true[:, 5:8], axis=0)
+        report(out, f"  {estimator.name:<14}{bias_mae[0]:9.4f}{bias_mae[1]:9.4f}{bias_mae[2]:11.5f}")
 
     report(out)
     report(out, "share of steps with the true position inside the reported 95% ellipse:")

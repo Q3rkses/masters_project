@@ -181,14 +181,15 @@ def main():
     nees_smoother = (x_true - x_smoother) ** 2 / P_smoother
 
     rmse = lambda estimate: np.sqrt(np.mean((x_true - estimate) ** 2))
+    mae = lambda estimate: np.mean(np.abs(x_true - estimate))
     print(f"{len(k)} timesteps\n")
     print("consistency (time-averaged):")
     summarise("ANIS", nis, MEASUREMENT_DIM)
     summarise("ANEES filter", nees_filter, STATE_DIM)
     summarise("ANEES smoother", nees_smoother, STATE_DIM)
     print("\naccuracy:")
-    print(f"  RMSE filter      {rmse(x_filter):6.4f}   mean P {P_filter.mean():.4f}")
-    print(f"  RMSE smoother    {rmse(x_smoother):6.4f}   mean P {P_smoother.mean():.4f}")
+    print(f"  filter      RMSE {rmse(x_filter):6.4f}   MAE {mae(x_filter):6.4f}   mean P {P_filter.mean():.4f}")
+    print(f"  smoother    RMSE {rmse(x_smoother):6.4f}   MAE {mae(x_smoother):6.4f}   mean P {P_smoother.mean():.4f}")
 
     figures = {}
     for window in WINDOWS:

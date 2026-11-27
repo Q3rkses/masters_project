@@ -1,0 +1,41 @@
+30000 timesteps, dt 0.01 s, fixes: GNSS 42, magnetometer 6, DVL 501, altimeter 500
+
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS UKF                    18.1342  band [1.3486, 5.3004]  52.4% of steps in band  -> overconfident
+  ANIS magnetometer UKF            11.1083  band [0.0010, 5.0239]  50.0% of steps in band  -> overconfident
+  ANIS DVL UKF                      2.2302  band [2.7955, 3.2117]  94.4% of steps in band  -> underconfident
+  ANIS altimeter UKF                0.9973  band [0.8729, 1.1356]  95.6% of steps in band  -> consistent
+  ANEES full UKF                   88.0940  band [12.5353, 17.6826]  49.1% of steps in band  -> overconfident
+  ANEES full URTSS                 81.0439  band [6.2621, 27.4884]  46.5% of steps in band  -> overconfident
+  ANEES position UKF               29.0926  band [1.4473, 5.1091]  50.9% of steps in band  -> overconfident
+  ANEES position URTSS             34.5657  band [0.2158, 9.3484]  44.6% of steps in band  -> overconfident
+  ANEES attitude UKF               20.0540  band [1.7680, 4.5525]  58.5% of steps in band  -> overconfident
+  ANEES attitude URTSS             21.0586  band [0.2158, 9.3484]  69.1% of steps in band  -> overconfident
+
+accuracy (position error in m, attitude error in deg):
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE att  MAE att  max att
+  UKF             10.3289   7.2763   5.3694  22.5129  35.8839   0.4307   21.4905  15.2097  89.3639
+  URTSS            8.4175   6.0683   4.4554  18.6261  19.1864   0.4307    9.6457   6.5188  61.4756
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                     RMSE      MAE      max   at end
+  UKF             12.2666   9.7311  35.8839   0.3248
+  URTSS           10.0193   8.3219  19.1864   0.3297
+
+bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  UKF              0.06332   0.18567   0.02032   0.00159   0.00286   0.03103
+  URTSS            0.04040   0.16189   0.01037   0.00097   0.00127   0.00644
+
+bias MAE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  UKF              0.05268   0.17667   0.01602   0.00100   0.00222   0.01457
+  URTSS            0.03317   0.15294   0.00811   0.00074   0.00104   0.00405
+
+share of steps with the true position inside the reported 95% ellipsoid:
+  UKF            50.0%
+  URTSS          43.1%
+
+smallest eigenvalue of the full P:
+  UKF           min  6.609e-06  0 of 30000 steps below zero
+  URTSS         min  3.644e-06  0 of 30000 steps below zero
+
+URTSS trace(P_p) <= UKF trace(P_p) at every step: True

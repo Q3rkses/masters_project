@@ -1,0 +1,26 @@
+dead_reckoning/figure_eight, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               1.6753 +- 0.6684    1.5280 +- 0.6221
+  ERTS              1.6709 +- 0.6718    1.5240 +- 0.6256
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF               1.8703 +- 0.1069    1.4583 +- 0.0599
+  ERTS              1.2194 +- 0.0825    0.9778 +- 0.0689
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF           100.0% inside,   0.0% below,   0.0% above
+  ERTS          100.0% inside,   0.0% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             1.7133 +- 0.2444  [1.2035, 2.2231]  runs [0.331, 4.086]  -> consistent
+  ERTS            1.7155 +- 0.2468  [1.2007, 2.2303]  runs [0.313, 4.145]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF             no fixes
+  magnetometer EKF      1.0231 +- 0.0131  [0.9957, 1.0506]  expected 1  -> consistent
+  DVL EKF               1.9923 +- 0.0140  [1.9631, 2.0215]  expected 2  -> consistent

@@ -1,0 +1,295 @@
+case,estimator,quantity,tau_1000,tau_200,verdict_1000,verdict_200
+dead_reckoning/figure_eight,EKF,RMSE,1.6784,1.6753,,
+dead_reckoning/figure_eight,ERTS,RMSE,1.6728,1.6709,,
+dead_reckoning/figure_eight,EKF,ANEES,1.7269,1.7133,consistent,consistent
+dead_reckoning/figure_eight,ERTS,ANEES,1.7306,1.7155,consistent,consistent
+dead_reckoning/figure_eight,magnetometer EKF,ANIS,1.0220,1.0231,consistent,consistent
+dead_reckoning/figure_eight,DVL EKF,ANIS,1.9946,1.9923,consistent,consistent
+dead_reckoning/rounded_rectangle,EKF,RMSE,1.8005,1.8054,,
+dead_reckoning/rounded_rectangle,ERTS,RMSE,1.7944,1.8001,,
+dead_reckoning/rounded_rectangle,EKF,ANEES,1.9093,1.8978,consistent,consistent
+dead_reckoning/rounded_rectangle,ERTS,ANEES,1.9126,1.8989,consistent,consistent
+dead_reckoning/rounded_rectangle,magnetometer EKF,ANIS,1.0214,1.0231,consistent,consistent
+dead_reckoning/rounded_rectangle,DVL EKF,ANIS,1.9954,1.9930,consistent,consistent
+gnss_outage/figure_eight_matched,EKF,RMSE,1.3217,1.3417,,
+gnss_outage/figure_eight_matched,ERTS,RMSE,0.7279,0.7347,,
+gnss_outage/figure_eight_matched,EKF,outage RMSE,1.5570,1.5811,,
+gnss_outage/figure_eight_matched,ERTS,outage RMSE,0.8549,0.8626,,
+gnss_outage/figure_eight_matched,EKF,ANEES,2.2674,2.3008,consistent,consistent
+gnss_outage/figure_eight_matched,ERTS,ANEES,2.0973,2.0894,consistent,consistent
+gnss_outage/figure_eight_matched,GNSS EKF,ANIS,1.9643,1.9624,consistent,consistent
+gnss_outage/figure_eight_matched,magnetometer EKF,ANIS,1.0038,1.0041,consistent,consistent
+gnss_outage/figure_eight_matched,DVL EKF,ANIS,2.0307,2.0327,consistent,consistent
+gnss_outage/figure_eight_mistuned,EKF,RMSE,1.3291,1.3465,,
+gnss_outage/figure_eight_mistuned,ERTS,RMSE,0.7274,0.7344,,
+gnss_outage/figure_eight_mistuned,EKF,outage RMSE,1.5659,1.5869,,
+gnss_outage/figure_eight_mistuned,ERTS,outage RMSE,0.8543,0.8624,,
+gnss_outage/figure_eight_mistuned,EKF,ANEES,2.2731,2.3037,consistent,consistent
+gnss_outage/figure_eight_mistuned,ERTS,ANEES,2.0665,2.0625,consistent,consistent
+gnss_outage/figure_eight_mistuned,GNSS EKF,ANIS,1.9607,1.9585,consistent,consistent
+gnss_outage/figure_eight_mistuned,magnetometer EKF,ANIS,0.9988,0.9966,consistent,consistent
+gnss_outage/figure_eight_mistuned,DVL EKF,ANIS,1.9708,1.9312,consistent,underconfident
+gnss_outage/matched,EKF,RMSE,1.2090,1.2083,,
+gnss_outage/matched,ERTS,RMSE,0.6644,0.6743,,
+gnss_outage/matched,EKF,outage RMSE,1.4207,1.4198,,
+gnss_outage/matched,ERTS,outage RMSE,0.7775,0.7889,,
+gnss_outage/matched,EKF,ANEES,1.9910,1.9823,consistent,consistent
+gnss_outage/matched,ERTS,ANEES,1.8563,1.8649,consistent,consistent
+gnss_outage/matched,GNSS EKF,ANIS,1.9680,1.9659,consistent,consistent
+gnss_outage/matched,magnetometer EKF,ANIS,1.0038,1.0039,consistent,consistent
+gnss_outage/matched,DVL EKF,ANIS,2.0319,2.0332,consistent,consistent
+gnss_outage/mistuned,EKF,RMSE,1.2069,1.2025,,
+gnss_outage/mistuned,ERTS,RMSE,0.6672,0.6765,,
+gnss_outage/mistuned,EKF,outage RMSE,1.4183,1.4128,,
+gnss_outage/mistuned,ERTS,outage RMSE,0.7809,0.7916,,
+gnss_outage/mistuned,EKF,ANEES,1.9776,1.9663,consistent,consistent
+gnss_outage/mistuned,ERTS,ANEES,1.8427,1.8530,consistent,consistent
+gnss_outage/mistuned,GNSS EKF,ANIS,1.9637,1.9630,consistent,consistent
+gnss_outage/mistuned,magnetometer EKF,ANIS,0.9987,0.9964,consistent,consistent
+gnss_outage/mistuned,DVL EKF,ANIS,1.9714,1.9313,consistent,underconfident
+iekf/gnss_outage,EKF,RMSE,1.3217,1.3417,,
+iekf/gnss_outage,ERTS,RMSE,0.7279,0.7347,,
+iekf/gnss_outage,UKF,RMSE,1.3222,1.3426,,
+iekf/gnss_outage,URTSS,RMSE,0.7281,0.7350,,
+iekf/gnss_outage,IEKF,RMSE,1.3239,1.3431,,
+iekf/gnss_outage,ERTS (IEKF),RMSE,0.7268,0.7339,,
+iekf/gnss_outage,EKF,outage RMSE,1.5570,1.5811,,
+iekf/gnss_outage,ERTS,outage RMSE,0.8549,0.8626,,
+iekf/gnss_outage,UKF,outage RMSE,1.5576,1.5821,,
+iekf/gnss_outage,URTSS,outage RMSE,0.8551,0.8630,,
+iekf/gnss_outage,IEKF,outage RMSE,1.5597,1.5828,,
+iekf/gnss_outage,ERTS (IEKF),outage RMSE,0.8535,0.8617,,
+iekf/gnss_outage,EKF,ANEES,2.2674,2.3008,consistent,consistent
+iekf/gnss_outage,ERTS,ANEES,2.0973,2.0894,consistent,consistent
+iekf/gnss_outage,UKF,ANEES,2.2676,2.3023,consistent,consistent
+iekf/gnss_outage,URTSS,ANEES,2.0969,2.0893,consistent,consistent
+iekf/gnss_outage,IEKF,ANEES,2.2695,2.2998,consistent,consistent
+iekf/gnss_outage,ERTS (IEKF),ANEES,2.0927,2.0853,consistent,consistent
+iekf/gnss_outage,GNSS EKF,ANIS,1.9643,1.9624,consistent,consistent
+iekf/gnss_outage,magnetometer EKF,ANIS,1.0038,1.0041,consistent,consistent
+iekf/gnss_outage,DVL EKF,ANIS,2.0307,2.0327,consistent,consistent
+iekf/gnss_outage,GNSS UKF,ANIS,1.9641,1.9624,consistent,consistent
+iekf/gnss_outage,magnetometer UKF,ANIS,1.0036,1.0039,consistent,consistent
+iekf/gnss_outage,DVL UKF,ANIS,2.0298,2.0316,consistent,consistent
+iekf/gnss_outage,GNSS IEKF,ANIS,1.9637,1.9613,consistent,consistent
+iekf/gnss_outage,magnetometer IEKF,ANIS,1.0037,1.0039,consistent,consistent
+iekf/gnss_outage,DVL IEKF,ANIS,2.0307,2.0327,consistent,consistent
+iekf/multi_sensor_fusion,EKF,RMSE,0.6241,0.6271,,
+iekf/multi_sensor_fusion,ERTS,RMSE,0.3929,0.3999,,
+iekf/multi_sensor_fusion,UKF,RMSE,0.6238,0.6268,,
+iekf/multi_sensor_fusion,URTSS,RMSE,0.3929,0.3999,,
+iekf/multi_sensor_fusion,IEKF,RMSE,0.6243,0.6275,,
+iekf/multi_sensor_fusion,ERTS (IEKF),RMSE,0.3931,0.4002,,
+iekf/multi_sensor_fusion,EKF,ANEES,1.9725,1.9785,consistent,consistent
+iekf/multi_sensor_fusion,ERTS,ANEES,1.9126,1.9135,consistent,consistent
+iekf/multi_sensor_fusion,UKF,ANEES,1.9713,1.9773,consistent,consistent
+iekf/multi_sensor_fusion,URTSS,ANEES,1.9122,1.9130,consistent,consistent
+iekf/multi_sensor_fusion,IEKF,ANEES,1.9746,1.9828,consistent,consistent
+iekf/multi_sensor_fusion,ERTS (IEKF),ANEES,1.9135,1.9154,consistent,consistent
+iekf/multi_sensor_fusion,GNSS EKF,ANIS,2.0621,2.0655,consistent,consistent
+iekf/multi_sensor_fusion,magnetometer EKF,ANIS,1.0035,1.0052,consistent,consistent
+iekf/multi_sensor_fusion,DVL EKF,ANIS,2.0076,2.0087,consistent,consistent
+iekf/multi_sensor_fusion,GNSS UKF,ANIS,2.0616,2.0649,consistent,consistent
+iekf/multi_sensor_fusion,magnetometer UKF,ANIS,1.0033,1.0051,consistent,consistent
+iekf/multi_sensor_fusion,DVL UKF,ANIS,2.0064,2.0074,consistent,consistent
+iekf/multi_sensor_fusion,GNSS IEKF,ANIS,2.0617,2.0658,consistent,consistent
+iekf/multi_sensor_fusion,magnetometer IEKF,ANIS,1.0035,1.0052,consistent,consistent
+iekf/multi_sensor_fusion,DVL IEKF,ANIS,2.0071,2.0083,consistent,consistent
+ieks/figure_eight_heading_stress,EKF,RMSE,8.8510,9.3479,,
+ieks/figure_eight_heading_stress,ERTS,RMSE,4.3723,4.5465,,
+ieks/figure_eight_heading_stress,UKF,RMSE,6.7834,8.1400,,
+ieks/figure_eight_heading_stress,URTSS,RMSE,2.8010,3.4591,,
+ieks/figure_eight_heading_stress,IEKF,RMSE,8.6126,10.3728,,
+ieks/figure_eight_heading_stress,IEKS,RMSE,2.6622,2.9515,,
+ieks/figure_eight_heading_stress,EKF,outage RMSE,10.5448,11.1429,,
+ieks/figure_eight_heading_stress,ERTS,outage RMSE,5.2105,5.4200,,
+ieks/figure_eight_heading_stress,UKF,outage RMSE,8.0981,9.7209,,
+ieks/figure_eight_heading_stress,URTSS,outage RMSE,3.3425,4.1300,,
+ieks/figure_eight_heading_stress,IEKF,outage RMSE,10.2881,12.3924,,
+ieks/figure_eight_heading_stress,IEKS,outage RMSE,3.1773,3.5230,,
+ieks/figure_eight_heading_stress,EKF,ANEES,7.4829,6.6102,overconfident,overconfident
+ieks/figure_eight_heading_stress,ERTS,ANEES,7.6534,6.6827,overconfident,overconfident
+ieks/figure_eight_heading_stress,UKF,ANEES,2.5079,2.9299,consistent,overconfident
+ieks/figure_eight_heading_stress,URTSS,ANEES,2.1989,2.6104,consistent,overconfident
+ieks/figure_eight_heading_stress,IEKF,ANEES,4.3304,5.5135,overconfident,overconfident
+ieks/figure_eight_heading_stress,IEKS,ANEES,1.8043,1.8794,consistent,consistent
+ieks/figure_eight_heading_stress,GNSS EKF,ANIS,6.5397,6.2687,overconfident,overconfident
+ieks/figure_eight_heading_stress,magnetometer EKF,ANIS,3.2744,2.8237,overconfident,overconfident
+ieks/figure_eight_heading_stress,DVL EKF,ANIS,2.5095,2.4444,overconfident,overconfident
+ieks/figure_eight_heading_stress,GNSS UKF,ANIS,2.2650,2.2434,overconfident,overconfident
+ieks/figure_eight_heading_stress,magnetometer UKF,ANIS,1.3252,1.6583,overconfident,overconfident
+ieks/figure_eight_heading_stress,DVL UKF,ANIS,1.9508,1.9176,underconfident,underconfident
+ieks/figure_eight_heading_stress,GNSS IEKF,ANIS,2.0765,2.1116,consistent,consistent
+ieks/figure_eight_heading_stress,magnetometer IEKF,ANIS,2.8130,3.4200,overconfident,overconfident
+ieks/figure_eight_heading_stress,DVL IEKF,ANIS,2.1311,2.1312,overconfident,overconfident
+ieks/gnss_outage,EKF,RMSE,1.3217,1.3417,,
+ieks/gnss_outage,ERTS,RMSE,0.7279,0.7347,,
+ieks/gnss_outage,UKF,RMSE,1.3222,1.3426,,
+ieks/gnss_outage,URTSS,RMSE,0.7281,0.7350,,
+ieks/gnss_outage,IEKF,RMSE,1.3239,1.3431,,
+ieks/gnss_outage,IEKS,RMSE,0.7261,0.7340,,
+ieks/gnss_outage,EKF,outage RMSE,1.5570,1.5811,,
+ieks/gnss_outage,ERTS,outage RMSE,0.8549,0.8626,,
+ieks/gnss_outage,UKF,outage RMSE,1.5576,1.5821,,
+ieks/gnss_outage,URTSS,outage RMSE,0.8551,0.8630,,
+ieks/gnss_outage,IEKF,outage RMSE,1.5597,1.5828,,
+ieks/gnss_outage,IEKS,outage RMSE,0.8527,0.8618,,
+ieks/gnss_outage,EKF,ANEES,2.2674,2.3008,consistent,consistent
+ieks/gnss_outage,ERTS,ANEES,2.0973,2.0894,consistent,consistent
+ieks/gnss_outage,UKF,ANEES,2.2676,2.3023,consistent,consistent
+ieks/gnss_outage,URTSS,ANEES,2.0969,2.0893,consistent,consistent
+ieks/gnss_outage,IEKF,ANEES,2.2695,2.2998,consistent,consistent
+ieks/gnss_outage,IEKS,ANEES,2.0849,2.0799,consistent,consistent
+ieks/gnss_outage,GNSS EKF,ANIS,1.9643,1.9624,consistent,consistent
+ieks/gnss_outage,magnetometer EKF,ANIS,1.0038,1.0041,consistent,consistent
+ieks/gnss_outage,DVL EKF,ANIS,2.0307,2.0327,consistent,consistent
+ieks/gnss_outage,GNSS UKF,ANIS,1.9641,1.9624,consistent,consistent
+ieks/gnss_outage,magnetometer UKF,ANIS,1.0036,1.0039,consistent,consistent
+ieks/gnss_outage,DVL UKF,ANIS,2.0298,2.0316,consistent,consistent
+ieks/gnss_outage,GNSS IEKF,ANIS,1.9637,1.9613,consistent,consistent
+ieks/gnss_outage,magnetometer IEKF,ANIS,1.0037,1.0039,consistent,consistent
+ieks/gnss_outage,DVL IEKF,ANIS,2.0307,2.0327,consistent,consistent
+ieks/heading_stress,EKF,RMSE,9.0821,9.4103,,
+ieks/heading_stress,ERTS,RMSE,4.3669,4.5162,,
+ieks/heading_stress,UKF,RMSE,6.5933,7.7783,,
+ieks/heading_stress,URTSS,RMSE,2.7933,3.3124,,
+ieks/heading_stress,IEKF,RMSE,8.8091,10.2250,,
+ieks/heading_stress,IEKS,RMSE,2.5584,2.8340,,
+ieks/heading_stress,EKF,outage RMSE,10.8197,11.2157,,
+ieks/heading_stress,ERTS,outage RMSE,5.2028,5.3835,,
+ieks/heading_stress,UKF,outage RMSE,7.8711,9.2887,,
+ieks/heading_stress,URTSS,outage RMSE,3.3334,3.9545,,
+ieks/heading_stress,IEKF,outage RMSE,10.5232,12.2160,,
+ieks/heading_stress,IEKS,outage RMSE,3.0529,3.3823,,
+ieks/heading_stress,EKF,ANEES,8.2679,7.7578,overconfident,overconfident
+ieks/heading_stress,ERTS,ANEES,7.7853,7.0949,overconfident,overconfident
+ieks/heading_stress,UKF,ANEES,2.5149,3.0065,consistent,overconfident
+ieks/heading_stress,URTSS,ANEES,2.3534,2.6930,consistent,overconfident
+ieks/heading_stress,IEKF,ANEES,4.5030,5.4797,overconfident,overconfident
+ieks/heading_stress,IEKS,ANEES,1.9468,2.0416,consistent,consistent
+ieks/heading_stress,GNSS EKF,ANIS,6.5571,6.2759,overconfident,overconfident
+ieks/heading_stress,magnetometer EKF,ANIS,3.2132,2.7975,overconfident,overconfident
+ieks/heading_stress,DVL EKF,ANIS,2.5084,2.4447,overconfident,overconfident
+ieks/heading_stress,GNSS UKF,ANIS,2.2360,2.1968,overconfident,overconfident
+ieks/heading_stress,magnetometer UKF,ANIS,1.3410,1.6749,overconfident,overconfident
+ieks/heading_stress,DVL UKF,ANIS,1.9497,1.9169,underconfident,underconfident
+ieks/heading_stress,GNSS IEKF,ANIS,2.0374,2.0429,consistent,consistent
+ieks/heading_stress,magnetometer IEKF,ANIS,2.9232,3.5991,overconfident,overconfident
+ieks/heading_stress,DVL IEKF,ANIS,2.1296,2.1312,overconfident,overconfident
+ieks/multi_sensor_fusion,EKF,RMSE,0.6241,0.6271,,
+ieks/multi_sensor_fusion,ERTS,RMSE,0.3929,0.3999,,
+ieks/multi_sensor_fusion,UKF,RMSE,0.6238,0.6268,,
+ieks/multi_sensor_fusion,URTSS,RMSE,0.3929,0.3999,,
+ieks/multi_sensor_fusion,IEKF,RMSE,0.6243,0.6275,,
+ieks/multi_sensor_fusion,IEKS,RMSE,0.3932,0.4004,,
+ieks/multi_sensor_fusion,EKF,ANEES,1.9725,1.9785,consistent,consistent
+ieks/multi_sensor_fusion,ERTS,ANEES,1.9126,1.9135,consistent,consistent
+ieks/multi_sensor_fusion,UKF,ANEES,1.9713,1.9773,consistent,consistent
+ieks/multi_sensor_fusion,URTSS,ANEES,1.9122,1.9130,consistent,consistent
+ieks/multi_sensor_fusion,IEKF,ANEES,1.9746,1.9828,consistent,consistent
+ieks/multi_sensor_fusion,IEKS,ANEES,1.9139,1.9167,consistent,consistent
+ieks/multi_sensor_fusion,GNSS EKF,ANIS,2.0621,2.0655,consistent,consistent
+ieks/multi_sensor_fusion,magnetometer EKF,ANIS,1.0035,1.0052,consistent,consistent
+ieks/multi_sensor_fusion,DVL EKF,ANIS,2.0076,2.0087,consistent,consistent
+ieks/multi_sensor_fusion,GNSS UKF,ANIS,2.0616,2.0649,consistent,consistent
+ieks/multi_sensor_fusion,magnetometer UKF,ANIS,1.0033,1.0051,consistent,consistent
+ieks/multi_sensor_fusion,DVL UKF,ANIS,2.0064,2.0074,consistent,consistent
+ieks/multi_sensor_fusion,GNSS IEKF,ANIS,2.0617,2.0658,consistent,consistent
+ieks/multi_sensor_fusion,magnetometer IEKF,ANIS,1.0035,1.0052,consistent,consistent
+ieks/multi_sensor_fusion,DVL IEKF,ANIS,2.0071,2.0083,consistent,consistent
+multi_sensor_fusion/figure_eight,EKF,RMSE,0.6241,0.6271,,
+multi_sensor_fusion/figure_eight,ERTS,RMSE,0.3929,0.3999,,
+multi_sensor_fusion/figure_eight,EKF,ANEES,1.9725,1.9785,consistent,consistent
+multi_sensor_fusion/figure_eight,ERTS,ANEES,1.9126,1.9135,consistent,consistent
+multi_sensor_fusion/figure_eight,GNSS EKF,ANIS,2.0621,2.0655,consistent,consistent
+multi_sensor_fusion/figure_eight,magnetometer EKF,ANIS,1.0035,1.0052,consistent,consistent
+multi_sensor_fusion/figure_eight,DVL EKF,ANIS,2.0076,2.0087,consistent,consistent
+multi_sensor_fusion/rounded_rectangle,EKF,RMSE,0.6518,0.6544,,
+multi_sensor_fusion/rounded_rectangle,ERTS,RMSE,0.3896,0.3972,,
+multi_sensor_fusion/rounded_rectangle,EKF,ANEES,2.1535,2.1569,consistent,consistent
+multi_sensor_fusion/rounded_rectangle,ERTS,ANEES,1.8690,1.8788,consistent,consistent
+multi_sensor_fusion/rounded_rectangle,GNSS EKF,ANIS,2.1106,2.1074,consistent,consistent
+multi_sensor_fusion/rounded_rectangle,magnetometer EKF,ANIS,1.0030,1.0046,consistent,consistent
+multi_sensor_fusion/rounded_rectangle,DVL EKF,ANIS,2.0094,2.0106,consistent,consistent
+only_gnss/figure_eight,EKF,RMSE,0.7232,0.8538,,
+only_gnss/figure_eight,ERTS,RMSE,0.2761,0.3148,,
+only_gnss/figure_eight,EKF,ANEES,2.0724,2.1387,consistent,overconfident
+only_gnss/figure_eight,ERTS,ANEES,1.9618,2.0639,consistent,consistent
+only_gnss/figure_eight,GNSS EKF,ANIS,2.1067,2.1716,overconfident,overconfident
+only_gnss/rounded_rectangle,EKF,RMSE,0.7463,0.8622,,
+only_gnss/rounded_rectangle,ERTS,RMSE,0.2874,0.3130,,
+only_gnss/rounded_rectangle,EKF,ANEES,2.1462,2.1399,consistent,overconfident
+only_gnss/rounded_rectangle,ERTS,ANEES,2.0666,2.0013,consistent,consistent
+only_gnss/rounded_rectangle,GNSS EKF,ANIS,2.1664,2.1513,overconfident,overconfident
+ukf/figure_eight_heading_stress,EKF,RMSE,8.8510,9.3479,,
+ukf/figure_eight_heading_stress,ERTS,RMSE,4.3723,4.5465,,
+ukf/figure_eight_heading_stress,UKF,RMSE,6.7834,8.1400,,
+ukf/figure_eight_heading_stress,URTSS,RMSE,2.8010,3.4591,,
+ukf/figure_eight_heading_stress,EKF,outage RMSE,10.5448,11.1429,,
+ukf/figure_eight_heading_stress,ERTS,outage RMSE,5.2105,5.4200,,
+ukf/figure_eight_heading_stress,UKF,outage RMSE,8.0981,9.7209,,
+ukf/figure_eight_heading_stress,URTSS,outage RMSE,3.3425,4.1300,,
+ukf/figure_eight_heading_stress,EKF,ANEES,7.4829,6.6102,overconfident,overconfident
+ukf/figure_eight_heading_stress,ERTS,ANEES,7.6534,6.6827,overconfident,overconfident
+ukf/figure_eight_heading_stress,UKF,ANEES,2.5079,2.9299,consistent,overconfident
+ukf/figure_eight_heading_stress,URTSS,ANEES,2.1989,2.6104,consistent,overconfident
+ukf/figure_eight_heading_stress,GNSS EKF,ANIS,6.5397,6.2687,overconfident,overconfident
+ukf/figure_eight_heading_stress,magnetometer EKF,ANIS,3.2744,2.8237,overconfident,overconfident
+ukf/figure_eight_heading_stress,DVL EKF,ANIS,2.5095,2.4444,overconfident,overconfident
+ukf/figure_eight_heading_stress,GNSS UKF,ANIS,2.2650,2.2434,overconfident,overconfident
+ukf/figure_eight_heading_stress,magnetometer UKF,ANIS,1.3252,1.6583,overconfident,overconfident
+ukf/figure_eight_heading_stress,DVL UKF,ANIS,1.9508,1.9176,underconfident,underconfident
+ukf/figure_eight_outage,EKF,RMSE,1.3217,1.3417,,
+ukf/figure_eight_outage,ERTS,RMSE,0.7279,0.7347,,
+ukf/figure_eight_outage,UKF,RMSE,1.3222,1.3426,,
+ukf/figure_eight_outage,URTSS,RMSE,0.7281,0.7350,,
+ukf/figure_eight_outage,EKF,outage RMSE,1.5570,1.5811,,
+ukf/figure_eight_outage,ERTS,outage RMSE,0.8549,0.8626,,
+ukf/figure_eight_outage,UKF,outage RMSE,1.5576,1.5821,,
+ukf/figure_eight_outage,URTSS,outage RMSE,0.8551,0.8630,,
+ukf/figure_eight_outage,EKF,ANEES,2.2674,2.3008,consistent,consistent
+ukf/figure_eight_outage,ERTS,ANEES,2.0973,2.0894,consistent,consistent
+ukf/figure_eight_outage,UKF,ANEES,2.2676,2.3023,consistent,consistent
+ukf/figure_eight_outage,URTSS,ANEES,2.0969,2.0893,consistent,consistent
+ukf/figure_eight_outage,GNSS EKF,ANIS,1.9643,1.9624,consistent,consistent
+ukf/figure_eight_outage,magnetometer EKF,ANIS,1.0038,1.0041,consistent,consistent
+ukf/figure_eight_outage,DVL EKF,ANIS,2.0307,2.0327,consistent,consistent
+ukf/figure_eight_outage,GNSS UKF,ANIS,1.9641,1.9624,consistent,consistent
+ukf/figure_eight_outage,magnetometer UKF,ANIS,1.0036,1.0039,consistent,consistent
+ukf/figure_eight_outage,DVL UKF,ANIS,2.0298,2.0316,consistent,consistent
+ukf/heading_stress,EKF,RMSE,9.0821,9.4103,,
+ukf/heading_stress,ERTS,RMSE,4.3669,4.5162,,
+ukf/heading_stress,UKF,RMSE,6.5933,7.7783,,
+ukf/heading_stress,URTSS,RMSE,2.7933,3.3124,,
+ukf/heading_stress,EKF,outage RMSE,10.8197,11.2157,,
+ukf/heading_stress,ERTS,outage RMSE,5.2028,5.3835,,
+ukf/heading_stress,UKF,outage RMSE,7.8711,9.2887,,
+ukf/heading_stress,URTSS,outage RMSE,3.3334,3.9545,,
+ukf/heading_stress,EKF,ANEES,8.2679,7.7578,overconfident,overconfident
+ukf/heading_stress,ERTS,ANEES,7.7853,7.0949,overconfident,overconfident
+ukf/heading_stress,UKF,ANEES,2.5149,3.0065,consistent,overconfident
+ukf/heading_stress,URTSS,ANEES,2.3534,2.6930,consistent,overconfident
+ukf/heading_stress,GNSS EKF,ANIS,6.5571,6.2759,overconfident,overconfident
+ukf/heading_stress,magnetometer EKF,ANIS,3.2132,2.7975,overconfident,overconfident
+ukf/heading_stress,DVL EKF,ANIS,2.5084,2.4447,overconfident,overconfident
+ukf/heading_stress,GNSS UKF,ANIS,2.2360,2.1968,overconfident,overconfident
+ukf/heading_stress,magnetometer UKF,ANIS,1.3410,1.6749,overconfident,overconfident
+ukf/heading_stress,DVL UKF,ANIS,1.9497,1.9169,underconfident,underconfident
+ukf/outage,EKF,RMSE,1.2090,1.2083,,
+ukf/outage,ERTS,RMSE,0.6644,0.6743,,
+ukf/outage,UKF,RMSE,1.2093,1.2086,,
+ukf/outage,URTSS,RMSE,0.6647,0.6750,,
+ukf/outage,EKF,outage RMSE,1.4207,1.4198,,
+ukf/outage,ERTS,outage RMSE,0.7775,0.7889,,
+ukf/outage,UKF,outage RMSE,1.4209,1.4201,,
+ukf/outage,URTSS,outage RMSE,0.7778,0.7897,,
+ukf/outage,EKF,ANEES,1.9910,1.9823,consistent,consistent
+ukf/outage,ERTS,ANEES,1.8563,1.8649,consistent,consistent
+ukf/outage,UKF,ANEES,1.9907,1.9820,consistent,consistent
+ukf/outage,URTSS,ANEES,1.8565,1.8672,consistent,consistent
+ukf/outage,GNSS EKF,ANIS,1.9680,1.9659,consistent,consistent
+ukf/outage,magnetometer EKF,ANIS,1.0038,1.0039,consistent,consistent
+ukf/outage,DVL EKF,ANIS,2.0319,2.0332,consistent,consistent
+ukf/outage,GNSS UKF,ANIS,1.9677,1.9660,consistent,consistent
+ukf/outage,magnetometer UKF,ANIS,1.0036,1.0038,consistent,consistent
+ukf/outage,DVL UKF,ANIS,2.0309,2.0321,consistent,consistent

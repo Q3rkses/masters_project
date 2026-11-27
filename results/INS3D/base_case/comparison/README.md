@@ -44,25 +44,25 @@ Every number below is taken from the run's `stats.txt`.
 
 | estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE attitude [°] | max attitude [°] | true position inside 95% ellipsoid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| EKF | 0.931 | 0.752 | 1.79 | 2.17 | 1.78 | 4.0 | 98.3% |
-| UKF | 0.944 | 0.742 | 1.83 | 2.22 | 1.79 | 4.0 | 98.3% |
-| IEKF | 0.912 | 0.730 | 1.75 | 2.13 | 1.79 | 4.0 | 98.4% |
-| ERTS | 0.708 | 0.424 | 1.31 | 1.56 | 1.35 | 3.2 | 98.6% |
-| URTSS | 0.708 | 0.423 | 1.31 | 1.56 | 1.34 | 3.2 | 98.5% |
-| IEKS | 0.685 | 0.441 | 1.26 | 1.51 | 1.26 | 3.2 | 98.6% |
+| EKF | 0.930 | 0.752 | 1.79 | 2.19 | 1.79 | 4.1 | 98.2% |
+| UKF | 0.942 | 0.739 | 1.84 | 2.23 | 1.80 | 4.1 | 98.1% |
+| IEKF | 0.913 | 0.731 | 1.76 | 2.15 | 1.79 | 4.0 | 98.2% |
+| ERTS | 0.716 | 0.430 | 1.32 | 1.57 | 1.37 | 3.2 | 98.5% |
+| URTSS | 0.709 | 0.423 | 1.31 | 1.56 | 1.36 | 3.2 | 98.6% |
+| IEKS | 0.692 | 0.446 | 1.27 | 1.52 | 1.27 | 3.2 | 98.6% |
 
 | statistic | dof | EKF / ERTS | UKF / URTSS | IEKF / IEKS |
 | --- | --- | --- | --- | --- |
-| NIS, GNSS | 3 | 3.548 (consistent) | 3.567 (consistent) | 3.538 (consistent) |
-| NIS, magnetometer | 1 | 0.805 (underconfident) | 0.805 (underconfident) | 0.803 (underconfident) |
-| NIS, DVL | 3 | 2.300 (underconfident) | 2.263 (underconfident) | 2.300 (underconfident) |
-| NIS, altimeter | 1 | 1.015 (consistent) | 1.010 (consistent) | 1.016 (consistent) |
-| NEES, full state, filter | 15 | 8.829 (underconfident) | 9.005 (underconfident) | 8.838 (underconfident) |
-| NEES, position, filter | 3 | 2.341 (underconfident) | 2.353 (underconfident) | 2.298 (underconfident) |
-| NEES, attitude, filter | 3 | 1.302 (underconfident) | 1.317 (underconfident) | 1.311 (underconfident) |
-| NEES, full state, smoother | 15 | 10.536 (underconfident) | 10.202 (underconfident) | 9.762 (underconfident) |
-| NEES, position, smoother | 3 | 2.913 (consistent) | 2.897 (consistent) | 2.853 (consistent) |
-| NEES, attitude, smoother | 3 | 2.058 (consistent) | 1.989 (consistent) | 1.756 (consistent) |
+| NIS, GNSS | 3 | 3.540 (consistent) | 3.557 (consistent) | 3.530 (consistent) |
+| NIS, magnetometer | 1 | 0.803 (underconfident) | 0.803 (underconfident) | 0.802 (underconfident) |
+| NIS, DVL | 3 | 2.298 (underconfident) | 2.261 (underconfident) | 2.298 (underconfident) |
+| NIS, altimeter | 1 | 1.015 (consistent) | 1.009 (consistent) | 1.015 (consistent) |
+| NEES, full state, filter | 15 | 9.000 (underconfident) | 9.199 (underconfident) | 8.998 (underconfident) |
+| NEES, position, filter | 3 | 2.344 (underconfident) | 2.354 (underconfident) | 2.304 (underconfident) |
+| NEES, attitude, filter | 3 | 1.319 (underconfident) | 1.331 (underconfident) | 1.320 (underconfident) |
+| NEES, full state, smoother | 15 | 10.768 (underconfident) | 10.451 (underconfident) | 9.981 (underconfident) |
+| NEES, position, smoother | 3 | 2.930 (consistent) | 2.887 (consistent) | 2.866 (consistent) |
+| NEES, attitude, smoother | 3 | 2.106 (consistent) | 2.025 (consistent) | 1.779 (consistent) |
 
 ### Four-corner
 
@@ -76,22 +76,22 @@ Every number below is taken from the run's `stats.txt`.
 
 | estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE attitude [°] | max attitude [°] | true position inside 95% ellipsoid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| EKF | 1.029 | 0.492 | 2.02 | 2.29 | 1.72 | 4.1 | 99.0% |
-| UKF | 1.046 | 0.494 | 2.06 | 2.32 | 1.72 | 4.1 | 98.9% |
-| IEKF | 1.024 | 0.477 | 1.99 | 2.27 | 1.72 | 4.0 | 99.0% |
-| ERTS | 0.637 | 0.378 | 1.26 | 1.46 | 1.18 | 3.2 | 99.7% |
-| URTSS | 0.631 | 0.378 | 1.25 | 1.45 | 1.16 | 3.1 | 99.7% |
-| IEKS | 0.613 | 0.399 | 1.19 | 1.40 | 1.14 | 3.2 | 99.7% |
+| EKF | 1.083 | 0.485 | 2.11 | 2.40 | 1.73 | 4.1 | 98.9% |
+| UKF | 1.101 | 0.484 | 2.16 | 2.42 | 1.73 | 4.1 | 98.8% |
+| IEKF | 1.081 | 0.487 | 2.09 | 2.37 | 1.73 | 4.0 | 98.9% |
+| ERTS | 0.610 | 0.373 | 1.22 | 1.40 | 1.20 | 3.3 | 99.7% |
+| URTSS | 0.604 | 0.378 | 1.20 | 1.39 | 1.19 | 3.3 | 99.7% |
+| IEKS | 0.591 | 0.407 | 1.15 | 1.35 | 1.15 | 3.3 | 99.7% |
 
 | statistic | dof | EKF / ERTS | UKF / URTSS | IEKF / IEKS |
 | --- | --- | --- | --- | --- |
-| NIS, GNSS | 3 | 3.514 (consistent) | 3.531 (consistent) | 3.507 (consistent) |
-| NIS, magnetometer | 1 | 0.801 (underconfident) | 0.801 (underconfident) | 0.800 (underconfident) |
-| NIS, DVL | 3 | 2.319 (underconfident) | 2.281 (underconfident) | 2.317 (underconfident) |
-| NIS, altimeter | 1 | 1.011 (consistent) | 1.006 (consistent) | 1.013 (consistent) |
-| NEES, full state, filter | 15 | 8.298 (underconfident) | 8.391 (underconfident) | 8.315 (underconfident) |
-| NEES, position, filter | 3 | 2.111 (underconfident) | 2.137 (underconfident) | 2.099 (underconfident) |
-| NEES, attitude, filter | 3 | 1.217 (underconfident) | 1.221 (underconfident) | 1.222 (underconfident) |
-| NEES, full state, smoother | 15 | 9.276 (underconfident) | 8.787 (underconfident) | 8.732 (underconfident) |
-| NEES, position, smoother | 3 | 2.519 (consistent) | 2.487 (consistent) | 2.455 (consistent) |
-| NEES, attitude, smoother | 3 | 1.588 (underconfident) | 1.493 (underconfident) | 1.434 (underconfident) |
+| NIS, GNSS | 3 | 3.521 (consistent) | 3.540 (consistent) | 3.515 (consistent) |
+| NIS, magnetometer | 1 | 0.799 (underconfident) | 0.799 (underconfident) | 0.798 (underconfident) |
+| NIS, DVL | 3 | 2.308 (underconfident) | 2.271 (underconfident) | 2.307 (underconfident) |
+| NIS, altimeter | 1 | 1.014 (consistent) | 1.007 (consistent) | 1.014 (consistent) |
+| NEES, full state, filter | 15 | 8.361 (underconfident) | 8.534 (underconfident) | 8.406 (underconfident) |
+| NEES, position, filter | 3 | 2.148 (underconfident) | 2.178 (underconfident) | 2.146 (underconfident) |
+| NEES, attitude, filter | 3 | 1.224 (underconfident) | 1.232 (underconfident) | 1.229 (underconfident) |
+| NEES, full state, smoother | 15 | 9.227 (underconfident) | 8.949 (underconfident) | 8.780 (underconfident) |
+| NEES, position, smoother | 3 | 2.420 (consistent) | 2.389 (consistent) | 2.375 (consistent) |
+| NEES, attitude, smoother | 3 | 1.618 (underconfident) | 1.555 (underconfident) | 1.465 (underconfident) |

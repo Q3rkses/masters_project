@@ -1,0 +1,41 @@
+30000 timesteps, dt 0.01 s, fixes: GNSS 42, magnetometer 6, DVL 501, altimeter 500
+
+consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
+  ANIS GNSS EKF                    14.7713  band [1.4106, 5.1789]  66.7% of steps in band  -> overconfident
+  ANIS magnetometer EKF             5.0015  band [0.0098, 4.1342]  50.0% of steps in band  -> overconfident
+  ANIS DVL EKF                      2.3379  band [2.7978, 3.2091]  94.0% of steps in band  -> underconfident
+  ANIS altimeter EKF                1.0050  band [0.8715, 1.1372]  95.4% of steps in band  -> consistent
+  ANEES full EKF                   53.4527  band [13.5745, 16.4957]  60.0% of steps in band  -> overconfident
+  ANEES full ERTS                  51.7473  band [6.2621, 27.4884]  58.9% of steps in band  -> overconfident
+  ANEES position EKF               13.5946  band [1.9317, 4.2997]  59.8% of steps in band  -> overconfident
+  ANEES position ERTS              16.4808  band [0.2158, 9.3484]  57.6% of steps in band  -> overconfident
+  ANEES attitude EKF               11.8286  band [2.0736, 4.0948]  77.4% of steps in band  -> overconfident
+  ANEES attitude ERTS              10.1769  band [0.2158, 9.3484]  91.4% of steps in band  -> overconfident
+
+accuracy (position error in m, attitude error in deg):
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE att  MAE att  max att
+  EKF              7.7434   6.0408   5.5685  15.6766  22.1522   0.2653   17.2990  11.2282  89.1429
+  ERTS             5.5830   4.1164   3.5706  11.7444  12.1865   0.2653    7.1377   4.8741  47.0094
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                     RMSE      MAE      max   at end
+  EKF              9.1754   8.0672  22.1522   0.3262
+  ERTS             6.6298   5.5976  12.1865   0.1941
+
+bias RMSE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  EKF              0.05996   0.16444   0.02050   0.00292   0.00378   0.02733
+  ERTS             0.05573   0.12087   0.01059   0.00114   0.00106   0.00495
+
+bias MAE (accel x, y, z [m/s^2], gyro x, y, z [rad/s]):
+  EKF              0.04891   0.15869   0.01617   0.00134   0.00239   0.01182
+  ERTS             0.04247   0.11453   0.00813   0.00085   0.00087   0.00319
+
+share of steps with the true position inside the reported 95% ellipsoid:
+  EKF            55.3%
+  ERTS           51.7%
+
+smallest eigenvalue of the full P:
+  EKF           min  6.609e-06  0 of 30000 steps below zero
+  ERTS          min  3.645e-06  0 of 30000 steps below zero
+
+ERTS trace(P_p) <= EKF trace(P_p) at every step: True

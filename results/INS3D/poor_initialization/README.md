@@ -1,13 +1,13 @@
 # 3-D strapdown INS, poor initialization
 
-[Back to the overview](../../../README.md) | [Previous: base case](../base_case/README.md)
+[Back to the overview](../../../README.md) | [Previous: base case](../base_case/README.md) | [Next: exaggerated poor initialization](../exaggerated_poor_initialization/README.md)
 
-The same scenario as the [base case](../base_case/README.md), but the filter starts from a prior that is far from the truth: several metres off in position and close to 90° off in attitude. The prior's covariance is large enough to admit the error. Each run is repeated with a sparse magnetometer, so the yaw error of the prior is corrected only rarely. The extended, unscented and iterated filters and their smoothers are each run on the same data, and then compared.
+The same scenario as the [base case](../base_case/README.md), but the filter starts from a prior that is far from the truth: several metres off in position and close to 90° off in attitude. The prior's covariance is large enough to admit the error. The extended, unscented and iterated filters and their smoothers are each run on the same data, and then compared.
 
 |               |                                  |
 | ------------- | -------------------------------- |
 | **Run**       | 30000 timesteps (300 s at $\Delta t = 0.01$ s), seed 42 |
-| **Cases**     | figure-eight and four-corner, each with the normal and with a sparse magnetometer, for each of `extended/`, `unscented/`, `iterated/` and `comparison/` |
+| **Cases**     | figure-eight and four-corner, for each of `extended/`, `unscented/`, `iterated/` and `comparison/` |
 | **Reproduce** | see [Reproduction](#reproduction) |
 
 ## Problem formulation
@@ -40,7 +40,7 @@ with process noise $w_k \sim \mathcal{N}(0, Q_k)$ on the error state. The biases
 | sensor | measurement | noise variance | period |
 | --- | --- | --- | --- |
 | GNSS | $z = p$ | $0.20$ m² per axis | 1 to 3 s, denied from 45 s to 255 s |
-| magnetometer | yaw of $R(q)$, $z = \operatorname{atan2}(R_{21}, R_{11})$ | $3\cdot10^{-3}$ rad² | 0.25 to 1 s, or 30 to 60 s in the `*_sparse_magnetometer` cases |
+| magnetometer | yaw of $R(q)$, $z = \operatorname{atan2}(R_{21}, R_{11})$ | $3\cdot10^{-3}$ rad² | 0.25 to 1 s |
 | DVL | body-frame velocity, $z = R(q)^\top v$ | $10^{-2}$ (m/s)² per axis | 0.2 to 1 s |
 | altimeter | vertical position, $z = p_z$ | $10^{-2}$ m² | 0.2 to 1 s |
 
@@ -60,7 +60,13 @@ The filters are given the same IMU noise parameters the data is simulated with.
 
 ### Trajectories
 
-Both paths are flown at 2 m/s in a plane tilted 0.15 rad about the $x$ axis, so the depth changes along the loop. The vehicle rolls into each turn as in a coordinated turn, building up the roll over 5 m of path.
+Both paths are flown horizontally at 2 m/s. GNSS does not penetrate the water column, so the vehicle is at the surface while it has GNSS and submerged for the whole outage: it starts at the surface, dives at 45 s, runs its mission under water and is back at the surface at 255 s. The depth is
+
+$$
+z(t) = h(t)\left(z_m + y \sin\alpha\right),
+$$
+
+with mission depth $z_m = 10$ m and slope $\alpha = 0.15$ rad, so the mission depth varies along the loop as over sloping ground, between 10 and 16 m on the figure-eight and between 10 and 17.5 m on the four-corner. The envelope $h(t)$ is 0 at the surface and 1 on the mission, and ramps between them over 30 s with a quintic smoothstep, so depth, vertical speed and vertical acceleration are continuous. The vehicle points along its velocity, so it pitches nose down by up to about 30° while diving and nose up while surfacing. It rolls into each turn as in a coordinated turn, building up the roll over 5 m of path.
 
 | trajectory | geometry |
 | --- | --- |
@@ -111,7 +117,7 @@ The executable runs every `config.yaml` it finds below the folder it is given an
 
 ## Results
 
-Each method has its own page with the setup, the figures and the numbers of its runs (figure-eight and four-corner, each with the normal and with a sparse magnetometer).
+Each method has its own page with the setup, the figures and the numbers of its runs (figure-eight and four-corner).
 
 | page | estimators |
 | --- | --- |
@@ -123,4 +129,5 @@ Each method has its own page with the setup, the figures and the numbers of its 
 ## Related results
 
 - [Base case](../base_case/README.md): the same scenario with a prior centred on the truth.
+- [Exaggerated poor initialization](../exaggerated_poor_initialization/README.md): the same prior with a sparse magnetometer, so the yaw error lingers.
 - [2-D strapdown INS, IEKS](../../INS2D/ieks/README.md): the planar version, including a heading-stress case with a wrong initial heading and a sparse magnetometer.

@@ -1,0 +1,44 @@
+ukf/heading_stress, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               9.4103 +- 4.5757    7.0681 +- 3.5356
+  ERTS              4.5162 +- 2.3525    3.2210 +- 1.4630
+  UKF               7.7783 +- 3.2379    5.7413 +- 2.4201
+  URTSS             3.3124 +- 1.4112    2.4612 +- 0.9884
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                              RMSE               MAE
+  EKF              11.2157 +- 5.4788    9.7345 +- 5.0473
+  ERTS              5.3835 +- 2.8176    4.4411 +- 2.0873
+  UKF               9.2887 +- 3.8721    8.0043 +- 3.4496
+  URTSS             3.9545 +- 1.6880    3.4152 +- 1.4074
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF              13.5421 +- 3.3321    9.3656 +- 2.8679
+  ERTS              5.5918 +- 2.0182    3.9586 +- 1.6091
+  UKF               9.9657 +- 1.9192    6.9237 +- 1.5592
+  URTSS             3.7422 +- 1.0154    2.8889 +- 0.7558
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF            22.2% inside,   0.3% below,  77.5% above
+  ERTS           28.5% inside,   0.0% below,  71.5% above
+  UKF            42.0% inside,   0.7% below,  57.4% above
+  URTSS          63.1% inside,   1.4% below,  35.5% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             7.7578 +- 1.4362  [4.7621, 10.7536]  runs [2.947, 27.360]  -> overconfident
+  ERTS            7.0949 +- 1.3857  [4.2044, 9.9854]  runs [2.287, 26.862]  -> overconfident
+  UKF             3.0065 +- 0.3751  [2.2240, 3.7890]  runs [1.039, 7.944]  -> overconfident
+  URTSS           2.6930 +- 0.3215  [2.0224, 3.3635]  runs [1.411, 6.397]  -> overconfident
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF              6.2759 +- 0.3015  [5.6470, 6.9049]  expected 2  -> overconfident
+  magnetometer EKF      2.7975 +- 0.4896  [1.7763, 3.8188]  expected 1  -> overconfident
+  DVL EKF               2.4447 +- 0.0181  [2.4069, 2.4825]  expected 2  -> overconfident
+  GNSS UKF              2.1968 +- 0.0523  [2.0876, 2.3060]  expected 2  -> overconfident
+  magnetometer UKF      1.6749 +- 0.1996  [1.2585, 2.0914]  expected 1  -> overconfident
+  DVL UKF               1.9169 +- 0.0196  [1.8761, 1.9578]  expected 2  -> underconfident

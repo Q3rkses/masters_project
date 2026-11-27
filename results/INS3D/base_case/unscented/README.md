@@ -60,21 +60,21 @@ Every number below is taken from the run's `stats.txt`.
 
 | estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE attitude [°] | max attitude [°] | true position inside 95% ellipsoid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| UKF | 0.944 | 0.742 | 1.83 | 2.22 | 1.79 | 4.0 | 98.3% |
-| URTSS | 0.708 | 0.423 | 1.31 | 1.56 | 1.34 | 3.2 | 98.5% |
+| UKF | 0.942 | 0.739 | 1.84 | 2.23 | 1.80 | 4.1 | 98.1% |
+| URTSS | 0.709 | 0.423 | 1.31 | 1.56 | 1.36 | 3.2 | 98.6% |
 
 | statistic | dof | average | 95% interval | verdict |
 | --- | --- | --- | --- | --- |
-| NIS, GNSS | 3 | 3.567 | [2.443, 3.613] | consistent |
-| NIS, magnetometer | 1 | 0.805 | [0.873, 1.135] | underconfident |
-| NIS, DVL | 3 | 2.263 | [2.770, 3.239] | underconfident |
-| NIS, altimeter | 1 | 1.010 | [0.876, 1.132] | consistent |
-| NEES, full state, UKF | 15 | 9.005 | [13.910, 16.130] | underconfident |
-| NEES, position, UKF | 3 | 2.353 | [2.480, 3.569] | underconfident |
-| NEES, attitude, UKF | 3 | 1.317 | [2.686, 3.332] | underconfident |
-| NEES, full state, URTSS | 15 | 10.202 | [12.644, 17.554] | underconfident |
-| NEES, position, URTSS | 3 | 2.897 | [0.216, 9.348] | consistent |
-| NEES, attitude, URTSS | 3 | 1.989 | [1.647, 4.753] | consistent |
+| NIS, GNSS | 3 | 3.557 | [2.446, 3.610] | consistent |
+| NIS, magnetometer | 1 | 0.803 | [0.873, 1.135] | underconfident |
+| NIS, DVL | 3 | 2.261 | [2.771, 3.238] | underconfident |
+| NIS, altimeter | 1 | 1.009 | [0.876, 1.132] | consistent |
+| NEES, full state, UKF | 15 | 9.199 | [13.868, 16.175] | underconfident |
+| NEES, position, UKF | 3 | 2.354 | [2.482, 3.567] | underconfident |
+| NEES, attitude, UKF | 3 | 1.331 | [2.685, 3.332] | underconfident |
+| NEES, full state, URTSS | 15 | 10.451 | [12.479, 17.750] | underconfident |
+| NEES, position, URTSS | 3 | 2.887 | [0.216, 9.348] | consistent |
+| NEES, attitude, URTSS | 3 | 2.025 | [1.625, 4.789] | consistent |
 
 ### Four-corner
 
@@ -104,18 +104,18 @@ Every number below is taken from the run's `stats.txt`.
 
 | estimator | RMSE position [m] | median [m] | 95th percentile [m] | max [m] | RMSE attitude [°] | max attitude [°] | true position inside 95% ellipsoid |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| UKF | 1.046 | 0.494 | 2.06 | 2.32 | 1.72 | 4.1 | 98.9% |
-| URTSS | 0.631 | 0.378 | 1.25 | 1.45 | 1.16 | 3.1 | 99.7% |
+| UKF | 1.101 | 0.484 | 2.16 | 2.42 | 1.73 | 4.1 | 98.8% |
+| URTSS | 0.604 | 0.378 | 1.20 | 1.39 | 1.19 | 3.3 | 99.7% |
 
 | statistic | dof | average | 95% interval | verdict |
 | --- | --- | --- | --- | --- |
-| NIS, GNSS | 3 | 3.531 | [2.377, 3.695] | consistent |
-| NIS, magnetometer | 1 | 0.801 | [0.874, 1.134] | underconfident |
-| NIS, DVL | 3 | 2.281 | [2.769, 3.240] | underconfident |
-| NIS, altimeter | 1 | 1.006 | [0.877, 1.131] | consistent |
-| NEES, full state, UKF | 15 | 8.391 | [13.968, 16.069] | underconfident |
-| NEES, position, UKF | 3 | 2.137 | [2.518, 3.523] | underconfident |
-| NEES, attitude, UKF | 3 | 1.221 | [2.683, 3.334] | underconfident |
-| NEES, full state, URTSS | 15 | 8.787 | [12.783, 17.392] | underconfident |
-| NEES, position, URTSS | 3 | 2.487 | [0.216, 9.348] | consistent |
-| NEES, attitude, URTSS | 3 | 1.493 | [1.745, 4.589] | underconfident |
+| NIS, GNSS | 3 | 3.540 | [2.374, 3.697] | consistent |
+| NIS, magnetometer | 1 | 0.799 | [0.875, 1.133] | underconfident |
+| NIS, DVL | 3 | 2.271 | [2.771, 3.239] | underconfident |
+| NIS, altimeter | 1 | 1.007 | [0.876, 1.132] | consistent |
+| NEES, full state, UKF | 15 | 8.534 | [13.953, 16.084] | underconfident |
+| NEES, position, UKF | 3 | 2.178 | [2.514, 3.529] | underconfident |
+| NEES, attitude, UKF | 3 | 1.232 | [2.681, 3.336] | underconfident |
+| NEES, full state, URTSS | 15 | 8.949 | [12.671, 17.522] | underconfident |
+| NEES, position, URTSS | 3 | 2.389 | [0.216, 9.348] | consistent |
+| NEES, attitude, URTSS | 3 | 1.555 | [1.727, 4.619] | underconfident |

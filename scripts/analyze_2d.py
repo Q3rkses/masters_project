@@ -214,6 +214,8 @@ def main():
     nees_smoother = quadratic_form(x_true - x_smoother, P_smoother)
 
     rmse = lambda estimate: np.sqrt(np.mean(np.sum((x_true - estimate) ** 2, axis=1)))
+    # mean distance between estimate and truth, the vector analogue of the MAE
+    mae = lambda estimate: np.mean(np.linalg.norm(x_true - estimate, axis=1))
     mean_trace = lambda P: np.trace(P, axis1=1, axis2=2).mean()
     print(f"{len(k)} timesteps\n")
     print("consistency (time-averaged):")
@@ -221,8 +223,8 @@ def main():
     summarise("ANEES filter", nees_filter, STATE_DIM)
     summarise("ANEES smoother", nees_smoother, STATE_DIM)
     print("\naccuracy:")
-    print(f"  RMSE filter      {rmse(x_filter):6.4f}   mean trace P {mean_trace(P_filter):.4f}")
-    print(f"  RMSE smoother    {rmse(x_smoother):6.4f}   mean trace P {mean_trace(P_smoother):.4f}")
+    print(f"  filter      RMSE {rmse(x_filter):6.4f}   MAE {mae(x_filter):6.4f}   mean trace P {mean_trace(P_filter):.4f}")
+    print(f"  smoother    RMSE {rmse(x_smoother):6.4f}   MAE {mae(x_smoother):6.4f}   mean trace P {mean_trace(P_smoother):.4f}")
 
     figures = {}
     for window in WINDOWS:

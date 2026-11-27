@@ -121,10 +121,12 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
       .mean = Eigen::VectorXd::Zero(3),
       .timeconstant = ins_config.accelerometer_time_constant,
   };
+  // the white noise is given as a continuous-time intensity, so each sample
+  // has variance intensity / dt
   SimulationConfig accelerometer_white_measurement_noise_config{
       .rng = rng,
       .covariance = Eigen::MatrixXd(
-          ins_config.accelerometer_white_noise_intensity.asDiagonal()),
+          (ins_config.accelerometer_white_noise_intensity / ins_config.dt).asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
   };
   SimulationConfig gyro_gauss_markov_config{
@@ -137,7 +139,7 @@ SimulatedData simulate_truth_and_imu(const YAML::Node &config,
   SimulationConfig gyro_white_measurement_noise_config{
       .rng = rng,
       .covariance =
-          Eigen::MatrixXd(ins_config.gyro_white_noise_intensity.asDiagonal()),
+          Eigen::MatrixXd((ins_config.gyro_white_noise_intensity / ins_config.dt).asDiagonal()),
       .mean = Eigen::VectorXd::Zero(3),
   };
 

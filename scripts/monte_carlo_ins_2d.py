@@ -2,25 +2,16 @@
 """Monte Carlo over seeds for the 2-D strapdown INS cases.
 
 Every case (a folder under results/INS2D with a config.yaml) is run once per
-seed, in two variants that differ only in the white noise of the simulated IMU.
-
-  matched       the truth's white-noise variance per sample is the configured
-                intensity divided by dt, which is what the filter's
-                continuous-time Q = G D G^T dt assumes.
-  conservative  the configured intensity is used as the variance per sample,
-                as the single-run results do. The truth then has 1/dt = 100
-                times less white noise than the filter believes.
-
-Any other difference between the truth and the filter that a case sets on
+seed. Any difference between the truth and the filter that a case sets on
 purpose (the mistuned bias noise of gnss_outage, the heading error of the
-heading stress cases) is kept in both variants.
+heading stress cases) is kept.
 
 A single run writes 150 to 220 MB of csv, so every run is reduced to the
 numbers below as soon as it finishes and its csv files are deleted. What is
-kept per case and variant goes to <case>/monte_carlo/<variant>/: stats.txt,
+kept per case goes to <case>/monte_carlo/: stats.txt,
 figures/, data/per_run.csv with one row per seed (which records the seeds too),
 and summary.npy with the per-timestep averages, from which --skip-run rebuilds
-the report. summary.npy is 2 to 5 MB per case and variant, so it is not tracked.
+the report. summary.npy is 2 to 5 MB per case, so it is not tracked.
 
 usage: monte_carlo_ins_2d.py [--skip-run] [--pdf] [--jobs N] [case_dir ...]
 """
@@ -45,7 +36,6 @@ PROJECT = Path(__file__).resolve().parent.parent
 EXECUTABLE = PROJECT / "build" / "kalman_filtering_and_smoothing"
 INS2D = PROJECT / "results" / "INS2D"
 SEEDS = range(22, 43)  # 22 up to and including 42, so 21 runs
-VARIANTS = ("matched", "conservative")
 
 STATE_DIM = 8
 HEADING = 4
@@ -82,25 +72,9 @@ def denied_window(text):
     return start, end
 
 
-def scale_line(text, key, factor):
-    """Multiply the number or list of numbers on the `key:` line by factor."""
-    def scaled(match):
-        values = re.sub(r"[-+]?[0-9.]+(?:[eE][-+]?[0-9]+)?",
-                        lambda m: repr(float(m.group(0)) * factor), match.group(2))
-        return f"{match.group(1)}{values}{match.group(3)}"
-    text, count = re.subn(rf"^({key}:\s*)(\[[^\]]*\]|\S+)(.*)$", scaled, text, flags=re.M)
-    if count != 1:
-        raise ValueError(f"expected one {key} line, found {count}")
-    return text
-
-
-def run_config(base, case_dir, variant, seed):
-    """The case's config with the seed, the variant and the estimators set."""
+def run_config(base, case_dir, seed):
+    """The case's config with the seed and the estimators set."""
     text = re.sub(r"^seed:.*$", f"seed: {seed}", base, flags=re.M)
-    if variant == "matched":
-        dt = number(base, "dt")
-        text = scale_line(text, "gyro_white_noise_intensity", 1 / dt)
-        text = scale_line(text, "accelerometer_white_noise_intensity", 1 / dt)
     if case_dir.parent.name not in COMPARISONS:
         text = re.sub(r"^(estimators|run_iekf|run_ieks):.*$\n?", "", text, flags=re.M)
         text += "\nestimators: [ekf]\n"
@@ -154,12 +128,12 @@ def nis_of(path, dim):
 
 
 def run_one(job):
-    """Runs one seed of one case and variant, and keeps only what is needed."""
-    case_dir, variant, seed = job
+    """Runs one seed of one case, and keeps only what is needed."""
+    case_dir, seed = job
     base = (case_dir / "config.yaml").read_text()
     with tempfile.TemporaryDirectory(prefix="mc_ins2d_") as scratch:
         run_dir = Path(scratch)
-        (run_dir / "config.yaml").write_text(run_config(base, case_dir, variant, seed))
+        (run_dir / "config.yaml").write_text(run_config(base, case_dir, seed))
         subprocess.run([EXECUTABLE, run_dir], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         data = run_dir / "data"
@@ -250,14 +224,10 @@ def summarise(runs, dt, denied):
     return summary
 
 
-def report(summary, case_dir, variant):
+def report(summary, case_dir):
     M, dt, denied = summary["runs"], summary["dt"], summary["denied"]
-    out = [f"{case_dir.relative_to(INS2D)}, {variant} white noise",
+    out = [f"{case_dir.parent.name}/{case_dir.name}",
            f"{M} runs (seeds {SEEDS[0]} to {SEEDS[-1]}), {summary['timesteps']} timesteps, dt {dt} s"]
-    if variant == "matched":
-        out.append("truth white noise per sample = configured intensity / dt, as the filter's Q assumes")
-    else:
-        out.append("truth white noise per sample = configured intensity, 1/dt times less than the filter assumes")
     names = summary["estimators"]
 
     out += ["", "position error [m], mean +- std over runs of each run's time average:"]
@@ -450,11 +420,11 @@ def write_per_run(summary, path):
                comments="", fmt=["%d"] + ["%.6g"] * (len(header) - 1))
 
 
-def write_outputs(summary, case_dir, variant, pdf):
-    out_dir = case_dir / "monte_carlo" / variant
+def write_outputs(summary, case_dir, pdf):
+    out_dir = case_dir / "monte_carlo"
     figures_dir = out_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    text = report(summary, case_dir, variant)
+    text = report(summary, case_dir)
     (out_dir / "stats.txt").write_text(text)
     write_per_run(summary, out_dir / "data" / "per_run.csv")
     figures = {"mc_nees.png": nees_figure(summary), "mc_nis.png": nis_figure(summary),
@@ -492,16 +462,15 @@ def main():
         for case_dir in cases:
             text = (case_dir / "config.yaml").read_text()
             dt, denied = number(text, "dt"), denied_window(text)
-            for variant in VARIANTS:
-                summary_path = case_dir / "monte_carlo" / variant / "summary.npy"
-                if skip_run:
-                    summary = load_summary(summary_path)
-                else:
-                    runs = list(pool.map(run_one, [(case_dir, variant, s) for s in SEEDS]))
-                    summary = summarise(runs, dt, denied)
-                    summary_path.parent.mkdir(parents=True, exist_ok=True)
-                    save_summary(summary, summary_path)
-                print(write_outputs(summary, case_dir, variant, pdf), flush=True)
+            summary_path = case_dir / "monte_carlo" / "summary.npy"
+            if skip_run:
+                summary = load_summary(summary_path)
+            else:
+                runs = list(pool.map(run_one, [(case_dir, s) for s in SEEDS]))
+                summary = summarise(runs, dt, denied)
+                summary_path.parent.mkdir(parents=True, exist_ok=True)
+                save_summary(summary, summary_path)
+            print(write_outputs(summary, case_dir, pdf), flush=True)
 
 
 if __name__ == "__main__":

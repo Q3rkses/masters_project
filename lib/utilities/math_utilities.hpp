@@ -12,6 +12,7 @@
 
 #include <Eigen/Dense>
 #include <cmath>
+#include <unsupported/Eigen/MatrixFunctions>
 
 /**
  * @brief maps an angle to its smallest signed representation, i.e. wraps it
@@ -132,6 +133,32 @@ inline Eigen::Vector3d quaternion_log(const Eigen::Quaterniond &q) {
     return 2.0 * imaginary / w;
   }
   return 2.0 * std::atan2(sin_half_angle, w) / sin_half_angle * imaginary;
+}
+
+/**
+ * @brief the exact discrete process noise covariance with Van Loan's formula,
+ * for x_dot = A x + G w with E[w w^T] = D delta(t - s), held over one step.
+ * exp([-A, G D G^T; 0, A^T] dt) = [., Phi^-1 Q_d; 0, Phi^T]
+ * @param A, the continuous-time system matrix
+ * @param GDGT, G D G^T, the continuous-time noise intensity in the state
+ * @param dt, the step length
+ * @return Q_d
+ */
+inline Eigen::MatrixXd van_loan_Q(const Eigen::MatrixXd &A,
+                                  const Eigen::MatrixXd &GDGT,
+                                  const double dt) {
+  const Eigen::Index n = A.rows();
+  Eigen::MatrixXd M = Eigen::MatrixXd::Zero(2 * n, 2 * n);
+  M.topLeftCorner(n, n) = -A * dt;
+  M.topRightCorner(n, n) = GDGT * dt;
+  M.bottomRightCorner(n, n) = A.transpose() * dt;
+
+  const Eigen::MatrixXd E = M.exp();
+  const Eigen::MatrixXd Phi = E.bottomRightCorner(n, n).transpose();
+  const Eigen::MatrixXd Q_d = Phi * E.topRightCorner(n, n);
+
+  // symmetric up to round-off, so make it exactly symmetric
+  return 0.5 * (Q_d + Q_d.transpose());
 }
 
 /**

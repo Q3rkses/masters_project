@@ -18,13 +18,13 @@ consistency (time-averaged; above the band the estimator is overconfident, below
   ANEES position ERTS (IEKF)      1.8206  band [0.0506, 7.3778]  99.2% of steps in band  -> consistent
 
 accuracy (position error in m, heading error in deg):
-                 RMSE pos   median     95th      max  RMSE head
-  EKF              0.6555   0.5885   1.0376   1.4505     1.2919
-  UKF              0.6548   0.5874   1.0368   1.4493     1.2917
-  IEKF             0.6592   0.5942   1.0424   1.4528     1.2925
-  ERTS             0.4027   0.3735   0.6793   1.2823     0.8806
-  URTSS            0.4024   0.3732   0.6790   1.2804     0.8806
-  ERTS (IEKF)      0.4039   0.3727   0.6825   1.3019     0.8822
+                 RMSE pos  MAE pos   median     95th      max    final  RMSE head  MAE head  max head
+  EKF              0.6555   0.5980   0.5885   1.0376   1.4505   1.2823     1.2919    1.0300    4.1723
+  UKF              0.6548   0.5974   0.5874   1.0368   1.4493   1.2804     1.2917    1.0298    4.1711
+  IEKF             0.6592   0.6016   0.5942   1.0424   1.4528   1.3019     1.2925    1.0305    4.1643
+  ERTS             0.4027   0.3604   0.3735   0.6793   1.2823   1.2823     0.8806    0.7141    3.0946
+  URTSS            0.4024   0.3602   0.3732   0.6790   1.2804   1.2804     0.8806    0.7141    3.0945
+  ERTS (IEKF)      0.4039   0.3606   0.3727   0.6825   1.3019   1.3019     0.8822    0.7153    3.0981
 
 bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
   EKF              0.0213   0.0236    0.00177     0.0074
@@ -33,6 +33,14 @@ bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
   ERTS             0.0104   0.0120    0.00139     0.0032
   URTSS            0.0104   0.0120    0.00139     0.0032
   ERTS (IEKF)      0.0104   0.0120    0.00139     0.0032
+
+bias MAE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]):
+  EKF              0.0169   0.0191    0.00147
+  UKF              0.0169   0.0190    0.00147
+  IEKF             0.0169   0.0191    0.00147
+  ERTS             0.0081   0.0094    0.00113
+  URTSS            0.0081   0.0094    0.00114
+  ERTS (IEKF)      0.0081   0.0094    0.00114
 
 share of steps with the true position inside the reported 95% ellipse:
   EKF            95.6%

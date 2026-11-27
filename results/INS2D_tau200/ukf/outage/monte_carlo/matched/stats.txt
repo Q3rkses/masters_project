@@ -1,0 +1,44 @@
+ukf/outage, matched white noise
+21 runs (seeds 22 to 42), 30000 timesteps, dt 0.01 s
+truth white noise per sample = configured intensity / dt, as the filter's Q assumes
+
+position error [m], mean +- std over runs of each run's time average:
+                              RMSE               MAE
+  EKF               1.2083 +- 0.4150    0.9906 +- 0.3201
+  ERTS              0.6743 +- 0.2037    0.5559 +- 0.1541
+  UKF               1.2086 +- 0.4145    0.9908 +- 0.3199
+  URTSS             0.6750 +- 0.2037    0.5564 +- 0.1542
+
+position error inside the GNSS outage, 45 to 255 s [m]:
+                              RMSE               MAE
+  EKF               1.4198 +- 0.5025    1.2721 +- 0.4532
+  ERTS              0.7889 +- 0.2477    0.7026 +- 0.2183
+  UKF               1.4201 +- 0.5019    1.2724 +- 0.4529
+  URTSS             0.7897 +- 0.2477    0.7034 +- 0.2185
+
+heading error [deg], mean +- std over runs:
+                              RMSE               MAE
+  EKF               1.8532 +- 0.1342    1.4620 +- 0.1102
+  ERTS              1.1687 +- 0.0668    0.9311 +- 0.0541
+  UKF               1.8531 +- 0.1341    1.4619 +- 0.1101
+  URTSS             1.1687 +- 0.0668    0.9311 +- 0.0541
+
+position NEES (dof 2), run-averaged at each timestep, band [1.2380, 2.9418]:
+  EKF            96.5% inside,   3.0% below,   0.5% above
+  ERTS           90.9% inside,   9.1% below,   0.0% above
+  UKF            96.4% inside,   3.1% below,   0.5% above
+  URTSS          91.0% inside,   9.0% below,   0.0% above
+
+ANEES position (expected 2), mean +- standard error and 95% t-interval over runs:
+  EKF             1.9823 +- 0.2093  [1.5457, 2.4189]  runs [1.017, 4.824]  -> consistent
+  ERTS            1.8649 +- 0.1582  [1.5350, 2.1948]  runs [0.987, 3.854]  -> consistent
+  UKF             1.9820 +- 0.2091  [1.5459, 2.4181]  runs [1.019, 4.811]  -> consistent
+  URTSS           1.8672 +- 0.1583  [1.5371, 2.1974]  runs [0.989, 3.863]  -> consistent
+
+ANIS (expected = measurement dimension), mean +- standard error and 95% t-interval over runs:
+  GNSS EKF              1.9659 +- 0.0647  [1.8308, 2.1009]  expected 2  -> consistent
+  magnetometer EKF      1.0039 +- 0.0134  [0.9758, 1.0320]  expected 1  -> consistent
+  DVL EKF               2.0332 +- 0.0189  [1.9938, 2.0726]  expected 2  -> consistent
+  GNSS UKF              1.9660 +- 0.0647  [1.8310, 2.1010]  expected 2  -> consistent
+  magnetometer UKF      1.0038 +- 0.0134  [0.9758, 1.0318]  expected 1  -> consistent
+  DVL UKF               2.0321 +- 0.0189  [1.9928, 2.0715]  expected 2  -> consistent
