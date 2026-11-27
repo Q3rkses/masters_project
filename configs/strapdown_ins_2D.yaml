@@ -4,16 +4,16 @@ seed: 42
 timesteps: 30000 # 5 minutes at dt=0.01
 dt: 0.01 # The discretization interval [s]
 # imu noise params
-gyro_time_constant: 1000 # Gauss Markov time constant for gyro [s]
-accelerometer_time_constant: [1000.0, 1000.0] # Gauss Markov time constant for accelerometer [s]
+gyro_time_constant: 200 # Gauss Markov time constant for gyro [s]
+accelerometer_time_constant: [200.0, 200.0] # Gauss Markov time constant for accelerometer [s]
 gyro_noise_variance: 5e-5 # (rad/s)^2, bias instability
 accelerometer_noise_variance: [5e-2, 5e-2] # (m/s^2)^2, bias instability
 gyro_white_noise_intensity: 5e-4 # rad^2/s, angular random walk
 accelerometer_white_noise_intensity: [5e-4, 5e-4] # (m/s^2)^2 * s, velocity random walk
 # the filter's own belief about the IMU noise above, matched to the truth
 # values here, no deliberate mismatch
-filter_gyro_time_constant: 1000
-filter_accelerometer_time_constant: [1000.0, 1000.0]
+filter_gyro_time_constant: 200
+filter_accelerometer_time_constant: [200.0, 200.0]
 filter_gyro_noise_variance: 5e-5
 filter_accelerometer_noise_variance: [5e-2, 5e-2]
 filter_gyro_white_noise_intensity: 5e-4

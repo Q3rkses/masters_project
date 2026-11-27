@@ -1,69 +1,69 @@
 30000 timesteps, dt 0.01 s, fixes: GNSS 19, magnetometer 476, DVL 487
 
 consistency (time-averaged; above the band the estimator is overconfident, below it underconfident):
-  ANIS GNSS EKF                   2.1052  band [1.0870, 3.1867]  94.7% of steps in band  -> consistent
-  ANIS magnetometer EKF           0.8980  band [0.8823, 1.1250]  96.0% of steps in band  -> consistent
-  ANIS DVL EKF                    1.8979  band [1.8170, 2.1917]  96.3% of steps in band  -> consistent
-  ANIS GNSS UKF                   2.1017  band [1.0870, 3.1867]  94.7% of steps in band  -> consistent
-  ANIS magnetometer UKF           0.8979  band [0.8823, 1.1250]  96.0% of steps in band  -> consistent
-  ANIS DVL UKF                    1.8972  band [1.8170, 2.1917]  96.3% of steps in band  -> consistent
-  ANIS GNSS IEKF                  2.1238  band [1.0867, 3.1873]  94.7% of steps in band  -> consistent
-  ANIS magnetometer IEKF          0.8980  band [0.8823, 1.1250]  95.8% of steps in band  -> consistent
-  ANIS DVL IEKF                   1.8975  band [1.8171, 2.1915]  96.3% of steps in band  -> consistent
-  ANEES position EKF              2.3119  band [1.1053, 3.1556]  94.5% of steps in band  -> consistent
-  ANEES position UKF              2.3060  band [1.1061, 3.1543]  94.5% of steps in band  -> consistent
-  ANEES position IEKF             2.3387  band [1.1018, 3.1616]  94.5% of steps in band  -> consistent
-  ANEES position ERTS             1.8170  band [0.0506, 7.3778]  99.1% of steps in band  -> consistent
-  ANEES position URTSS            1.8149  band [0.0506, 7.3778]  99.0% of steps in band  -> consistent
-  ANEES position IEKS             1.8347  band [0.0506, 7.3778]  99.3% of steps in band  -> consistent
+  ANIS GNSS EKF                   2.2138  band [1.1005, 3.1637]  100.0% of steps in band  -> consistent
+  ANIS magnetometer EKF           0.9883  band [0.8802, 1.1273]  95.2% of steps in band  -> consistent
+  ANIS DVL EKF                    2.0580  band [1.8180, 2.1905]  95.3% of steps in band  -> consistent
+  ANIS GNSS UKF                   2.2035  band [1.0996, 3.1653]  100.0% of steps in band  -> consistent
+  ANIS magnetometer UKF           0.9883  band [0.8802, 1.1273]  95.2% of steps in band  -> consistent
+  ANIS DVL UKF                    2.0570  band [1.8180, 2.1905]  95.3% of steps in band  -> consistent
+  ANIS GNSS IEKF                  2.2420  band [1.1035, 3.1586]  94.7% of steps in band  -> consistent
+  ANIS magnetometer IEKF          0.9882  band [0.8802, 1.1273]  95.6% of steps in band  -> consistent
+  ANIS DVL IEKF                   2.0569  band [1.8183, 2.1902]  95.3% of steps in band  -> consistent
+  ANEES position EKF              2.4560  band [1.1463, 3.0874]  95.7% of steps in band  -> consistent
+  ANEES position UKF              2.4428  band [1.1479, 3.0848]  95.7% of steps in band  -> consistent
+  ANEES position IEKF             2.4911  band [1.1399, 3.0979]  95.7% of steps in band  -> consistent
+  ANEES position ERTS             1.8354  band [0.0506, 7.3778]  99.4% of steps in band  -> consistent
+  ANEES position URTSS            1.8328  band [0.0506, 7.3778]  99.3% of steps in band  -> consistent
+  ANEES position IEKS             1.8501  band [0.0506, 7.3778]  99.4% of steps in band  -> consistent
 
 accuracy (position error in m, heading error in deg):
                  RMSE pos  MAE pos   median     95th      max    final  RMSE head  MAE head  max head
-  EKF              0.6555   0.5980   0.5885   1.0376   1.4505   1.2823     1.2919    1.0300    4.1723
-  UKF              0.6548   0.5974   0.5874   1.0368   1.4493   1.2804     1.2917    1.0298    4.1711
-  IEKF             0.6592   0.6016   0.5942   1.0424   1.4528   1.3019     1.2925    1.0305    4.1643
-  ERTS             0.4027   0.3604   0.3735   0.6793   1.2823   1.2823     0.8806    0.7141    3.0946
-  URTSS            0.4024   0.3602   0.3732   0.6790   1.2804   1.2804     0.8806    0.7141    3.0945
-  IEKS             0.4052   0.3621   0.3746   0.6842   1.2926   1.2926     0.8803    0.7134    3.0684
+  EKF              0.6935   0.6397   0.6415   1.0953   1.5247   1.3378     1.6845    1.3394    6.1340
+  UKF              0.6920   0.6382   0.6404   1.0929   1.5235   1.3321     1.6844    1.3393    6.1347
+  IEKF             0.6982   0.6441   0.6444   1.1000   1.5317   1.3593     1.6848    1.3400    6.1123
+  ERTS             0.4124   0.3716   0.3562   0.7063   1.3378   1.3378     1.2277    0.9782    4.6224
+  URTSS            0.4119   0.3715   0.3566   0.7054   1.3321   1.3321     1.2277    0.9782    4.6222
+  IEKS             0.4147   0.3732   0.3568   0.7128   1.3559   1.3559     1.2248    0.9764    4.5789
 
 bias RMSE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]) and peak gyro error:
-  EKF              0.0213   0.0236    0.00177     0.0074
-  UKF              0.0213   0.0235    0.00177     0.0074
-  IEKF             0.0213   0.0235    0.00177     0.0075
-  ERTS             0.0104   0.0120    0.00139     0.0032
-  URTSS            0.0104   0.0120    0.00139     0.0032
-  IEKS             0.0104   0.0119    0.00139     0.0032
+  EKF              0.0386   0.0456    0.00389     0.0164
+  UKF              0.0385   0.0456    0.00389     0.0164
+  IEKF             0.0386   0.0456    0.00391     0.0166
+  ERTS             0.0201   0.0230    0.00213     0.0055
+  URTSS            0.0201   0.0230    0.00213     0.0055
+  IEKS             0.0201   0.0230    0.00213     0.0055
 
 bias MAE (accel x [m/s^2], accel y [m/s^2], gyro [rad/s]):
-  EKF              0.0169   0.0191    0.00147
-  UKF              0.0169   0.0190    0.00147
-  IEKF             0.0169   0.0191    0.00147
-  ERTS             0.0081   0.0094    0.00113
-  URTSS            0.0081   0.0094    0.00114
-  IEKS             0.0081   0.0093    0.00114
+  EKF              0.0310   0.0366    0.00312
+  UKF              0.0310   0.0366    0.00312
+  IEKF             0.0310   0.0366    0.00313
+  ERTS             0.0157   0.0180    0.00180
+  URTSS            0.0157   0.0180    0.00180
+  IEKS             0.0157   0.0180    0.00180
 
 share of steps with the true position inside the reported 95% ellipse:
-  EKF            95.6%
-  UKF            95.7%
-  IEKF           95.4%
-  ERTS           99.9%
-  URTSS          99.9%
-  IEKS           99.8%
+  EKF            94.8%
+  UKF            94.9%
+  IEKF           94.7%
+  ERTS           99.5%
+  URTSS          99.6%
+  IEKS           99.0%
 
 smallest eigenvalue of the full P:
-  EKF           min  6.592e-06  0 of 30000 steps below zero
-  UKF           min  6.592e-06  0 of 30000 steps below zero
-  IEKF          min  6.592e-06  0 of 30000 steps below zero
-  ERTS          min  3.633e-06  0 of 30000 steps below zero
-  URTSS         min  3.633e-06  0 of 30000 steps below zero
-  IEKS          min  3.633e-06  0 of 30000 steps below zero
+  EKF           min  1.351e-05  0 of 30000 steps below zero
+  UKF           min  1.351e-05  0 of 30000 steps below zero
+  IEKF          min  1.351e-05  0 of 30000 steps below zero
+  ERTS          min  7.818e-06  0 of 30000 steps below zero
+  URTSS         min  7.818e-06  0 of 30000 steps below zero
+  IEKS          min  7.818e-06  0 of 30000 steps below zero
 
 ERTS trace(P) <= EKF trace(P) at every step: True
 URTSS trace(P) <= UKF trace(P) at every step: True
-IEKS trace(P) <= IEKF trace(P) at every step: False
+IEKS trace(P) <= IEKF trace(P) at every step: True
 
 distance to the EKF-based estimate (position in mm, heading in deg), and the range of the position trace(P) ratio:
-  UKF vs EKF: median 1.36 max 3.3, heading max 0.011, ratio [1.0000, 1.0003]
-  IEKF vs EKF: median 8.61 max 22.1, heading max 0.056, ratio [0.9951, 1.0048]
-  URTSS vs ERTS: median 1.14 max 3.0, heading max 0.003, ratio [1.0001, 1.0008]
-  IEKS vs ERTS: median 5.10 max 20.1, heading max 0.075, ratio [0.9962, 1.0049]
+  UKF vs EKF: median 3.73 max 8.2, heading max 0.006, ratio [1.0000, 1.0003]
+  IEKF vs EKF: median 10.21 max 26.1, heading max 0.108, ratio [0.9929, 1.0073]
+  URTSS vs ERTS: median 3.11 max 7.7, heading max 0.003, ratio [1.0001, 1.0008]
+  IEKS vs ERTS: median 6.53 max 32.7, heading max 0.133, ratio [0.9947, 1.0062]

@@ -13,7 +13,9 @@ figures/, data/per_run.csv with one row per seed (which records the seeds too),
 and summary.npy with the per-timestep averages, from which --skip-run rebuilds
 the report. summary.npy is 2 to 5 MB per case, so it is not tracked.
 
-usage: monte_carlo_ins_2d.py [--skip-run] [--pdf] [--jobs N] [case_dir ...]
+usage: monte_carlo_ins_2d.py [--skip-run] [--pdf] [--jobs N] [--runs N] [case_dir ...]
+
+--runs N runs the seeds 22 up to 22 + N - 1 (default 21, so 22 to 42).
 """
 
 import re
@@ -35,7 +37,8 @@ from scipy.stats import chi2, t as student_t
 PROJECT = Path(__file__).resolve().parent.parent
 EXECUTABLE = PROJECT / "build" / "kalman_filtering_and_smoothing"
 INS2D = PROJECT / "results" / "INS2D"
-SEEDS = range(22, 43)  # 22 up to and including 42, so 21 runs
+FIRST_SEED = 22
+RUNS = 21  # default, so seeds 22 up to and including 42
 
 STATE_DIM = 8
 HEADING = 4
@@ -227,7 +230,7 @@ def summarise(runs, dt, denied):
 def report(summary, case_dir):
     M, dt, denied = summary["runs"], summary["dt"], summary["denied"]
     out = [f"{case_dir.parent.name}/{case_dir.name}",
-           f"{M} runs (seeds {SEEDS[0]} to {SEEDS[-1]}), {summary['timesteps']} timesteps, dt {dt} s"]
+           f"{M} runs (seeds {summary['seeds'][0]} to {summary['seeds'][-1]}), {summary['timesteps']} timesteps, dt {dt} s"]
     names = summary["estimators"]
 
     out += ["", "position error [m], mean +- std over runs of each run's time average:"]
@@ -403,7 +406,7 @@ def find_cases(arguments):
 def write_per_run(summary, path):
     """One row per seed with that run's time-averaged errors and statistics."""
     slug = lambda name: re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
-    header, columns = ["seed"], [np.array(SEEDS)]
+    header, columns = ["seed"], [np.array(summary["seeds"])]
     fields = ["rmse", "mae", "heading_rmse", "heading_mae", "anees"]
     if summary["denied"]:
         fields += ["outage_rmse", "outage_mae"]
@@ -455,6 +458,11 @@ def main():
     if "--jobs" in arguments:
         jobs = int(arguments[arguments.index("--jobs") + 1])
         del arguments[arguments.index("--jobs"):arguments.index("--jobs") + 2]
+    runs = RUNS
+    if "--runs" in arguments:
+        runs = int(arguments[arguments.index("--runs") + 1])
+        del arguments[arguments.index("--runs"):arguments.index("--runs") + 2]
+    seeds = list(range(FIRST_SEED, FIRST_SEED + runs))
     arguments = [a for a in arguments if not a.startswith("--")]
 
     cases = find_cases(arguments)
@@ -466,8 +474,9 @@ def main():
             if skip_run:
                 summary = load_summary(summary_path)
             else:
-                runs = list(pool.map(run_one, [(case_dir, s) for s in SEEDS]))
-                summary = summarise(runs, dt, denied)
+                results = list(pool.map(run_one, [(case_dir, s) for s in seeds]))
+                summary = summarise(results, dt, denied)
+                summary["seeds"] = seeds
                 summary_path.parent.mkdir(parents=True, exist_ok=True)
                 save_summary(summary, summary_path)
             print(write_outputs(summary, case_dir, pdf), flush=True)
